@@ -6,7 +6,7 @@ import Image from "next/image";
 import NavbarClient from "@/components/NavbarClient";
 
 export const metadata: Metadata = {
-  title: "Clínica Estética Dra. Juliet Medina",
+  title: "Clínica Estética Dra. Julieth Medina",
   description:
     "Especialista en Medicina Estética, Nutrición y Antiedad en Ibagué",
 };
@@ -24,7 +24,7 @@ export default function RootLayout({
           fontFamily: "'Montserrat', sans-serif",
         }}
       >
-        {/* 🔝 BARRA SUPERIOR */}
+        {/* BARRA SUPERIOR */}
         <div
           style={{
             backgroundColor: "#E8E1D4",
@@ -60,7 +60,7 @@ export default function RootLayout({
             >
               <i className="fas fa-map-marker-alt me-2"></i>
               <span>
-                La Samaria, Carrera 12 Sur #93-21 Torre Consultorios 312, Ibagué
+                Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
               </span>
             </div>
 
@@ -94,52 +94,79 @@ export default function RootLayout({
           </div>
         </div>
 
-        {/* 🩰 NAVBAR INTERACTIVA */}
+        {/* NAVBAR INTERACTIVA */}
         <NavbarClient />
 
         {/* CONTENIDO PRINCIPAL */}
         <main>{children}</main>
 
-        {/* FOOTER */}
-        <footer className="bg-dark text-white py-4 mt-5">
-          <div className="container">
-            <div className="row">
-              <div className="col-md-4">
-                <h5>Clínica Estética Dra. Juliet Medina</h5>
-                <p>
-                  Esp. Medicina Estética & Salud Integral | Inyectora 𝐄𝐥𝐢𝐭𝐞.
-                </p>
-                <p>Magíster Gerencia Hospitalaria.</p>
-              </div>
+{/* FOOTER */}
+<footer
+  className="text-white pt-5 pb-3 mt-4"
+  style={{
+    backgroundColor: "#6C584C",
+  }}
+>
+  <div className="container">
+    <div className="row text-center text-md-start g-4">
+      <div className="col-md-4">
+        <h5
+          className="fw-bold mb-3"
+          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
+        >
+          Clínica Estética Dra. Juliet Medina
+        </h5>
+        <p style={{ color: "#FAF9F7" }}>
+          Esp. Medicina Estética & Salud Integral | Inyectora <strong>Elite</strong>.
+        </p>
+        <p style={{ color: "#FAF9F7" }}>Magíster en Gerencia Hospitalaria.</p>
+      </div>
 
-              <div className="col-md-4">
-                <h5>Contacto</h5>
-                <p>
-                  <i className="fas fa-map-marker-alt me-2"></i> Clínica
-                  Medicadiz, Torre Especialistas, Ibagué
-                </p>
-                <p>
-                  <i className="fas fa-phone me-2"></i> 315 5445748
-                </p>
-              </div>
+      <div className="col-md-4">
+        <h5
+          className="fw-bold mb-3"
+          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
+        >
+          Contacto
+        </h5>
+        <p style={{ color: "#FAF9F7" }}>
+          <i
+            className="fas fa-map-marker-alt me-2"
+            style={{ color: "#B08968" }}
+          ></i>
+          Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
+        </p>
+        <p style={{ color: "#FAF9F7" }}>
+          <i className="fas fa-phone me-2" style={{ color: "#B08968" }}></i> 315 5445748
+        </p>
+      </div>
 
-              <div className="col-md-4">
-                <h5>Horario</h5>
-                <p>Lunes a Viernes: 8:00 AM - 12:00 PM / 2:00 PM - 6:00 PM</p>
-                <p>Sábados: 9:00 AM - 1:00 PM</p>
-              </div>
-            </div>
+      <div className="col-md-4">
+        <h5
+          className="fw-bold mb-3"
+          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
+        >
+          Horario
+        </h5>
+        <p style={{ color: "#FAF9F7" }}>
+          Lunes a Viernes: <br />
+          8:00 AM - 12:00 PM / 2:00 PM - 6:00 PM
+        </p>
+        <p style={{ color: "#FAF9F7" }}>Sábados: 9:00 AM - 1:00 PM</p>
+      </div>
+    </div>
 
-            <hr />
+    <hr style={{ borderColor: "#B08968", opacity: 0.7 }} />
 
-            <div className="text-center">
-              <p>
-                © {new Date().getFullYear()} Clínica Estética Dra. Juliet
-                Medina. Todos los derechos reservados.
-              </p>
-            </div>
-          </div>
-        </footer>
+    <div className="text-center mt-3">
+      <p style={{ color: "#E9DED2", fontSize: "0.9rem" }}>
+        © {new Date().getFullYear()} Clínica Estética Dra. Juliet Medina. Todos
+        los derechos reservados.
+      </p>
+    </div>
+  </div>
+</footer>
+
       </body>
     </html>
   );

@@ -30,7 +30,7 @@ export default function NavbarClient() {
             alt="Logo Clínica Estética"
             width={80}
             height={60}
-            className="me-3"
+            className="me-1"
           />
           <div>
             <span
@@ -65,7 +65,7 @@ export default function NavbarClient() {
           <ul
             className="navbar-nav flex-row justify-content-center align-items-center mb-0"
             style={{
-              gap: "2.5rem",
+              gap: "1.4rem",
               fontSize: "1rem",
             }}
           >
@@ -75,6 +75,8 @@ export default function NavbarClient() {
               { label: "Procedimientos", href: "/procedimientos" },
               { label: "Testimonios", href: "/testimonios" },
               { label: "Agendar cita", href: "/agendar" },
+              { label: "Instalaciones", href: "/consultorio" },
+              { label: "Administrar", href: "/admin" },
             ].map((item, index) => (
               <li key={index} className="nav-item">
                 <Link

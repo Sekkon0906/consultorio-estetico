@@ -7,16 +7,13 @@ import Galeria3D from "@/components/Galeria3D";
 import Counter from "@/components/Counter";
 
 export default function HomePage() {
-  // Carrusel principal
+  // Carrusel home
   const imagenes = [
-    "/imagenes/carrucel1.jpg",
-    "/imagenes/carrucel2.jpg",
-    "/imagenes/carrucel3.jpg",
-    "/imagenes/carrucel4.jpg",
-    "/imagenes/carrucel5.jpg",
-    "/imagenes/carrucel6.jpg",
-    "/imagenes/carrucel9.jpg",
-    "/imagenes/carrucel10.jpg",
+    "/imagenes/carrucel_home1.jpg",
+    "/imagenes/carrucel_home2.jpg",
+    "/imagenes/carrucel_home3.jpg",
+    "/imagenes/carrucel_home4.jpg",
+    "/imagenes/carrucel_home5.jpg",
   ];
 
   const [imagenActual, setImagenActual] = useState(0);
@@ -290,10 +287,11 @@ export default function HomePage() {
           backgroundColor: "#FAF9F7",
           borderTop: "1px solid #E8E1D4",
           borderBottom: "1px solid #E8E1D4",
+          
         }}
       >
         <div className="text-center mb-5">
-          <h2 className="fw-bold" style={{ color: "#4E3B2B" }}>
+          <h2 className="fw-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#4E3B2B" }}>
             Tratamientos más demandados
           </h2>
           <p className="lead" style={{ color: "#6C584C" }}>
@@ -304,7 +302,7 @@ export default function HomePage() {
         <Galeria3D />
       </section>
 
-      {/* 🌿 PROCEDIMIENTOS VARIOS */}
+      {/* PROCEDIMIENTOS VARIOS */}
       <section
         className="py-5"
         style={{

@@ -440,7 +440,7 @@ export default function AgendarPage() {
               <div>
                 ¿Prefieres escribirnos directo?{" "}
                 <a
-                  href={`https://wa.me/${WHATSAPP_NUM}`}
+                  href={`https://api.whatsapp.com/message/SEJTQDVCRWGSP1?autoload=1&app_absent=0${WHATSAPP_NUM}`}
                   target="_blank"
                   style={{ color: "#B08968", textDecoration: "none" }}
                 >
@@ -455,8 +455,7 @@ export default function AgendarPage() {
                 </a>{" "}
                 ·{" "}
                 <span>
-                  <i className="fas fa-map-marker-alt me-1"></i> Clínica Medicadiz,
-                  Ibagué
+                  <i className="fas fa-map-marker-alt me-1"></i> Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
                 </span>
               </div>
             </div>

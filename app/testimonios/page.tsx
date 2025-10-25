@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
+import FondoAnim from "@/components/FondoAnim";
 
 export default function TestimoniosPage() {
   const testimonios = [
@@ -47,12 +48,15 @@ export default function TestimoniosPage() {
   return (
     <main
       style={{
-        background: "linear-gradient(180deg, #FAF9F7 0%, #F1E9E0 100%)",
+        position: "relative",
+        overflow: "hidden",
         minHeight: "100vh",
         padding: "5rem 2rem",
       }}
     >
-      <div className="container">
+      <FondoAnim />
+
+      <div className="container position-relative">
         <h2
           className="fw-bold text-center mb-4"
           style={{
@@ -62,6 +66,7 @@ export default function TestimoniosPage() {
         >
           Testimonios de Nuestros Pacientes
         </h2>
+
         <p
           className="lead text-center mb-5"
           style={{ color: "#6C584C", maxWidth: "700px", margin: "0 auto" }}
@@ -93,12 +98,11 @@ export default function TestimoniosPage() {
                   (e.currentTarget.style.transform = "translateY(0)")
                 }
               >
-                {/* Video o miniatura */}
                 <div
                   style={{
                     position: "relative",
                     width: "100%",
-                    paddingTop: "177%", // 9:16 vertical
+                    paddingTop: "177%",
                     overflow: "hidden",
                     backgroundColor: "#000",
                     borderRadius: "12px 12px 0 0",
@@ -144,7 +148,6 @@ export default function TestimoniosPage() {
                           filter: "brightness(0.9)",
                         }}
                       />
-                      {/* Botón de Play */}
                       <div
                         style={{
                           position: "absolute",
@@ -170,7 +173,6 @@ export default function TestimoniosPage() {
                   )}
                 </div>
 
-                {/* Texto debajo */}
                 <div className="p-3 text-center">
                   <h5
                     className="fw-bold mb-2"
@@ -198,7 +200,6 @@ export default function TestimoniosPage() {
         </div>
       </div>
 
-      {/* Animaciones CSS */}
       <style jsx>{`
         @keyframes fadeZoomIn {
           from {

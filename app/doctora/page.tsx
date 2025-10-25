@@ -124,12 +124,25 @@ export default function DoctoraPage() {
         {/* IZQUIERDA */}
         <div style={{ flex: "1 1 50%", background: "linear-gradient(135deg,#FAF9F7 0%,#E9DED2 100%)", padding: "4rem" }}>
           <h1 className="fw-bold display-5 mb-4" style={{ color: "#4E3B2B", fontFamily: "'Playfair Display',serif" }}>
-            Deja que tu rostro exprese su mejor versión, sin perder lo que te hace exclusivo/a
+            Quien es la doctora Julieth Vanessa Medina?
           </h1>
           <p className="lead mb-4" style={{ color: "#6C584C" }}>
-            “La autenticidad, sofisticación y elegancia son la nueva era de la Medicina estética. Invertir en ti debe tratarse de
-            resaltar lo que te hace único/a generando una belleza real y sin excesos.” — <b>Julieth Medina</b>.
-          </p>
+  Julieth Vanessa Medina es una médica colombiana apasionada por el bienestar y la belleza natural. Desde mis primeros años trabajando
+  en hospitales, descubrí que mi verdadera vocación estaba en la medicina estética, donde podía unir ciencia, arte y empatía para 
+  resaltar la mejor versión de cada persona.
+</p>
+
+<p className="lead mb-4" style={{ color: "#6C584C" }}>
+  Con el tiempo, decidí abrir mi propio consultorio, un espacio diseñado para ofrecer confianza, resultados naturales y 
+  tratamientos con tecnología de última generación. Hoy, mi mayor satisfacción es ver cómo cada paciente se siente más seguro 
+  y feliz al reflejar en su rostro la armonía que siempre ha tenido por dentro.
+</p>
+
+<p className="lead" style={{ color: "#6C584C" }}>
+  “La autenticidad, sofisticación y elegancia son la nueva era de la Medicina estética. Invertir en ti debe tratarse de
+  resaltar lo que te hace único/a generando una belleza real y sin excesos.” — <b>Julieth Medina</b>.
+</p>
+
           <Link
             href="/agendar"
             className="btn btn-lg fw-semibold"

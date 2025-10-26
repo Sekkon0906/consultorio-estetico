@@ -32,8 +32,8 @@ const PRECIOS: Record<string, number> = {
   "Tratamiento para Manchas": 300000,
 };
 
-const WHATSAPP_NUM = "573138210700";
-const CLINIC_EMAIL = "etr510@gmail.com";
+const WHATSAPP_NUM = "57 315 5445748";
+const CLINIC_EMAIL = "dra.vanessamedinao@gmail.com";
 
 const fmtCOP = (v: number) =>
   v.toLocaleString("es-CO", {

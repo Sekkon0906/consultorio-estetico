@@ -9,11 +9,11 @@ import { TypeAnimation } from "react-type-animation";
 export default function DoctoraPage() {
   // ===== HERO - Carrusel principal =====
   const imagenes = [
-    "/imagenes/carrucel_dr1.jpg",
-    "/imagenes/carrucel_dr2.jpg",
-    "/imagenes/carrucel_dr3.jpg",
-    "/imagenes/carrucel_dr4.jpg",
-    "/imagenes/carrucel_dr5.jpg",
+   "/imagenes/carrucel/carrucel_dr/carrucel_dr1.jpg",
+    "/imagenes/carrucel/carrucel_dr/carrucel_dr2.jpg",
+    "/imagenes/carrucel/carrucel_dr/carrucel_dr3.jpg",
+    "/imagenes/carrucel/carrucel_dr/carrucel_dr4.jpg",
+    "/imagenes/carrucel/carrucel_dr/carrucel_dr5.jpg",
   ];
   const [imagenActual, setImagenActual] = useState(0);
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function DoctoraPage() {
         {/* IZQUIERDA */}
         <div style={{ flex: "1 1 50%", background: "linear-gradient(135deg,#FAF9F7 0%,#E9DED2 100%)", padding: "4rem" }}>
           <h1 className="fw-bold display-5 mb-4" style={{ color: "#4E3B2B", fontFamily: "'Playfair Display',serif" }}>
-            Quien es la doctora Julieth Vanessa Medina?
+            ¿Quien es la doctora Julieth Vanessa Medina?
           </h1>
           <p className="lead mb-4" style={{ color: "#6C584C" }}>
   Julieth Vanessa Medina es una médica colombiana apasionada por el bienestar y la belleza natural. Desde mis primeros años trabajando
@@ -142,20 +142,56 @@ export default function DoctoraPage() {
   “La autenticidad, sofisticación y elegancia son la nueva era de la Medicina estética. Invertir en ti debe tratarse de
   resaltar lo que te hace único/a generando una belleza real y sin excesos.” — <b>Julieth Medina</b>.
 </p>
+<div className="d-flex flex-wrap gap-3 mt-4">
+    <Link
+      href="/agendar"
+      className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
+      style={{
+        backgroundColor: "#B08968",
+        color: "white",
+        border: "none",
+        borderRadius: "50px",
+        padding: "0.9rem 2.5rem",
+        transition: "all 0.3s ease, transform 0.2s ease",
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.backgroundColor = "#A1724F";
+        e.currentTarget.style.transform = "scale(1.07)";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.backgroundColor = "#B08968";
+        e.currentTarget.style.transform = "scale(1)";
+      }}
+    >
+      <i className="fas fa-calendar-check me-2" /> Agendar Cita
+    </Link>
 
-          <Link
-            href="/agendar"
-            className="btn btn-lg fw-semibold"
-            style={{
-              backgroundColor: "#B08968",
-              color: "white",
-              borderRadius: "50px",
-              padding: "0.9rem 2.5rem",
-            }}
-          >
-            <i className="fas fa-calendar-check me-2" /> Agendar Cita
-          </Link>
-        </div>
+    <a
+      href="https://www.instagram.com/dravanessamedinao28/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
+      style={{
+        backgroundColor: "#B08968",
+        color: "white",
+        border: "none",
+        borderRadius: "50px",
+        padding: "0.9rem 2.5rem",
+        transition: "all 0.3s ease, transform 0.2s ease",
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.backgroundColor = "#A1724F";
+        e.currentTarget.style.transform = "scale(1.07)";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.backgroundColor = "#B08968";
+        e.currentTarget.style.transform = "scale(1)";
+      }}
+    >
+      <i className="fab fa-instagram me-2" /> Conocer más sobre la doctora
+    </a>
+  </div>
+</div>
 
         {/* DERECHA */}
         <div style={{ flex: "1 1 50%", position: "relative", overflow: "hidden" }}>

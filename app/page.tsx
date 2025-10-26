@@ -2,21 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Galeria3D from "@/components/Galeria3D";
-import Counter from "@/components/Counter";
+import dynamic from "next/dynamic";
+import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+
+const VideoAnim = dynamic(() => import("@/components/VideoAnim"), { ssr: false });
 
 export default function HomePage() {
-  // Carrusel home
   const imagenes = [
-    "/imagenes/carrucel_home1.jpg",
-    "/imagenes/carrucel_home2.jpg",
-    "/imagenes/carrucel_home3.jpg",
-    "/imagenes/carrucel_home4.jpg",
-    "/imagenes/carrucel_home5.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home1.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home2.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home3.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home4.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home5.jpg",
+    "/imagenes/carrucel/carrucel_home/carrucel_home6.jpg",
   ];
 
   const [imagenActual, setImagenActual] = useState(0);
+  const [mostrarTextoCompleto, setMostrarTextoCompleto] = useState(false);
 
   useEffect(() => {
     const intervalo = setInterval(() => {
@@ -25,27 +29,12 @@ export default function HomePage() {
     return () => clearInterval(intervalo);
   }, [imagenes.length]);
 
-  // Procedimientos varios
-  const tratamientos = [
-    {
-      img: "/imagenes/P_Tratamiento_Acne.jpg",
-      title: "Tratamiento contra el Acné",
-      desc: "Reduce brotes, limpia poros y mejora la textura de la piel para un cutis más uniforme y saludable.",
-      id: 1,
-    },
-    {
-      img: "/imagenes/P_perfilamientoRostro.jpg",
-      title: "Perfilamiento Facial",
-      desc: "Resalta tus rasgos con técnicas de armonización facial, definiendo contornos de forma natural y precisa.",
-      id: 2,
-    },
-    {
-      img: "/imagenes/P_Tratamiento_Manchas.jpg",
-      title: "Tratamiento Antimanchas",
-      desc: "Aclara y unifica el tono de la piel, reduciendo hiperpigmentaciones y devolviendo luminosidad al rostro.",
-      id: 3,
-    },
-  ];
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
+
+  const ubicacionConsultorio = { lat: 4.438889, lng: -75.199722 };
+  const memoizedVideo = useMemo(() => <VideoAnim />, []);
 
   return (
     <>
@@ -58,7 +47,7 @@ export default function HomePage() {
           position: "relative",
         }}
       >
-        {/* Mitad izquierda: carrusel */}
+        {/* Carrusel izquierdo */}
         <div
           className="hero-left position-relative"
           style={{
@@ -93,7 +82,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Mitad derecha */}
+        {/* Texto derecho */}
         <div
           className="hero-right d-flex flex-column justify-content-center"
           style={{
@@ -112,173 +101,157 @@ export default function HomePage() {
                 lineHeight: "1.2",
               }}
             >
-              ¡La innovadora y exclusiva tecnología de Hydrafacial, está en el
+              ¡La innovadora y exclusiva tecnología de Hydrafacial está en el
               consultorio de la Dra. Vanessa Medina!
             </h1>
 
+            {/* Texto visible en pantallas grandes */}
             <p
-              className="lead mb-4"
+              className="lead mb-4 d-none d-lg-block"
               style={{
                 color: "#6C584C",
-                fontSize: "1.1rem",
-                lineHeight: "1.6",
+                fontSize: "1.05rem",
+                lineHeight: "1.7",
+                textAlign: "justify",
               }}
             >
-              “El bienestar verdadero nace del equilibrio: cuerpo fuerte, mente
-              serena y emociones en armonía. La salud y la estética se
-              construyen cultivando hábitos que nos mantienen jóvenes,
-              energéticos y en paz.”
+              <strong>Que es HydraFacial? Es innovación en cuidado facial.</strong> HydraFacial es una
+              tecnología estética de última generación que combina limpieza profunda,
+              exfoliación, extracción de impurezas e hidratación avanzada en un solo
+              procedimiento. Su sistema patentado utiliza un aplicador con succión
+              controlada y sueros enriquecidos que renuevan la piel desde la primera sesión,
+              sin necesidad de tiempo de recuperación. Es un tratamiento médico-estético
+              seguro, eficaz y con resultados visibles al instante.
+              <br />
+              <br />
+              <strong>¿Para qué sirve?</strong> Este procedimiento está diseñado para revitalizar la piel y tratar múltiples necesidades al mismo tiempo: poros dilatados, textura irregular, líneas de expresión, manchas, acné y deshidratación. Gracias a su tecnología de vórtice, elimina células muertas e impurezas mientras infunde potentes antioxidantes, péptidos y ácido hialurónico, devolviendo al rostro su luminosidad natural.
+              <br />
+              <br />
+              <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio de la
+              Dra. Vanessa Medina es el único en el Tolima que cuenta con la tecnología
+              original HydraFacial®, certificada internacionalmente. Esta exclusividad
+              garantiza que cada paciente experimente el auténtico procedimiento avalado
+              por la marca, con equipos originales y protocolos clínicos de precisión.
+              Disfrutar de un HydraFacial en Ibagué es ahora posible gracias a la Dra.
+              Vanessa, quien ha traído a la región un servicio estético de estándar
+              internacional que antes solo se encontraba en grandes capitales.
             </p>
 
-            <Link
-              href="/agendar"
-              className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
+            {/* Texto corto + Leer más (solo móvil) */}
+            <p
+              className="lead mb-4 d-lg-none"
               style={{
-                backgroundColor: "#B08968",
-                color: "white",
-                border: "none",
-                borderRadius: "50px",
-                padding: "0.9rem 2.5rem",
-                boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
+                color: "#6C584C",
                 fontSize: "1.05rem",
-                transition:
-                  "all 0.35s ease, transform 0.2s ease, box-shadow 0.3s ease",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = "#A1724F";
-                e.currentTarget.style.transform = "scale(1.07)";
-                e.currentTarget.style.boxShadow =
-                  "0 6px 16px rgba(161, 114, 79, 0.4)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = "#B08968";
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(176, 137, 104, 0.25)";
+                lineHeight: "1.7",
+                textAlign: "justify",
+                overflow: "hidden",
               }}
             >
-              <i className="fas fa-calendar-check me-2"></i> Agendar Cita
-            </Link>
-          </div>
-        </div>
-      </section>
+              {!mostrarTextoCompleto ? (
+                <>
+                  <strong>HydraFacial:</strong> la tecnología que transforma el
+                  cuidado facial, combinando limpieza, exfoliación e hidratación
+                  profunda en un solo procedimiento. Resultados visibles desde la
+                  primera sesión, con piel más luminosa y saludable.
+                </>
+              ) : (
+                <>
+                  <strong>HydraFacial: innovación en cuidado facial.</strong> HydraFacial
+                  es una tecnología estética de última generación que combina limpieza
+                  profunda, exfoliación, extracción de impurezas e hidratación avanzada
+                  en un solo procedimiento. Su sistema patentado utiliza un aplicador
+                  con succión controlada y sueros enriquecidos que renuevan la piel desde
+                  la primera sesión, sin necesidad de tiempo de recuperación.
+                  <br />
+                  <br />
+                  <strong>¿Para qué sirve?</strong> Revitaliza la piel, trata poros
+                  dilatados, líneas finas, manchas y deshidratación, devolviendo su
+                  luminosidad natural. <br />
+                  <br />
+                  <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio
+                  de la Dra. Vanessa Medina es el único en la región con tecnología
+                  original HydraFacial®, certificada internacionalmente.
+                </>
+              )}
+            </p>
 
-      {/* SOBRE LA DRA */}
-      <section
-        className="py-5"
-        style={{
-          background: "linear-gradient(180deg, #F8F5F0 0%, #FFFFFF 100%)",
-        }}
-      >
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-10">
-              <div
-                className="card border-0 shadow-lg overflow-hidden"
-                style={{ backgroundColor: "#FAF9F7" }}
+            {/* Botón Leer más solo móvil */}
+            <div className="mt-3 d-lg-none text-center">
+              <button
+                onClick={() => setMostrarTextoCompleto(!mostrarTextoCompleto)}
+                className="btn btn-sm fw-semibold"
+                style={{
+                  backgroundColor: "transparent",
+                  color: "#A1724F",
+                  border: "none",
+                  textDecoration: "underline",
+                }}
               >
-                <div className="row g-0 align-items-center">
-                  {/* Imagen y contadores */}
-                  <div
-                    className="col-lg-4 p-4 text-center"
-                    style={{ backgroundColor: "#FFFDF9" }}
-                  >
-                    <Image
-                      src="/imagenes/hydroface.jpg"
-                      alt="Dra. Juliet Medina"
-                      width={320}
-                      height={320}
-                      className="img-fluid rounded-4 object-fit-cover shadow-sm"
-                      style={{ aspectRatio: "1/1" }}
-                    />
-                    <div className="d-flex justify-content-center gap-5 mt-4">
-                      <Counter end={3000} label="Pacientes" suffix="+" duration={2500} />
-                      <Counter end={15} label="Procedimientos" suffix="+" duration={2000} />
-                    </div>
-                  </div>
+                {mostrarTextoCompleto ? "Mostrar menos" : "Leer más"}
+              </button>
+            </div>
 
-                  {/* Contenido */}
-                  <div className="col-lg-8 p-4 p-lg-5 text-center text-lg-start">
-                    <div
-                      className="d-flex align-items-center mb-4 justify-content-center justify-content-lg-start flex-wrap"
-                      style={{ gap: "12px" }}
-                    >
-                      <span
-                        className="badge"
-                        style={{
-                          backgroundColor: "#E9DED2",
-                          color: "#4E3B2B",
-                          fontWeight: 600,
-                          fontSize: "0.9rem",
-                          padding: "0.5rem 1rem",
-                          borderRadius: "0.75rem",
-                        }}
-                      >
-                        Medicina Estética • Antienvejecimiento
-                      </span>
+            {/* BOTONES */}
+            <div className="d-flex flex-wrap gap-3 mt-3">
+              <Link
+                href="/agendar"
+                className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
+                style={{
+                  backgroundColor: "#B08968",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "50px",
+                  padding: "0.9rem 2.5rem",
+                  boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
+                  fontSize: "1.05rem",
+                  transition: "all 0.35s ease, transform 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = "#A1724F";
+                  e.currentTarget.style.transform = "scale(1.07)";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = "#B08968";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                <i className="fas fa-calendar-check me-2"></i> Agendar Cita
+              </Link>
 
-                      <Link
-                        href="/vanessa-medina"
-                        className="fw-bold"
-                        style={{
-                          color: "#4E3B2B",
-                          fontFamily: "'Playfair Display', serif",
-                          fontSize: "2rem",
-                          textDecoration: "none",
-                          transition: "color 0.3s ease",
-                        }}
-                        onMouseOver={(e) => (e.currentTarget.style.color = "#A1724F")}
-                        onMouseOut={(e) => (e.currentTarget.style.color = "#4E3B2B")}
-                      >
-                        Dra. Juliet Medina
-                      </Link>
-                    </div>
-
-                    <p
-                      className="text-muted mb-4"
-                      style={{ color: "#6C584C", fontSize: "1rem" }}
-                    >
-                      Médica especialista en Medicina Estética con más de 5 años
-                      de experiencia. Tratamientos personalizados con enfoque en
-                      resultados naturales y bienestar integral.
-                    </p>
-
-                    <div className="mt-4 text-center text-lg-start">
-                      <Link
-                        href="/doctora"
-                        className="fw-semibold"
-                        style={{
-                          display: "inline-block",
-                          padding: "0.85rem 2.2rem",
-                          borderRadius: "40px",
-                          border: "2px solid #B08968",
-                          color: "#4E3B2B",
-                          fontSize: "1.05rem",
-                          backgroundColor: "transparent",
-                          transition: "all 0.35s ease",
-                          textDecoration: "none",
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = "#B08968";
-                          e.currentTarget.style.color = "#FFF";
-                          e.currentTarget.style.transform = "scale(1.05)";
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = "#4E3B2B";
-                          e.currentTarget.style.transform = "scale(1)";
-                        }}
-                      >
-                        Conocer más sobre la doctora
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <a
+                href="https://www.instagram.com/hydrafacialcolombia/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
+                style={{
+                  backgroundColor: "#B08968",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "50px",
+                  padding: "0.9rem 2.5rem",
+                  boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
+                  fontSize: "1.05rem",
+                  transition: "all 0.35s ease, transform 0.2s ease",
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = "#A1724F";
+                  e.currentTarget.style.transform = "scale(1.07)";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = "#B08968";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                <i className="fab fa-instagram me-2"></i> Conocer más de HydraFacial
+              </a>
             </div>
           </div>
         </div>
       </section>
+
+      {/* VIDEO CENTRAL */}
+      {memoizedVideo}
 
       {/* GALERÍA 3D */}
       <section
@@ -287,11 +260,16 @@ export default function HomePage() {
           backgroundColor: "#FAF9F7",
           borderTop: "1px solid #E8E1D4",
           borderBottom: "1px solid #E8E1D4",
-          
         }}
       >
         <div className="text-center mb-5">
-          <h2 className="fw-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#4E3B2B" }}>
+          <h2
+            className="fw-bold"
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              color: "#4E3B2B",
+            }}
+          >
             Tratamientos más demandados
           </h2>
           <p className="lead" style={{ color: "#6C584C" }}>
@@ -302,112 +280,74 @@ export default function HomePage() {
         <Galeria3D />
       </section>
 
-      {/* PROCEDIMIENTOS VARIOS */}
+      {/* UBICACIÓN */}
       <section
-        className="py-5"
+        className="py-5 text-center"
         style={{
-          background: "linear-gradient(180deg, #FAF9F7 0%, #F1E9E0 100%)",
+          backgroundColor: "#E9DED2",
+          color: "#4E3B2B",
         }}
       >
-        <div className="container">
-          <div className="text-center mb-5">
-            <h2
-              className="fw-bold"
-              style={{
-                color: "#4E3B2B",
-                fontFamily: "'Playfair Display', serif",
-              }}
-            >
-              Procedimientos Varios
-            </h2>
-            <p
-              className="lead"
-              style={{
-                color: "#6C584C",
-                fontSize: "1.1rem",
-              }}
-            >
-              Descubre nuestros tratamientos más solicitados y efectivos
-            </p>
-          </div>
+        <h2
+          className="fw-bold mb-3"
+          style={{ fontFamily: "'Playfair Display', serif" }}
+        >
+          Nuestra ubicación
+        </h2>
+        <p className="mb-4" style={{ color: "#6C584C" }}>
+          Encuéntranos en el corazón de Ibagué, dentro de la Torre Empresarial.
+        </p>
 
-          <div className="row g-4">
-            {tratamientos.map((p, i) => (
-              <div className="col-md-6 col-lg-4" key={i}>
-                <div
-                  className="card h-100 shadow-sm border-0 rounded-4 overflow-hidden"
-                  style={{
-                    backgroundColor: "#FFFDF9",
-                    transition: "all 0.35s ease",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = "translateY(-6px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 8px 20px rgba(176, 137, 104, 0.3)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow =
-                      "0 4px 12px rgba(176, 137, 104, 0.15)";
-                  }}
-                >
-                  <Image
-                    src={p.img}
-                    alt={p.title}
-                    width={600}
-                    height={400}
-                    className="card-img-top"
-                    style={{
-                      objectFit: "cover",
-                      height: "250px",
-                      borderBottom: "3px solid #E9DED2",
-                    }}
-                  />
-                  <div className="card-body p-4">
-                    <h5
-                      className="fw-bold mb-2"
-                      style={{
-                        color: "#4E3B2B",
-                        fontFamily: "'Playfair Display', serif",
-                      }}
-                    >
-                      {p.title}
-                    </h5>
-                    <p
-                      className="text-muted mb-3"
-                      style={{
-                        color: "#6C584C",
-                        lineHeight: "1.6",
-                      }}
-                    >
-                      {p.desc}
-                    </p>
-                    <Link
-                      href={`/procedimientos/`}
-                      className="fw-semibold text-decoration-none"
-                      style={{
-                        color: "#B08968",
-                        transition: "color 0.3s ease",
-                      }}
-                      onMouseOver={(e) =>
-                        (e.currentTarget.style.color = "#8C6D4F")
-                      }
-                      onMouseOut={(e) =>
-                        (e.currentTarget.style.color = "#B08968")
-                      }
-                    >
-                      Ver más{" "}
-                      <i
-                        className="fas fa-arrow-right ms-1"
-                        style={{ color: "#B08968" }}
-                      ></i>
-                    </Link>
-                  </div>
+        <div
+          style={{
+            width: "90%",
+            maxWidth: "900px",
+            height: "450px",
+            margin: "0 auto",
+            borderRadius: "20px",
+            overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+          }}
+        >
+          {isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={{ width: "100%", height: "100%" }}
+              center={ubicacionConsultorio}
+              zoom={17}
+            >
+              <Marker position={ubicacionConsultorio} label="🏥" />
+              <InfoWindow position={ubicacionConsultorio}>
+                <div style={{ color: "#4E3B2B" }}>
+                  <strong>Consultorio Dra. Vanessa Medina</strong>
+                  <br />
+                  Carrera 5ta #11-24, Torre Empresarial, Consultorio 502
+                  <br />
+                  Ibagué – Tolima
                 </div>
-              </div>
-            ))}
-          </div>
+              </InfoWindow>
+            </GoogleMap>
+          ) : (
+            <p>Cargando mapa...</p>
+          )}
         </div>
+
+        <a
+          href="https://www.google.com/maps?q=Carrera+5ta+%2311-24,+Torre+Empresarial,+Consultorio+502,+Ibagué,+Tolima"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-lg fw-semibold mt-4"
+          style={{
+            backgroundColor: "#B08968",
+            color: "white",
+            border: "none",
+            borderRadius: "50px",
+            padding: "0.8rem 2rem",
+            boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
+            transition: "all 0.3s ease",
+          }}
+        >
+          <i className="fas fa-map-marker-alt me-2"></i> Ver en Google Maps
+        </a>
       </section>
     </>
   );

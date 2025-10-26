@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { loginUser } from "../utils/auth";
 import { useRouter } from "next/navigation";
+import FondoAnim from "@/components/FondoAnim";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,15 +50,22 @@ export default function LoginPage() {
 
   return (
     <section
-      className="py-5"
+      className="py-5 position-relative"
       style={{
         background: "linear-gradient(180deg, #FAF9F7 0%, #F1E9E0 100%)",
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
+        overflow: "hidden",
       }}
     >
-      <div className="container">
+      {/* Fondo animado */}
+      <div className="absolute inset-0 z-0">
+        <FondoAnim />
+      </div>
+
+      {/* Contenido principal */}
+      <div className="container position-relative z-10">
         <div className="row justify-content-center">
           <div className="col-md-7 col-lg-5">
             <div
@@ -207,66 +215,65 @@ export default function LoginPage() {
                       : "Entrar"}
                   </button>
 
-                {/* Links */}
-<div className="text-center mt-4">
-  {!recoverMode ? (
-    <>
-      <p
-        style={{
-          color: "#B08968",
-          cursor: "pointer",
-          textDecoration: "underline",
-          transition: "color 0.3s ease",
-          marginBottom: "0.8rem",
-        }}
-        onClick={() => setRecoverMode(true)}
-        onMouseOver={(e) =>
-          (e.currentTarget.style.color = "#A1724F")
-        }
-        onMouseOut={(e) =>
-          (e.currentTarget.style.color = "#B08968")
-        }
-      >
-        ¿Olvidaste tu contraseña?
-      </p>
+                  {/* Links */}
+                  <div className="text-center mt-4">
+                    {!recoverMode ? (
+                      <>
+                        <p
+                          style={{
+                            color: "#B08968",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                            transition: "color 0.3s ease",
+                            marginBottom: "0.8rem",
+                          }}
+                          onClick={() => setRecoverMode(true)}
+                          onMouseOver={(e) =>
+                            (e.currentTarget.style.color = "#A1724F")
+                          }
+                          onMouseOut={(e) =>
+                            (e.currentTarget.style.color = "#B08968")
+                          }
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </p>
 
-      <p style={{ color: "#4E3B2B", fontSize: "0.9rem" }}>
-        ¿No tienes cuenta?{" "}
-        <span
-          onClick={() => router.push("/register")}
-          style={{
-            color: "#B08968",
-            textDecoration: "underline",
-            fontWeight: 600,
-            transition: "color 0.3s ease",
-            cursor: "pointer",
-          }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.color = "#A1724F")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.color = "#B08968")
-          }
-        >
-          Quiero registrarme
-        </span>
-      </p>
-    </>
-  ) : (
-    <p
-      onClick={() => setRecoverMode(false)}
-      style={{
-        color: "#B08968",
-        cursor: "pointer",
-        textDecoration: "underline",
-        marginTop: "1rem",
-      }}
-    >
-      Volver al inicio de sesión
-    </p>
-  )}
-</div>
-
+                        <p style={{ color: "#4E3B2B", fontSize: "0.9rem" }}>
+                          ¿No tienes cuenta?{" "}
+                          <span
+                            onClick={() => router.push("/register")}
+                            style={{
+                              color: "#B08968",
+                              textDecoration: "underline",
+                              fontWeight: 600,
+                              transition: "color 0.3s ease",
+                              cursor: "pointer",
+                            }}
+                            onMouseOver={(e) =>
+                              (e.currentTarget.style.color = "#A1724F")
+                            }
+                            onMouseOut={(e) =>
+                              (e.currentTarget.style.color = "#B08968")
+                            }
+                          >
+                            Quiero registrarme
+                          </span>
+                        </p>
+                      </>
+                    ) : (
+                      <p
+                        onClick={() => setRecoverMode(false)}
+                        style={{
+                          color: "#B08968",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          marginTop: "1rem",
+                        }}
+                      >
+                        Volver al inicio de sesión
+                      </p>
+                    )}
+                  </div>
                 </form>
               </div>
             </div>

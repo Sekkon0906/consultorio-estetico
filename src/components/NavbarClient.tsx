@@ -2,12 +2,36 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
+
+// Evita errores de SSR importando Framer Motion dinámicamente
+const MotionDiv = dynamic(
+  async () => (await import("framer-motion")).motion.div,
+  { ssr: false }
+);
 
 export default function NavbarClient() {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { label: "Inicio", href: "/" },
+    { label: "Dra. Vanessa Medina", href: "/doctora" },
+    { label: "Instalaciones", href: "/consultorio" },
+    { label: "Procedimientos", href: "/procedimientos" },
+    { label: "Testimonios", href: "/testimonios" },
+    { label: "Agendar cita", href: "/agendar" },
+    { label: "Administrar", href: "/admin" },
+  ];
+
   return (
     <nav
       className="navbar navbar-expand-lg shadow-sm py-3"
-      style={{ backgroundColor: "#FAF9F7" }}
+      style={{
+        backgroundColor: "#FAF9F7",
+        position: "relative",
+        zIndex: 10,
+      }}
     >
       <div
         className="container-fluid d-flex justify-content-between align-items-center"
@@ -26,11 +50,12 @@ export default function NavbarClient() {
           }}
         >
           <Image
-            src="/imagenes/logoJM.png"
+            src="/imagenes/logo/logoJM.jpg"
             alt="Logo Clínica Estética"
             width={80}
             height={60}
             className="me-1"
+            priority
           />
           <div>
             <span
@@ -59,7 +84,7 @@ export default function NavbarClient() {
 
         {/* CENTRO: Menú interactivo */}
         <div
-          className="d-flex justify-content-center align-items-center"
+          className="d-flex justify-content-center align-items-center position-relative"
           style={{ flex: "1.5" }}
         >
           <ul
@@ -67,36 +92,98 @@ export default function NavbarClient() {
             style={{
               gap: "1.4rem",
               fontSize: "1rem",
+              position: "relative",
             }}
           >
-            {[
-              { label: "Inicio", href: "/" },
-              { label: "Dra. Vanessa Medina", href: "/doctora" },
-              { label: "Procedimientos", href: "/procedimientos" },
-              { label: "Testimonios", href: "/testimonios" },
-              { label: "Agendar cita", href: "/agendar" },
-              { label: "Instalaciones", href: "/consultorio" },
-              { label: "Administrar", href: "/admin" },
-            ].map((item, index) => (
-              <li key={index} className="nav-item">
-                <Link
-                  href={item.href}
-                  className="nav-link fw-semibold"
-                  style={{
-                    color: "#2B2B2B",
-                    transition: "color 0.3s ease",
-                  }}
-                  onMouseOver={(e) =>
-                    (e.currentTarget.style.color = "#B08968")
-                  }
-                  onMouseOut={(e) =>
-                    (e.currentTarget.style.color = "#2B2B2B")
-                  }
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {menuItems.map((item, index) => {
+              const isActive = pathname === item.href;
+
+              return (
+                <li key={index} className="nav-item" style={{ listStyle: "none" }}>
+                  <Link
+                    href={item.href}
+                    className="nav-link fw-semibold position-relative"
+                    style={{
+                      color: isActive ? "#B08968" : "#2B2B2B",
+                      fontWeight: "600",
+                      transition: "all 0.3s ease",
+                      padding: "8px 14px",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* SUBRAYADO ACTIVO */}
+                    {isActive && (
+                      <MotionDiv
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{
+                          width: "100%",
+                          opacity: 1,
+                        }}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeInOut",
+                        }}
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          height: "3px",
+                          borderRadius: "2px",
+                          background:
+                            "linear-gradient(90deg, #b08968, #ffe4c0, #b08968)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* EFECTO DE DESTELLO VIAJERO */}
+                        <MotionDiv
+                          initial={{ x: "-100%" }}
+                          animate={{ x: "100%" }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          style={{
+                            width: "60%",
+                            height: "100%",
+                            background:
+                              "linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)",
+                            filter: "blur(3px)",
+                          }}
+                        />
+                      </MotionDiv>
+                    )}
+
+                    {item.label}
+
+                    {/* EFECTO DE AURA SUAVE */}
+                    {isActive && (
+                      <MotionDiv
+                        initial={{ opacity: 0.2 }}
+                        animate={{
+                          opacity: [0.2, 0.6, 0.2],
+                          scale: [1, 1.04, 1],
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        style={{
+                          position: "absolute",
+                          inset: "-5px",
+                          borderRadius: "12px",
+                          zIndex: -1,
+                          background:
+                            "radial-gradient(circle, rgba(176,137,104,0.15) 0%, rgba(176,137,104,0) 70%)",
+                        }}
+                      />
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

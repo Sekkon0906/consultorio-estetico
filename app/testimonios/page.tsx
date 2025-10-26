@@ -3,40 +3,41 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import FondoAnim from "@/components/FondoAnim";
+import ComentariosClientes from "@/components/ComentariosClientes";
 
 export default function TestimoniosPage() {
   const testimonios = [
     {
       id: 1,
-      thumb: "/imagenes/testimonio1.jpg",
+      thumb: "/imagenes/testimonios/testimonio1.jpg",
       video: "https://www.youtube-nocookie.com/embed/2sooGeas5VU",
       nombre: "Laura G.",
       texto: "Gracias a la Dra. Vanessa, mi piel volvió a verse luminosa y saludable.",
     },
     {
       id: 2,
-      thumb: "/imagenes/testimonio2.jpg",
+      thumb: "/imagenes/testimonios/testimonio2.jpg",
       video: "https://www.youtube-nocookie.com/embed/CS9WgY4eomo",
       nombre: "Camila R.",
       texto: "El tratamiento fue cómodo, seguro y con resultados increíbles.",
     },
     {
       id: 3,
-      thumb: "/imagenes/testimonio3.jpg",
+      thumb: "/imagenes/testimonios/testimonio3.jpg",
       video: "https://www.youtube-nocookie.com/embed/wTAMYOhU5D4",
       nombre: "Carolina P.",
       texto: "Resultados naturales, atención cálida y profesionalismo en cada detalle.",
     },
     {
       id: 4,
-      thumb: "/imagenes/testimonio4.jpg",
+      thumb: "/imagenes/testimonios/testimonio4.jpg",
       video: "https://www.youtube-nocookie.com/embed/hKTEMGxCEBA",
       nombre: "Valentina S.",
       texto: "Después del tratamiento de acné, mi rostro cambió por completo.",
     },
     {
       id: 5,
-      thumb: "/imagenes/testimonio5.jpg",
+      thumb: "/imagenes/testimonios/testimonio5.jpg",
       video: "https://www.youtube-nocookie.com/embed/9kaV_avyPJo",
       nombre: "Andrés E.",
       texto: "La Dra. Vanessa combina ciencia y arte. ¡Los resultados hablan por sí solos!",
@@ -52,29 +53,48 @@ export default function TestimoniosPage() {
         overflow: "hidden",
         minHeight: "100vh",
         padding: "5rem 2rem",
+        backgroundColor: "#FAF7F2",
       }}
     >
-      <FondoAnim />
+      {/* Fondo animado */}
+      <div className="absolute inset-0 z-0">
+        <FondoAnim />
+      </div>
 
-      <div className="container position-relative">
-        <h2
-          className="fw-bold text-center mb-4"
+      <div className="relative z-10 container position-relative">
+        {/* Viñeta blanca decorativa */}
+        <div
+          className="mx-auto mb-5 p-4 text-center rounded-3 shadow-sm backdrop-blur-sm"
           style={{
-            color: "#4E3B2B",
-            fontFamily: "'Playfair Display', serif",
+            background: "rgba(255, 255, 255, 0.8)",
+            maxWidth: "800px",
+            border: "1px solid #E9DED2",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
           }}
         >
-          Testimonios de Nuestros Pacientes
-        </h2>
+          <h2
+            className="fw-bold mb-3"
+            style={{
+              color: "#4E3B2B",
+              fontFamily: "'Playfair Display', serif",
+            }}
+          >
+            Testimonios de Nuestros Pacientes
+          </h2>
 
-        <p
-          className="lead text-center mb-5"
-          style={{ color: "#6C584C", maxWidth: "700px", margin: "0 auto" }}
-        >
-          Experiencias reales de pacientes que confiaron en la Dra. Vanessa
-          Medina para transformar su bienestar y su confianza.
-        </p>
+          <p
+            className="lead mb-0"
+            style={{
+              color: "#6C584C",
+              lineHeight: "1.6",
+            }}
+          >
+            Experiencias reales de pacientes que confiaron en la Dra. Vanessa
+            Medina para transformar su bienestar y su confianza.
+          </p>
+        </div>
 
+        {/* Tarjetas de testimonios */}
         <div className="row g-4 justify-content-center">
           {testimonios.map((t, index) => (
             <div
@@ -142,6 +162,7 @@ export default function TestimoniosPage() {
                         src={t.thumb}
                         alt={t.nombre}
                         fill
+                        sizes="100vw"
                         style={{
                           objectFit: "cover",
                           borderRadius: "12px 12px 0 0",
@@ -197,6 +218,11 @@ export default function TestimoniosPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Sección de comentarios de Google */}
+        <div className="mt-5">
+          <ComentariosClientes />
         </div>
       </div>
 

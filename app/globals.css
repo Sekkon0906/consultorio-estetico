@@ -85,3 +85,31 @@ body {
 }
 
 }
+
+/* Corrige el color heredado de los íconos Font Awesome */
+footer a i {
+  color: inherit !important;
+}
+
+/* Animación de brillo dorado inicial */
+@keyframes shine {
+  0% {
+    background-position: -200%;
+  }
+  100% {
+    background-position: 200%;
+  }
+}
+
+.animate-shine i {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #e9ded2 50%,
+    transparent 100%
+  );
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 1.5s ease-out;
+}

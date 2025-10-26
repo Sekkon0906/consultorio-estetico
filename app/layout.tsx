@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./globals.css";
-import Image from "next/image";
 import NavbarClient from "@/components/NavbarClient";
+import Footer from "@/components/Footer"; // ✅ usa alias limpio
 
 export const metadata: Metadata = {
   title: "Clínica Estética Dra. Julieth Medina",
@@ -60,7 +60,8 @@ export default function RootLayout({
             >
               <i className="fas fa-map-marker-alt me-2"></i>
               <span>
-                Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
+                Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502.
+                Ibagué – Tolima.
               </span>
             </div>
 
@@ -73,6 +74,7 @@ export default function RootLayout({
                 href="https://www.facebook.com/profile.php?id=61556167276406"
                 target="_blank"
                 className="text-dark me-3"
+                rel="noopener noreferrer"
               >
                 <i className="fab fa-facebook-f"></i>
               </a>
@@ -80,6 +82,7 @@ export default function RootLayout({
                 href="https://www.instagram.com/dravanessamedinao28/"
                 target="_blank"
                 className="text-dark me-3"
+                rel="noopener noreferrer"
               >
                 <i className="fab fa-instagram"></i>
               </a>
@@ -87,6 +90,7 @@ export default function RootLayout({
                 href="https://api.whatsapp.com/message/SEJTQDVCRWGSP1?autoload=1&app_absent=0"
                 target="_blank"
                 className="text-dark"
+                rel="noopener noreferrer"
               >
                 <i className="fab fa-whatsapp"></i>
               </a>
@@ -100,73 +104,8 @@ export default function RootLayout({
         {/* CONTENIDO PRINCIPAL */}
         <main>{children}</main>
 
-{/* FOOTER */}
-<footer
-  className="text-white pt-5 pb-3 mt-4"
-  style={{
-    backgroundColor: "#6C584C",
-  }}
->
-  <div className="container">
-    <div className="row text-center text-md-start g-4">
-      <div className="col-md-4">
-        <h5
-          className="fw-bold mb-3"
-          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
-        >
-          Clínica Estética Dra. Juliet Medina
-        </h5>
-        <p style={{ color: "#FAF9F7" }}>
-          Esp. Medicina Estética & Salud Integral | Inyectora <strong>Elite</strong>.
-        </p>
-        <p style={{ color: "#FAF9F7" }}>Magíster en Gerencia Hospitalaria.</p>
-      </div>
-
-      <div className="col-md-4">
-        <h5
-          className="fw-bold mb-3"
-          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
-        >
-          Contacto
-        </h5>
-        <p style={{ color: "#FAF9F7" }}>
-          <i
-            className="fas fa-map-marker-alt me-2"
-            style={{ color: "#B08968" }}
-          ></i>
-          Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
-        </p>
-        <p style={{ color: "#FAF9F7" }}>
-          <i className="fas fa-phone me-2" style={{ color: "#B08968" }}></i> 315 5445748
-        </p>
-      </div>
-
-      <div className="col-md-4">
-        <h5
-          className="fw-bold mb-3"
-          style={{ color: "#E9DED2", fontFamily: "'Montserrat', sans-serif" }}
-        >
-          Horario
-        </h5>
-        <p style={{ color: "#FAF9F7" }}>
-          Lunes a Viernes: <br />
-          8:00 AM - 12:00 PM / 2:00 PM - 6:00 PM
-        </p>
-        <p style={{ color: "#FAF9F7" }}>Sábados: 9:00 AM - 1:00 PM</p>
-      </div>
-    </div>
-
-    <hr style={{ borderColor: "#B08968", opacity: 0.7 }} />
-
-    <div className="text-center mt-3">
-      <p style={{ color: "#E9DED2", fontSize: "0.9rem" }}>
-        © {new Date().getFullYear()} Clínica Estética Dra. Juliet Medina. Todos
-        los derechos reservados.
-      </p>
-    </div>
-  </div>
-</footer>
-
+        {/* FOOTER */}
+        <Footer />
       </body>
     </html>
   );

@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./globals.css";
 import NavbarClient from "@/components/NavbarClient";
-import Footer from "@/components/Footer"; // ✅ usa alias limpio
+import Footer from "@/components/Footer"; 
 
 export const metadata: Metadata = {
   title: "Clínica Estética Dra. Julieth Medina",

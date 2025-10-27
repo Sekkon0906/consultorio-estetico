@@ -16,6 +16,11 @@ const nextConfig = {
         hostname: "maps.googleapis.com",
       },
     ],
+    domains: [
+      "lh3.googleusercontent.com",
+      "ui-avatars.com",
+      "upload.wikimedia.org",
+    ],
   },
 };
 

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 export default function Footer() {
   const [animateIcons, setAnimateIcons] = useState(false);
@@ -20,7 +21,6 @@ export default function Footer() {
     terms: false,
   });
 
-  // === PROCEDIMIENTOS AGRUPADOS ===
   const proceduresList = {
     Faciales: [
       "Limpieza facial básica",
@@ -29,14 +29,8 @@ export default function Footer() {
       "Peeling químico",
       "NCTF 135 polirevitalizante",
       "Toxina botulínica facial (líneas de expresión)",
-      "Toxina botulínica axilar (hiperhidrosis)",
-      "Toxina botulínica palmar (hiperhidrosis)",
-      "Toxina botulínica maseteros (bruxismo)",
       "Ácido hialurónico (labios, ojeras, mentón, mandíbula)",
       "Plasma rico en plaquetas facial",
-      "Hydrafacial Perk (labios / ojos)",
-      "Tratamiento cuello y escote",
-      "Tratamiento espalda y glúteos",
       "Skinbooster facial",
     ],
     Corporales: [
@@ -77,9 +71,9 @@ export default function Footer() {
 
     const texto = `*Nuevo mensaje desde la web de la Clínica Estética Dra. Juliet Medina*  
 
-Mi nombre es ${name}, mi gmail es ${email} y mi numero de contacto es ${phone || "No especificado"}. 
+Mi nombre es ${name}, mi correo es ${email} y mi número de contacto es ${phone || "No especificado"}. 
 Tengo una pregunta con respecto al siguiente procedimiento: ${procedure || "No especificado"}  
-Mi pregunta es: ${message}`;
+Mi mensaje es: ${message}`;
 
     const numeroDestino = "573155445748";
 
@@ -99,7 +93,6 @@ Mi pregunta es: ${message}`;
     });
   };
 
-  // === ANIMACIÓN DE APERTURA SUAVE ===
   useEffect(() => {
     const content = document.getElementById("procedures-menu");
     if (content) {
@@ -122,7 +115,7 @@ Mi pregunta es: ${message}`;
       <div className="absolute inset-0 bg-[#6C584C]/90"></div>
 
       <div className="relative container mx-auto px-6 z-10">
-        {/* FORMULARIO */}
+        {/* === FORMULARIO === */}
         <div className="text-center mb-12">
           <h3
             className="text-3xl font-semibold mb-8 font-[Montserrat]"
@@ -154,12 +147,12 @@ Mi pregunta es: ${message}`;
               required
             />
 
-            {/* === BLOQUE DE PROCEDIMIENTOS CON ANIMACIÓN === */}
+            {/* === Procedimientos === */}
             <div className="relative md:col-span-2">
               <button
                 type="button"
                 onClick={() => setShowProcedures(!showProcedures)}
-                className="w-full bg-[#FAF9F7]/10 border border-[#B08968] text-left text-[#FAF9F7] rounded-md px-4 py-2 placeholder-[#FAF9F7]/70 focus:outline-none focus:ring-2 focus:ring-[#B08968] flex justify-between items-center"
+                className="w-full bg-[#FAF9F7]/10 border border-[#B08968] text-left text-[#FAF9F7] rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#B08968] flex justify-between items-center"
               >
                 {formData.procedure
                   ? `Procedimiento: ${formData.procedure}`
@@ -249,43 +242,35 @@ Mi pregunta es: ${message}`;
         <div className="border-t border-[#B08968]/60 my-10"></div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
           <div>
-            <h5 className="text-xl font-semibold mb-3 font-[Montserrat]" style={{ color: "#E9DED2" }}>
+            <h4 className="text-lg font-semibold mb-8 font-[Montserrat] text-[#E9DED2]">
               Clínica Estética Dra. Juliet Medina
-            </h5>
-            <p style={{ color: "#FAF9F7" }}>
-              Esp. Medicina Estética & Salud Integral | Inyectora <strong>Elite</strong>.
-            </p>
-            <p style={{ color: "#FAF9F7" }}>
-              Magíster en Gerencia Hospitalaria.
+            </h4>
+            <p className="text-[#E9DED2]/80 text-sm">
+              Atención personalizada y tratamientos de estética facial, corporal
+              y capilar.
             </p>
           </div>
 
           <div>
-            <h5 className="text-xl font-semibold mb-3 font-[Montserrat]" style={{ color: "#E9DED2" }}>
+            <h4 className="text-lg font-semibold mb-8 font-[Montserrat] text-[#E9DED2]">
+              Dirección
+            </h4>
+            <p className="text-[#E9DED2]/80 text-sm">
+              Calle 123 #45-67, Medellín, Colombia
+              <br />
+              Horarios: Lunes a Sábado, 9:00 a.m. - 6:00 p.m.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-8 font-[Montserrat] text-[#E9DED2]">
               Contacto
-            </h5>
-            <p style={{ color: "#FAF9F7" }}>
-              <i className="fas fa-map-marker-alt me-2" style={{ color: "#B08968" }}></i>
-              Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
+            </h4>
+            <p className="text-[#E9DED2]/80 text-sm">
+              WhatsApp: +57 315 544 5748
+              <br />
+              Email: dra.vanessamedinao@gmail.com
             </p>
-            <p style={{ color: "#FAF9F7" }}>
-              <i className="fas fa-phone me-2" style={{ color: "#B08968" }}></i>
-              +57 315 5445748 (Colombia)
-            </p>
-            <p style={{ color: "#FAF9F7" }}>
-              <i className="fas fa-envelope me-2" style={{ color: "#B08968" }}></i>
-              dra.vanessamedinao@gmail.com
-            </p>
-          </div>
-
-          <div>
-            <h5 className="text-xl font-semibold mb-3 font-[Montserrat]" style={{ color: "#E9DED2" }}>
-              Horario
-            </h5>
-            <p style={{ color: "#FAF9F7" }}>
-              Lunes a Viernes: 8:00 AM - 12:00 PM / 2:00 PM - 6:00 PM
-            </p>
-            <p style={{ color: "#FAF9F7" }}>Sábados: 9:00 AM - 1:00 PM</p>
           </div>
         </div>
 
@@ -294,17 +279,14 @@ Mi pregunta es: ${message}`;
           <div className="flex justify-center gap-8 mb-5">
             {[
               {
-                href: "https://www.facebook.com/profile.php?id=61556167276406",
-                icon: "fab fa-facebook-f",
-              },
-              {
-                href: "https://www.instagram.com/dravanessamedinao28/",
+                href: "https://www.instagram.com/tu_instagram",
                 icon: "fab fa-instagram",
               },
               {
-                href: "https://api.whatsapp.com/message/SEJTQDVCRWGSP1?autoload=1&app_absent=0",
-                icon: "fab fa-whatsapp",
+                href: "https://www.facebook.com/tu_facebook",
+                icon: "fab fa-facebook",
               },
+              { href: "https://wa.me/573155445748", icon: "fab fa-whatsapp" },
             ].map((red, index) => (
               <a
                 key={index}
@@ -322,10 +304,62 @@ Mi pregunta es: ${message}`;
           </div>
 
           <p style={{ color: "#E9DED2", fontSize: "0.9rem" }}>
-            © {new Date().getFullYear()} Clínica Estética Dra. Juliet Medina. Todos los derechos reservados.
+            © 2023 Clínica Estética Dra. Juliet Medina. Todos los derechos
+            reservados.
           </p>
+
+          {/* === Créditos === */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2 }}
+            style={{
+              color: "#E9DED2",
+              fontSize: "0.9rem",
+              marginTop: "0.3rem",
+            }}
+          >
+            Página diseñada por{" "}
+            <a
+              href="https://github.com/Sekkon0906"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative designer-link"
+            >
+              Juan Medina O.
+              <span className="underline-anim"></span>
+            </a>
+          </motion.p>
         </div>
       </div>
+
+      {/* === Estilos animados === */}
+      <style jsx>{`
+        .designer-link {
+          color: #e9ded2;
+          text-decoration: none;
+          font-weight: 500;
+          position: relative;
+          display: inline-block;
+          transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        .designer-link:hover {
+          color: #f0d8b0;
+          text-shadow: 0 0 8px #d6b68c;
+        }
+        .underline-anim {
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          width: 0%;
+          height: 2px;
+          background: linear-gradient(90deg, #b08968, #e9ded2, #b08968);
+          transition: width 0.5s ease;
+        }
+        .designer-link:hover .underline-anim {
+          width: 100%;
+        }
+      `}</style>
     </footer>
   );
 }

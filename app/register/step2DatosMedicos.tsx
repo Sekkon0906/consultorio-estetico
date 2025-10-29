@@ -4,10 +4,8 @@ import React, { useState, useMemo } from "react";
 import Select, { MultiValue } from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { AnimatePresence, motion } from "framer-motion";
 import { PALETTE } from "./palette";
 
-// Antecedentes médicos relevantes antes de procedimientos estéticos
 const ANTECEDENTES = [
   "Hipertensión arterial",
   "Diabetes mellitus",
@@ -24,7 +22,6 @@ const ANTECEDENTES = [
   "No tengo antecedentes médicos",
 ];
 
-// Alergias relevantes antes de procedimientos estéticos
 const ALERGIAS = [
   "Lidocaína o anestésicos locales",
   "Penicilina o antibióticos similares",
@@ -40,7 +37,6 @@ const ALERGIAS = [
   "No tengo alergias",
 ];
 
-// Medicamentos comunes relevantes para valoración médica
 const MEDICAMENTOS = [
   "Anticoagulantes (warfarina, aspirina, etc.)",
   "Antiinflamatorios (ibuprofeno, naproxeno, diclofenaco)",
@@ -82,7 +78,6 @@ export default function Step2InfoMedica({
   const alergiasOptions = toOptions(ALERGIAS);
   const medicamentosOptions = toOptions(MEDICAMENTOS);
 
-  // Rango de edad permitido: entre 16 y 80 años
   const today = new Date();
   const maxDate = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
   const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
@@ -94,18 +89,9 @@ export default function Step2InfoMedica({
       : sel;
   };
 
-  // Validación de edad manual
   const handleDateChange = (date: Date | null) => {
-    if (!date) {
-      setFechaError("Selecciona una fecha válida.");
-      setFormData({ ...formData, fechaNacimiento: null });
-      return;
-    }
-
-    const ageDifMs = today.getTime() - date.getTime();
-    const ageDate = new Date(ageDifMs);
-    const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-
+    if (!date) return;
+    const age = today.getFullYear() - date.getFullYear();
     if (age < 16) {
       setFechaError("Debes tener al menos 16 años.");
       setFormData({ ...formData, fechaNacimiento: null });
@@ -150,20 +136,42 @@ export default function Step2InfoMedica({
       boxShadow: "none",
       minHeight: "44px",
       borderRadius: 12,
+      color: PALETTE.text,
     }),
+    singleValue: (p: any) => ({
+      ...p,
+      color: PALETTE.text,
+    }),
+    input: (p: any) => ({
+      ...p,
+      color: PALETTE.text,
+    }),
+    placeholder: (p: any) => ({
+      ...p,
+      color: PALETTE.text,
+      opacity: 0.6,
+    }),
+    option: (p: any, state: any) => ({
+      ...p,
+      color: PALETTE.text,
+      backgroundColor: state.isSelected
+        ? "#e6d3c2"
+        : state.isFocused
+        ? "#f5ebe3"
+        : "white",
+    }),
+    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
     multiValue: (p: any) => ({
       ...p,
       background: "#E9DED2",
       borderRadius: 999,
       padding: "4px 8px",
+      color: PALETTE.text,
     }),
   };
 
-  const hasNoTengo = (field: string) =>
-    formData[field]?.some((a: any) => a.value.includes("No"));
-
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ overflow: "visible", color: PALETTE.text }}>
       {/* Fecha */}
       <div className="mb-3 text-start">
         <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
@@ -172,23 +180,24 @@ export default function Step2InfoMedica({
         <DatePicker
           selected={formData.fechaNacimiento || null}
           onChange={(date) => handleDateChange(date)}
-          minDate={minDate}
           maxDate={maxDate}
-          showYearDropdown
-          showMonthDropdown
-          dropdownMode="select"
-          yearDropdownItemNumber={100}
-          dateFormat="dd/MM/yyyy"
-          placeholderText="Selecciona tu fecha de nacimiento"
+          minDate={minDate}
+          placeholderText="Selecciona tu fecha"
           className={`form-control rounded-3 shadow-sm ${
             touched && (errors.fechaNacimiento || fechaError) ? "is-invalid" : ""
           }`}
+          dateFormat="dd/MM/yyyy"
+          showMonthDropdown
+          showYearDropdown
+          dropdownMode="select"
+          popperPlacement="bottom-start"
+          calendarClassName="custom-calendar"
         />
-        {(touched && (errors.fechaNacimiento || fechaError)) && (
-          <div className="invalid-feedback">
-            {fechaError || errors.fechaNacimiento}
+        {(touched && errors.fechaNacimiento) || fechaError ? (
+          <div className="invalid-feedback d-block">
+            {errors.fechaNacimiento || fechaError}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Sexo */}
@@ -202,7 +211,11 @@ export default function Step2InfoMedica({
           }`}
           value={formData.sexo || ""}
           onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
-          style={{ borderColor: PALETTE.border, backgroundColor: PALETTE.surface }}
+          style={{
+            borderColor: PALETTE.border,
+            backgroundColor: PALETTE.surface,
+            color: PALETTE.text,
+          }}
         >
           <option value="">Selecciona</option>
           <option value="Masculino">Masculino</option>
@@ -210,7 +223,9 @@ export default function Step2InfoMedica({
           <option value="Intersex">Intersex</option>
           <option value="Prefiero no decirlo">Prefiero no decirlo</option>
         </select>
-        {touched && errors.sexo && <div className="invalid-feedback">{errors.sexo}</div>}
+        {touched && errors.sexo && (
+          <div className="invalid-feedback d-block">{errors.sexo}</div>
+        )}
       </div>
 
       {/* Género */}
@@ -231,8 +246,8 @@ export default function Step2InfoMedica({
           value={formData.genero ? { value: formData.genero, label: formData.genero } : null}
           onChange={(opt) => setFormData({ ...formData, genero: opt?.value })}
           styles={selectStyles}
+          menuPortalTarget={document.body}
         />
-        {touched && errors.genero && <div className="invalid-feedback">{errors.genero}</div>}
       </div>
 
       {/* Antecedentes */}
@@ -246,33 +261,9 @@ export default function Step2InfoMedica({
           value={formData.antecedentes || []}
           onChange={(v) => setFormData({ ...formData, antecedentes: normalizeSelection(v) })}
           styles={selectStyles}
+          menuPortalTarget={document.body}
           placeholder="Selecciona antecedentes..."
         />
-        {touched && errors.antecedentes && (
-          <div className="invalid-feedback">{errors.antecedentes}</div>
-        )}
-        <AnimatePresence>
-          {!hasNoTengo("antecedentes") && formData.antecedentes?.length > 0 && (
-            <motion.textarea
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.28 }}
-              maxLength={500}
-              className="form-control rounded-3 shadow-sm mt-2"
-              placeholder="Describe detalles relevantes..."
-              value={formData.antecedentesDesc || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, antecedentesDesc: e.target.value })
-              }
-              style={{
-                borderColor: PALETTE.border,
-                backgroundColor: PALETTE.surface,
-                minHeight: 80,
-              }}
-            />
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Alergias */}
@@ -286,33 +277,9 @@ export default function Step2InfoMedica({
           value={formData.alergias || []}
           onChange={(v) => setFormData({ ...formData, alergias: normalizeSelection(v) })}
           styles={selectStyles}
+          menuPortalTarget={document.body}
           placeholder="Selecciona alergias..."
         />
-        {touched && errors.alergias && (
-          <div className="invalid-feedback">{errors.alergias}</div>
-        )}
-        <AnimatePresence>
-          {!hasNoTengo("alergias") && formData.alergias?.length > 0 && (
-            <motion.textarea
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.28 }}
-              maxLength={500}
-              className="form-control rounded-3 shadow-sm mt-2"
-              placeholder="Describe las reacciones o tratamiento..."
-              value={formData.alergiasDesc || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, alergiasDesc: e.target.value })
-              }
-              style={{
-                borderColor: PALETTE.border,
-                backgroundColor: PALETTE.surface,
-                minHeight: 80,
-              }}
-            />
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Medicamentos */}
@@ -326,33 +293,9 @@ export default function Step2InfoMedica({
           value={formData.medicamentos || []}
           onChange={(v) => setFormData({ ...formData, medicamentos: normalizeSelection(v) })}
           styles={selectStyles}
+          menuPortalTarget={document.body}
           placeholder="Selecciona medicamentos..."
         />
-        {touched && errors.medicamentos && (
-          <div className="invalid-feedback">{errors.medicamentos}</div>
-        )}
-        <AnimatePresence>
-          {!hasNoTengo("medicamentos") && formData.medicamentos?.length > 0 && (
-            <motion.textarea
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.28 }}
-              maxLength={500}
-              className="form-control rounded-3 shadow-sm mt-2"
-              placeholder="Describe dosis o frecuencia..."
-              value={formData.medicamentosDesc || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, medicamentosDesc: e.target.value })
-              }
-              style={{
-                borderColor: PALETTE.border,
-                backgroundColor: PALETTE.surface,
-                minHeight: 80,
-              }}
-            />
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Botones */}

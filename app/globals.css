@@ -324,3 +324,26 @@ footer a:hover i {
     font-size: 0.9rem;
   }
 }
+.custom-calendar {
+  border-radius: 12px !important;
+  border: 1px solid #e5d3c5 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+  background-color: #fffaf7 !important;
+  font-family: "Poppins", sans-serif;
+}
+
+.custom-calendar .react-datepicker__header {
+  background-color: #f3e8e0 !important;
+  border-bottom: 1px solid #e0cfc0 !important;
+}
+
+.custom-calendar .react-datepicker__day:hover {
+  background-color: #d9bba6 !important;
+  color: white !important;
+}
+
+.custom-calendar .react-datepicker__day--selected {
+  background-color: #b78b69 !important;
+  color: white !important;
+  border-radius: 50%;
+}

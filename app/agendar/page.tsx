@@ -1,467 +1,318 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  crearCita,
+  getProcedimientos,
+  getCitasByUser,
+  User,
+} from "../utils/localDB";
 
-type Form = {
-  nombre: string;
-  email: string;
-  telefono: string;
-  procedimiento: string;
-  fecha: string;
-  hora: string;
-  notas: string;
-  pago: "Efectivo" | "Tarjeta en clínica" | "Transferencia" | "Pago en línea" | "";
-  anticipo: string;
+import AgendarCalendar from "./agendarCalendar";
+import AgendarForm from "./agendarForm";
+import AgendarConfirmacion from "./agendarConfirmacion";
+
+export const PALETTE = {
+  bgGradFrom: "#E9E0D1",
+  bgGradTo: "#C9AD8D",
+  surface: "#FBF7F2",
+  border: "#E5D8C8",
+  main: "#8B6A4B",
+  mainHover: "#75573F",
+  accent: "#C7A27A",
+  text: "#32261C",
+  textSoft: "#6E5A49",
 };
-
-const PROCEDIMIENTOS = [
-  "Limpieza Facial",
-  "Bótox",
-  "Ácido Hialurónico en labios",
-  "Ácido Hialurónico Facial",
-  "Tratamiento para el Acné",
-  "Tratamiento para Manchas",
-];
-
-const PRECIOS: Record<string, number> = {
-  "Limpieza Facial": 120000,
-  "Bótox": 600000,
-  "Ácido Hialurónico en labios": 900000,
-  "Ácido Hialurónico Facial": 1200000,
-  "Tratamiento para el Acné": 250000,
-  "Tratamiento para Manchas": 300000,
-};
-
-const WHATSAPP_NUM = "57 315 5445748";
-const CLINIC_EMAIL = "dra.vanessamedinao@gmail.com";
-
-const fmtCOP = (v: number) =>
-  v.toLocaleString("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  });
 
 export default function AgendarPage() {
-  const [f, setF] = useState<Form>({
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const procParam = searchParams.get("proc") || "";
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [fecha, setFecha] = useState<Date | null>(null);
+  const [hora, setHora] = useState("");
+  const [usuario, setUsuario] = useState<User | null>(null);
+  const [procedimientos, setProcedimientos] = useState<any[]>([]);
+  const [citaConfirmada, setCitaConfirmada] = useState<any>(null);
+
+  const [formData, setFormData] = useState<any>({
     nombre: "",
-    email: "",
     telefono: "",
-    procedimiento: "",
-    fecha: "",
-    hora: "",
-    notas: "",
-    pago: "",
-    anticipo: "",
+    correo: "",
+    procedimiento: procParam || "",
+    nota: "",
+    metodoPago: null,
+    tipoPagoConsultorio: undefined,
+    tipoPagoOnline: undefined,
   });
-  const [touched, setTouched] = useState(false);
 
-  const precio = useMemo(() => PRECIOS[f.procedimiento] ?? 0, [f.procedimiento]);
-  const anticipoSugerido = useMemo(() => Math.round(precio * 0.2), [precio]);
-  const anticipoNumber = useMemo(
-    () => Number((f.anticipo || "0").replace(/[^\d]/g, "")),
-    [f.anticipo]
-  );
+  // ======== Obtener usuario local ========
+  useEffect(() => {
+    const stored = localStorage.getItem("currentUser");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setUsuario(parsed);
+        setFormData((d: any) => ({
+          ...d,
+          nombre: parsed.nombres || "",
+          telefono: parsed.telefono || "",
+          correo: parsed.email || "",
+        }));
+      } catch {
+        console.warn("Error leyendo usuario local.");
+      }
+    }
+  }, []);
 
-  const errors = useMemo(() => {
-    const e: Partial<Record<keyof Form, string>> = {};
-    if (!f.nombre.trim()) e.nombre = "Ingresa tu nombre";
-    if (!/^\S+@\S+\.\S+$/.test(f.email)) e.email = "Correo no válido";
-    if (!/^[0-9\s()+-]{7,}$/.test(f.telefono)) e.telefono = "Teléfono no válido";
-    if (!f.procedimiento) e.procedimiento = "Selecciona un procedimiento";
-    if (!f.fecha) e.fecha = "Selecciona una fecha";
-    if (!f.hora) e.hora = "Selecciona una hora";
-    if (!f.pago) e.pago = "Selecciona un método de pago";
-    if (f.pago !== "" && f.anticipo && isNaN(anticipoNumber))
-      e.anticipo = "Valor no válido";
-    return e;
-  }, [f, anticipoNumber]);
+  // ======== Obtener procedimientos ========
+  useEffect(() => {
+    const list = getProcedimientos();
+    setProcedimientos(list);
+  }, []);
 
-  const formIsValid = Object.keys(errors).length === 0;
+  // ======== Determinar si es primera cita ========
+  const esPrimeraCita = useMemo(() => {
+    if (!usuario) return false;
+    const citas = getCitasByUser(usuario.id);
+    return citas.length === 0;
+  }, [usuario]);
 
-  const handleChange =
-    (k: keyof Form) =>
-    (
-      e: React.ChangeEvent<
-        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-      >
-    ) => {
-      let val = e.target.value;
-      if (k === "anticipo") val = val.replace(/[^\d]/g, "");
-      setF((s) => ({ ...s, [k]: val }));
-    };
+  useEffect(() => {
+    if (esPrimeraCita && !procParam) {
+      setFormData((f: any) => ({
+        ...f,
+        procedimiento: "Consulta de valoración (primera visita)",
+      }));
+    }
+  }, [esPrimeraCita, procParam]);
 
-  const buildWhatsAppUrl = () => {
-    const msg =
-      `Hola, soy *${f.nombre}*.\n` +
-      `Quiero agendar una cita para *${f.procedimiento}*.\n\n` +
-      `📅 Fecha: ${f.fecha}\n` +
-      `🕒 Hora: ${f.hora}\n` +
-      `📧 Correo: ${f.email}\n` +
-      `📞 Teléfono: ${f.telefono}\n` +
-      (precio ? `💵 Precio estimado: ${fmtCOP(precio)}\n` : "") +
-      (f.anticipo
-        ? `🔖 Anticipo: ${fmtCOP(anticipoNumber)}\n`
-        : `🔖 Anticipo sugerido: ${fmtCOP(anticipoSugerido)}\n`) +
-      (f.pago ? `💳 Método de pago: ${f.pago}\n` : "") +
-      (f.notas ? `📝 Notas: ${f.notas}\n` : "");
-    return `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msg)}`;
+  // ======== Toast de notificaciones ========
+  function showToast(message: string, type: "error" | "success" = "error") {
+    const existing = document.getElementById("toast-msg");
+    if (existing) existing.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "toast-msg";
+    Object.assign(toast.style, {
+      position: "fixed",
+      bottom: "40px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background:
+        type === "error"
+          ? `linear-gradient(90deg, #B08968, #9C6644)`
+          : `linear-gradient(90deg, #7D9C5A, #9CB678)`,
+      color: "#fff",
+      padding: "14px 28px",
+      borderRadius: "12px",
+      fontWeight: "600",
+      boxShadow: "0 4px 25px rgba(0,0,0,0.25)",
+      zIndex: "9999",
+      opacity: "0",
+      transition: "opacity 0.4s ease, transform 0.4s ease",
+      fontFamily: "'Poppins', sans-serif",
+    });
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => {
+      toast.style.opacity = "1";
+      toast.style.transform = "translateX(-50%) translateY(-5px)";
+    });
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateX(-50%) translateY(20px)";
+      setTimeout(() => toast.remove(), 400);
+    }, 3200);
+  }
+
+  // ======== Manejadores ========
+  const handleAvanzar = () => {
+    if (!fecha || !hora) {
+      showToast("Selecciona un día y una hora antes de continuar.");
+      return;
+    }
+    if (!usuario) {
+      showToast("Debes iniciar sesión para agendar una cita.");
+      router.push("/login");
+      return;
+    }
+    setStep(2);
   };
 
-  const buildMailto = () => {
-    const subject = `Nueva cita: ${f.procedimiento} - ${f.nombre}`;
-    const body =
-      `Nombre: ${f.nombre}\n` +
-      `Correo: ${f.email}\n` +
-      `Teléfono: ${f.telefono}\n` +
-      `Procedimiento: ${f.procedimiento}\n` +
-      `Fecha: ${f.fecha}\n` +
-      `Hora: ${f.hora}\n` +
-      (precio ? `Precio estimado: ${fmtCOP(precio)}\n` : "") +
-      (f.anticipo
-        ? `Anticipo: ${fmtCOP(anticipoNumber)}\n`
-        : `Anticipo sugerido: ${fmtCOP(anticipoSugerido)}\n`) +
-      (f.pago ? `Método de pago: ${f.pago}\n` : "") +
-      (f.notas ? `Notas: ${f.notas}\n` : "");
-    return `mailto:${CLINIC_EMAIL}?subject=${encodeURIComponent(
-      subject
-    )}&body=${encodeURIComponent(body)}`;
-  };
+ const handleConfirmar = () => {
+  const { nombre, telefono, correo, procedimiento } = formData;
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setTouched(true);
-    if (!formIsValid) return;
-    window.open(buildWhatsAppUrl(), "_blank");
-  };
+  // ✅ Solo validamos datos del usuario y el procedimiento
+  if (!nombre || !telefono || !correo || !procedimiento) {
+    showToast("Completa todos los campos requeridos.");
+    return;
+  }
 
+  const telRegex = /^[0-9]{7,}$/;
+  if (!telRegex.test(telefono)) {
+    showToast("Número de teléfono inválido.");
+    return;
+  }
+
+  const mailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!mailRegex.test(correo)) {
+    showToast("Correo electrónico inválido.");
+    return;
+  }
+
+  // ✅ Creación de cita sin método de pago (se completará después)
+  const cita = crearCita({
+    userId: usuario!.id,
+    nombres: nombre,
+    apellidos: "",
+    telefono,
+    correo,
+    procedimiento,
+    nota: formData.nota,
+    fecha: fecha!.toISOString(),
+    hora,
+    metodoPago: null, // Se llenará en paso 3
+    tipoPagoConsultorio: null,
+    tipoPagoOnline: null,
+    tipoCita: esPrimeraCita ? "valoracion" : "implementacion",
+    creadaPor: "usuario",
+  });
+
+  setCitaConfirmada(cita);
+  setStep(3); // Avanza a la confirmación
+  showToast("Cita confirmada con éxito", "success");
+};
+
+
+  // ======== Datos para la barra de pasos ========
+  const steps = [
+    { id: 1, label: "Selecciona fecha y hora" },
+    { id: 2, label: "Completa tus datos" },
+    { id: 3, label: "Confirmación" },
+  ];
+
+  // ======== Render principal ========
   return (
-    <section
-      className="py-5"
+    <main
+      className="min-h-screen w-full py-10 px-4 md:px-8"
       style={{
-        background: "linear-gradient(180deg, #FAF9F7 0%, #FFFFFF 100%)",
+        background: `linear-gradient(135deg, ${PALETTE.bgGradFrom}, ${PALETTE.bgGradTo})`,
       }}
     >
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-lg-8">
-            <div
-              className="card border-0 shadow-lg rounded-4 overflow-hidden"
-              style={{ backgroundColor: "#FFFDF9" }}
+      {/* === Barra de progreso animada === */}
+      <div className="max-w-3xl mx-auto mb-12 relative">
+        <div className="flex justify-between items-center relative">
+          {/* Línea base */}
+          <div
+            className="absolute top-1/2 left-0 w-full h-[4px] -translate-y-1/2 rounded-full"
+            style={{ background: "#E5D8C8", zIndex: 0 }}
+          />
+          {/* Línea de progreso rellena */}
+          <motion.div
+            className="absolute top-1/2 left-0 h-[4px] -translate-y-1/2 rounded-full"
+            style={{
+              background: `linear-gradient(90deg, ${PALETTE.main}, ${PALETTE.accent})`,
+              zIndex: 1,
+            }}
+            animate={{
+              width: step === 1 ? "0%" : step === 2 ? "50%" : "100%",
+            }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+          />
+          {/* Círculos */}
+          {steps.map((s, i) => (
+            <motion.div
+              key={s.id}
+              className="relative flex flex-col items-center z-10"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: i * 0.1 }}
             >
-              <div className="row g-0">
-                {/* Imagen lateral */}
-                <div
-                  className="col-md-5 d-none d-md-block"
-                  style={{
-                    backgroundImage: "url('/imagenes/doctora.jpg')",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
-                />
-
-                {/* Formulario */}
-                <div className="col-md-7 p-4 p-md-5">
-                  <h1
-                    className="fw-bold mb-1"
-                    style={{
-                      color: "#4E3B2B",
-                      fontFamily: "'Playfair Display', serif",
-                    }}
-                  >
-                    Agendar Cita
-                  </h1>
-                  <p className="text-muted mb-4" style={{ color: "#6C584C" }}>
-                    Completa tus datos y elige fecha y hora. Te confirmaremos por
-                    WhatsApp o correo electrónico.
-                  </p>
-
-                  <form onSubmit={onSubmit} noValidate>
-                    <div className="row">
-                      {/* Nombre */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Nombre completo</label>
-                        <input
-                          type="text"
-                          className={`form-control ${
-                            touched && errors.nombre ? "is-invalid" : ""
-                          }`}
-                          value={f.nombre}
-                          onChange={handleChange("nombre")}
-                          placeholder="Tu nombre"
-                        />
-                        {touched && errors.nombre && (
-                          <div className="invalid-feedback">
-                            {errors.nombre}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Teléfono */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Teléfono</label>
-                        <input
-                          type="tel"
-                          className={`form-control ${
-                            touched && errors.telefono ? "is-invalid" : ""
-                          }`}
-                          value={f.telefono}
-                          onChange={handleChange("telefono")}
-                          placeholder="+57 313 821 0700"
-                        />
-                        {touched && errors.telefono && (
-                          <div className="invalid-feedback">
-                            {errors.telefono}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Correo */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Correo electrónico</label>
-                        <input
-                          type="email"
-                          className={`form-control ${
-                            touched && errors.email ? "is-invalid" : ""
-                          }`}
-                          value={f.email}
-                          onChange={handleChange("email")}
-                          placeholder="tucorreo@dominio.com"
-                        />
-                        {touched && errors.email && (
-                          <div className="invalid-feedback">
-                            {errors.email}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Procedimiento */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Procedimiento</label>
-                        <select
-                          className={`form-select ${
-                            touched && errors.procedimiento ? "is-invalid" : ""
-                          }`}
-                          value={f.procedimiento}
-                          onChange={handleChange("procedimiento")}
-                        >
-                          <option value="">Selecciona…</option>
-                          {PROCEDIMIENTOS.map((p) => (
-                            <option key={p} value={p}>
-                              {p}
-                            </option>
-                          ))}
-                        </select>
-                        {touched && errors.procedimiento && (
-                          <div className="invalid-feedback">
-                            {errors.procedimiento}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Fecha y hora */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Fecha</label>
-                        <input
-                          type="date"
-                          className={`form-control ${
-                            touched && errors.fecha ? "is-invalid" : ""
-                          }`}
-                          value={f.fecha}
-                          onChange={handleChange("fecha")}
-                        />
-                        {touched && errors.fecha && (
-                          <div className="invalid-feedback">
-                            {errors.fecha}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Hora</label>
-                        <input
-                          type="time"
-                          className={`form-control ${
-                            touched && errors.hora ? "is-invalid" : ""
-                          }`}
-                          value={f.hora}
-                          onChange={handleChange("hora")}
-                        />
-                        {touched && errors.hora && (
-                          <div className="invalid-feedback">{errors.hora}</div>
-                        )}
-                      </div>
-
-                      {/* Método de pago */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Método de pago</label>
-                        <select
-                          className={`form-select ${
-                            touched && errors.pago ? "is-invalid" : ""
-                          }`}
-                          value={f.pago}
-                          onChange={handleChange("pago")}
-                        >
-                          <option value="">Selecciona…</option>
-                          <option>Efectivo</option>
-                          <option>Tarjeta en clínica</option>
-                          <option>Transferencia</option>
-                          <option>Pago en línea</option>
-                        </select>
-                        {touched && errors.pago && (
-                          <div className="invalid-feedback">{errors.pago}</div>
-                        )}
-                      </div>
-
-                      {/* Anticipo */}
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">
-                          Anticipo (opcional)
-                          {precio
-                            ? ` — sugerido ${fmtCOP(anticipoSugerido)}`
-                            : ""}
-                        </label>
-                        <div className="input-group">
-                          <span className="input-group-text">$</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className={`form-control ${
-                              touched && errors.anticipo ? "is-invalid" : ""
-                            }`}
-                            value={f.anticipo}
-                            onChange={handleChange("anticipo")}
-                            placeholder={
-                              precio ? String(anticipoSugerido) : "0"
-                            }
-                          />
-                        </div>
-                        {touched && errors.anticipo && (
-                          <div className="invalid-feedback">
-                            {errors.anticipo}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Precio estimado */}
-                      {precio > 0 && (
-                        <div className="col-12 mb-2">
-                          <div
-                            className="alert border rounded-3 d-flex justify-content-between align-items-center"
-                            style={{
-                              backgroundColor: "#FAF9F7",
-                              color: "#4E3B2B",
-                              borderColor: "#E9DED2",
-                            }}
-                          >
-                            <span>
-                              <strong>Precio estimado:</strong> {fmtCOP(precio)}{" "}
-                              • <strong>Anticipo:</strong>{" "}
-                              {f.anticipo
-                                ? fmtCOP(anticipoNumber)
-                                : fmtCOP(anticipoSugerido)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Notas */}
-                      <div className="col-12 mb-3">
-                        <label className="form-label">Notas (opcional)</label>
-                        <textarea
-                          className="form-control"
-                          rows={3}
-                          value={f.notas}
-                          onChange={handleChange("notas")}
-                          placeholder="Alergias, preferencias de horario, EPS, etc."
-                        />
-                      </div>
-                    </div>
-
-                    {/* Botones */}
-                    <div className="d-flex flex-wrap gap-2">
-                      
-
-                     
-                      
-
-                      <button
-                        type="submit"
-                        className="btn btn-lg text-white"
-                        style={{
-                          backgroundColor: "#B08968",
-                          borderColor: "#B08968",
-                          borderRadius: "40px",
-                          transition: "all 0.3s ease",
-                        }}
-                        onMouseOver={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#A1724F")
-                        }
-                        onMouseOut={(e) =>
-                          (e.currentTarget.style.backgroundColor = "#B08968")
-                        }
-                      >
-                        <i className="fab fa-whatsapp me-2"></i> Solicitar por
-                        WhatsApp
-                      </button>
-
-                      <a
-                        className="btn btn-outline-secondary btn-lg"
-                        style={{
-                          borderColor: "#B08968",
-                          color: "#4E3B2B",
-                          borderRadius: "40px",
-                        }}
-                        href={buildMailto()}
-                        onClick={(e) =>
-                          !formIsValid
-                            ? (setTouched(true), e.preventDefault())
-                            : undefined
-                        }
-                      >
-                        <i className="fas fa-envelope me-2"></i> Enviar por correo
-                      </a>
-                    </div>
-                  </form>
-
-                  <div
-                    className="mt-3 small"
-                    style={{ color: "#6C584C", fontStyle: "italic" }}
-                  >
-                    *Los precios son estimados y pueden variar según valoración
-                    médica.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* info de contacto */}
-            <div className="text-center mt-4" style={{ color: "#6C584C" }}>
-              <div>
-                ¿Prefieres escribirnos directo?{" "}
-                <a
-                  href={`https://api.whatsapp.com/message/SEJTQDVCRWGSP1?autoload=1&app_absent=0${WHATSAPP_NUM}`}
-                  target="_blank"
-                  style={{ color: "#B08968", textDecoration: "none" }}
-                >
-                  WhatsApp
-                </a>{" "}
-                ·{" "}
-                <a
-                  href={`mailto:${CLINIC_EMAIL}`}
-                  style={{ color: "#B08968", textDecoration: "none" }}
-                >
-                  {CLINIC_EMAIL}
-                </a>{" "}
-                ·{" "}
-                <span>
-                  <i className="fas fa-map-marker-alt me-1"></i> Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
-                </span>
-              </div>
-            </div>
-          </div>
+              <motion.div
+                className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white shadow-md"
+                style={{
+                  background:
+                    s.id <= step ? PALETTE.main : "rgba(200, 190, 170, 0.6)",
+                  border:
+                    s.id === step
+                      ? `2px solid ${PALETTE.accent}`
+                      : "2px solid transparent",
+                }}
+                animate={{ scale: s.id === step ? 1.1 : 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                {s.id}
+              </motion.div>
+              <p
+                className="text-sm mt-2 font-medium text-center"
+                style={{
+                  color: s.id <= step ? PALETTE.text : PALETTE.textSoft,
+                }}
+              >
+                {s.label}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
-    </section>
+
+      {/* === Contenido principal === */}
+      <div className="mx-auto w-full max-w-7xl grid gap-6 items-start">
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <AgendarCalendar
+                fecha={fecha}
+                hora={hora}
+                onFechaSelect={setFecha}
+                onHoraSelect={setHora}
+                usuario={usuario}
+              />
+              <div className="text-center mt-8">
+                <button
+                  onClick={handleAvanzar}
+                  className="px-6 py-3 rounded-lg text-white font-semibold shadow-md"
+                  style={{ background: PALETTE.main }}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.background = PALETTE.mainHover)
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.background = PALETTE.main)
+                  }
+                >
+                  Continuar
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <AgendarForm
+  formData={formData}
+  setFormData={setFormData}
+  procedimientos={procedimientos}
+  handleConfirmar={handleConfirmar}
+  goBack={() => setStep(1)}
+  usuario={usuario}
+  esPrimeraCita={esPrimeraCita}
+/>
+
+          )}
+
+          {step === 3 && citaConfirmada && (
+            <AgendarConfirmacion cita={citaConfirmada} usuario={usuario} />
+          )}
+        </AnimatePresence>
+      </div>
+    </main>
   );
 }

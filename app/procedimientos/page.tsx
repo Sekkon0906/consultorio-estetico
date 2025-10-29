@@ -16,12 +16,33 @@ import {
 import FondoAnimado from "./FondoAnimado";
 import SiluetasAnimadas from "./SiluetasAnimadas";
 
-interface Procedimiento {
-  id: number;
-  title: string;
-  img: string;
-  desc: string;
-  precio: string;
+import {
+  getProcedimientos,
+  CategoriaProcedimiento,
+  Procedimiento,
+} from "../utils/localDB";
+
+// =======================================================
+// Formateador universal de precios
+// Aplica puntos de miles a cualquier número en el texto
+// =======================================================
+function formatPrecioUniversal(precio: string | number): string {
+  if (typeof precio === "number") {
+    return precio.toLocaleString("es-CO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  }
+
+  // Buscar todos los números y aplicar formato
+  return precio.replace(/\d{1,3}(?:\d{3})*(?:\.\d+)?/g, (match) => {
+    const num = parseFloat(match.replace(/\./g, "").replace(/,/g, "."));
+    if (isNaN(num)) return match;
+    return num.toLocaleString("es-CO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  });
 }
 
 export default function ProcedimientosPage() {
@@ -31,104 +52,20 @@ export default function ProcedimientosPage() {
     setOpenSection(openSection === key ? null : key);
   };
 
-  const procedimientos: Record<string, Procedimiento[]> = {
-    "Explora los procedimientos faciales": [
-      {
-        id: 1,
-        title: "Limpieza Facial Básica",
-        img: "/imagenes/procedimientos/P_LimpiezaBasica.jpg",
-        desc: "Elimina impurezas superficiales y aporta frescura y vitalidad a la piel.",
-        precio: "$180.000",
-      },
-      {
-        id: 2,
-        title: "Hydrafacial Elite",
-        img: "/imagenes/procedimientos/P_Hydrafacial.jpg",
-        desc: "Tecnología Vortex-Fusion que limpia, exfolia e hidrata profundamente.",
-        precio: "$350.000 – $450.000",
-      },
-      {
-        id: 3,
-        title: "Peeling Químico",
-        img: "/imagenes/procedimientos/P_PeelingQuimico.jpg",
-        desc: "Renueva la piel, reduce manchas y mejora textura mediante exfoliación controlada.",
-        precio: "$450.000",
-      },
-      {
-        id: 4,
-        title: "Ácido Hialurónico Facial",
-        img: "/imagenes/procedimientos/P_AcidoHialuronico.jpg",
-        desc: "Rellenos dérmicos para perfilar el rostro y restaurar volumen.",
-        precio: "$1.100.000 – $1.500.000",
-      },
-      {
-        id: 5,
-        title: "Toxina Botulínica (Bótox)",
-        img: "/imagenes/procedimientos/P_Botox.jpg",
-        desc: "Suaviza arrugas de expresión y previene nuevas líneas.",
-        precio: "$1.100.000 – $1.300.000",
-      },
-      {
-        id: 6,
-        title: "Plasma Rico en Plaquetas Facial",
-        img: "/imagenes/procedimientos/P_PlasmaFacial.jpg",
-        desc: "Regenera, hidrata y mejora la luminosidad de la piel.",
-        precio: "$450.000 – $1.100.000",
-      },
-    ],
-    "Explora los procedimientos corporales": [
-      {
-        id: 7,
-        title: "Sueroterapia",
-        img: "/imagenes/procedimientos/P_Sueroterapia.jpg",
-        desc: "Vitaminas y antioxidantes intravenosos que revitalizan el organismo.",
-        precio: "$250.000 – $800.000",
-      },
-      {
-        id: 8,
-        title: "Enzimas Lipolíticas",
-        img: "/imagenes/procedimientos/P_EnzimasLipoliticas.jpg",
-        desc: "Reduce grasa localizada y flacidez sin cirugía.",
-        precio: "Según valoración médica",
-      },
-      {
-        id: 9,
-        title: "Tratamiento de Estrías",
-        img: "/imagenes/procedimientos/P_TratamientoEstrias.jpg",
-        desc: "Estimula colágeno y mejora textura y color en estrías.",
-        precio: "$400.000 – $700.000",
-      },
-      {
-        id: 10,
-        title: "Hiperhidrosis Axilar / Palmar",
-        img: "/imagenes/procedimientos/P_Hiperhidrosis.jpg",
-        desc: "Reduce sudoración excesiva con aplicación de toxina botulínica.",
-        precio: "$1.300.000 por zona",
-      },
-    ],
-    "Explora los procedimientos capilares": [
-      {
-        id: 11,
-        title: "Hydrafacial Capilar (Keravive)",
-        img: "/imagenes/procedimientos/P_HydrafacialCapilar.jpg",
-        desc: "Purifica y nutre el cuero cabelludo, estimulando el crecimiento.",
-        precio: "$700.000 (por sesión)",
-      },
-      {
-        id: 12,
-        title: "Mesocapilar",
-        img: "/imagenes/procedimientos/P_Mesocapilar.jpg",
-        desc: "Inyección de vitaminas y nutrientes para fortalecer el folículo capilar.",
-        precio: "$250.000 – $350.000",
-      },
-      {
-        id: 13,
-        title: "Plasma Rico en Plaquetas Capilar",
-        img: "/imagenes/procedimientos/P_PlasmaCapilar.jpg",
-        desc: "Bioestimulación capilar con factores de crecimiento.",
-        precio: "$450.000 – $1.100.000",
-      },
-    ],
+  // Obtenemos todos los procedimientos desde la base local
+  const procedimientos = getProcedimientos();
+
+  // Agrupamos por categoría
+  const procedimientosPorCategoria: Record<string, Procedimiento[]> = {
+    "Explora los procedimientos faciales": procedimientos.filter(
+      (p) => p.categoria === "Facial"
+    ),
+    "Explora los procedimientos corporales": procedimientos.filter(
+      (p) => p.categoria === "Corporal"
+    ),
+    "Explora los procedimientos capilares": procedimientos.filter(
+      (p) => p.categoria === "Capilar"
+    ),
   };
 
   const fadeCard = {
@@ -171,7 +108,7 @@ export default function ProcedimientosPage() {
         </div>
 
         {/* Acordeón principal */}
-        {Object.entries(procedimientos).map(([titulo, items]) => (
+        {Object.entries(procedimientosPorCategoria).map(([titulo, items]) => (
           <motion.div
             key={titulo}
             initial={{ opacity: 0, y: 30 }}
@@ -204,17 +141,15 @@ export default function ProcedimientosPage() {
                         custom={i}
                         className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-md border border-[#E9DED2] overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                       >
-                        {/* Imagen ocupa 60% */}
+                        {/* Imagen */}
                         <div className="relative overflow-hidden rounded-t-3xl">
                           <Image
-                            src={p.img}
-                            alt={p.title}
+                            src={p.imagen}
+                            alt={p.nombre}
                             width={900}
                             height={900}
                             className="w-full h-[60%] min-h-[20rem] object-cover transition-transform duration-700 hover:scale-110"
-                            style={{
-                              objectPosition: "center",
-                            }}
+                            style={{ objectPosition: "center" }}
                           />
                         </div>
 
@@ -228,23 +163,25 @@ export default function ProcedimientosPage() {
                                 fontFamily: "'Playfair Display', serif",
                               }}
                             >
-                              {p.title}
+                              {p.nombre}
                             </h3>
                             <p className="text-[#6C584C] mb-3 leading-relaxed text-[0.95rem]">
                               {p.desc}
                             </p>
                             <p className="text-[#B08968] font-semibold">
-                              Precio estándar: {p.precio}
+                              Precio estándar: {formatPrecioUniversal(p.precio)}
                             </p>
                             <small className="text-[#6C584C]/70 block mb-4">
-                              *El valor puede variar según valoración médica.*
+                              *Los precios están en pesos colombianos, y el costo puede
+                              cambiar según la valoración médica.*
                             </small>
                           </div>
 
                           {/* Botones */}
                           <div className="flex justify-center gap-4 mt-auto pt-4 border-t border-[#E9DED2] pb-6">
+                            {/* ✅ Agendar cita */}
                             <Link
-                              href="/agendar"
+                              href={`/agendar?proc=${encodeURIComponent(p.nombre)}`}
                               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-medium shadow-sm transition-all duration-300"
                               style={{
                                 backgroundColor: "#B08968",
@@ -262,6 +199,7 @@ export default function ProcedimientosPage() {
                               Agendar cita
                             </Link>
 
+                            {/* 👁 Ver más */}
                             <Link
                               href={`/procedimientos/${p.id}`}
                               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border font-medium shadow-sm transition-all duration-300"

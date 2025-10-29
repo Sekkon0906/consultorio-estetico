@@ -256,7 +256,8 @@ Mi mensaje es: ${message}`;
               Dirección
             </h4>
             <p className="text-[#E9DED2]/80 text-sm">
-              Calle 123 #45-67, Medellín, Colombia
+              
+Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
               <br />
               Horarios: Lunes a Sábado, 9:00 a.m. - 6:00 p.m.
             </p>
@@ -279,11 +280,11 @@ Mi mensaje es: ${message}`;
           <div className="flex justify-center gap-8 mb-5">
             {[
               {
-                href: "https://www.instagram.com/tu_instagram",
+                href: "https://www.instagram.com/dravanessamedinao28/",
                 icon: "fab fa-instagram",
               },
               {
-                href: "https://www.facebook.com/tu_facebook",
+                href: "https://www.facebook.com/profile.php?id=61556167276406",
                 icon: "fab fa-facebook",
               },
               { href: "https://wa.me/573155445748", icon: "fab fa-whatsapp" },

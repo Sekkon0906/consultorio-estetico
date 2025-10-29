@@ -1,68 +1,57 @@
 @import "tailwindcss";
 
+/* ==========================
+   PALETA GLOBAL
+========================== */
 :root {
   --background: #b14c1e;
   --foreground: #a34711;
+  --text-color: #3a2a1a;
+  --text-soft: #6e5a49;
+  --surface: #f9f5f1;
+  --border: #e5d8c8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #924b1bd7;
-    --foreground: #c25d22;
+    --background: #2b1b14;
+    --foreground: #e8a676;
+    --text-color: #f6ede6;
+    --text-soft: #c9b5a6;
+    --surface: #3c2b20;
+    --border: #5a4637;
   }
 }
 
+/* ==========================
+   ESTILOS BASE
+========================== */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Poppins", Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-/* ======== RESPONSIVIDAD DEL HERO ======== */
-@media (max-width: 992px) {
-  /* Oculta la mitad izquierda (carrusel) en pantallas pequeñas */
-  .hero-left {
-    display: none;
-  }
-
-  /* El texto ocupa toda la pantalla */
-  .hero-right {
-    flex: 1 1 100% !important;
-    padding: 3rem 2rem !important;
-    text-align: center !important;
-    align-items: center !important;
-  }
-
-  /* Ajusta el tamaño del título */
-  .hero-right h1 {
-    font-size: 2rem !important;
-  }
-
-  /* Centra y ajusta el texto descriptivo */
-  .hero-right p {
-    margin: 0 auto;
-    font-size: 1rem !important;
-  }
-
-  /* Centra el botón */
-  .hero-right a.btn {
-    margin: 1rem auto 0 auto;
-    display: inline-block;
-  }
-  @media (max-width: 992px) {
-  .hero-left {
-    flex: 1 1 100%;
-    height: 50vh;
-  }
-
-  .hero-right {
-    flex: 1 1 100%;
-    padding: 2rem !important;
-    text-align: center;
-  }
+img {
+  max-width: 100%;
+  height: auto;
 }
+
+/* Suaviza transiciones en elementos interactivos */
+a,
+button {
+  transition: all 0.25s ease-in-out;
+}
+
+/* ==========================
+   HERO SECTION RESPONSIVE
+========================== */
+
+/* Base (pantallas grandes ≥ 993px) */
 .hero-left {
-  aspect-ratio: 4 / 5; /* relación vertical ideal para retratos */
+  aspect-ratio: 4 / 5;
   max-height: 750px;
   min-height: 500px;
   overflow: hidden;
@@ -72,26 +61,134 @@ body {
 .hero-left img {
   object-fit: cover;
   object-position: center;
+  transition: transform 0.4s ease, filter 0.4s ease;
 }
 
+.hero-left img:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+/* Carrusel de imágenes en rotación (si lo usas) */
 .rotate-ring > div {
   filter: brightness(0.8);
   transition: transform 0.4s ease, filter 0.4s ease;
 }
-
 .rotate-ring > div:hover {
   transform: scale(1.05) translateZ(25px);
   filter: brightness(1.1);
 }
 
+/* ==========================
+   BREAKPOINTS
+========================== */
+
+/* Tablets horizontales y pantallas medianas */
+@media (max-width: 1200px) {
+  .hero-right {
+    padding: 3rem 2rem;
+  }
 }
 
-/* Corrige el color heredado de los íconos Font Awesome */
+/* Tablets verticales y móviles grandes */
+@media (max-width: 992px) {
+  .hero-left {
+    display: none;
+  }
+
+  .hero-right {
+    flex: 1 1 100% !important;
+    padding: 2rem !important;
+    text-align: center !important;
+    align-items: center !important;
+  }
+
+  .hero-right h1 {
+    font-size: 2rem !important;
+  }
+
+  .hero-right p {
+    margin: 0 auto;
+    font-size: 1rem !important;
+    max-width: 480px;
+  }
+
+  .hero-right a.btn {
+    margin: 1rem auto 0 auto;
+    display: inline-block;
+  }
+}
+
+/* Móviles medianos (por debajo de 768px) */
+@media (max-width: 768px) {
+  .hero-right {
+    padding: 1.5rem !important;
+  }
+
+  .hero-right h1 {
+    font-size: 1.75rem !important;
+  }
+
+  .hero-right p {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Móviles pequeños (por debajo de 576px) */
+@media (max-width: 576px) {
+  .hero-right {
+    padding: 1rem !important;
+  }
+
+  .hero-right h1 {
+    font-size: 1.5rem !important;
+  }
+
+  .hero-right p {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* ==========================
+   COMPONENTES COMUNES
+========================== */
+
+/* Botones base reutilizables */
+.btn-base {
+  @apply px-4 py-2 rounded-lg font-semibold shadow-md transition-all;
+  background: var(--foreground);
+  color: #fff;
+}
+
+.btn-base:hover {
+  @apply shadow-lg scale-105;
+  background: #7f3a0f;
+}
+
+/* Tarjetas */
+.card-base {
+  @apply rounded-2xl shadow-lg p-6;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-color);
+}
+
+/* ==========================
+   FOOTER E ICONOS
+========================== */
 footer a i {
   color: inherit !important;
+  transition: color 0.3s ease;
 }
 
-/* Animación de brillo dorado inicial */
+footer a:hover i {
+  color: var(--foreground) !important;
+}
+
+/* ==========================
+   ANIMACIONES COMUNES
+========================== */
+
 @keyframes shine {
   0% {
     background-position: -200%;
@@ -102,17 +199,14 @@ footer a i {
 }
 
 .animate-shine i {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #e9ded2 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent, #e9ded2 50%, transparent 100%);
   background-size: 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shine 1.5s ease-out;
 }
+
+/* Animaciones de entrada de dropdowns o tooltips */
 @keyframes slideDownAndFade {
   from {
     opacity: 0;
@@ -141,4 +235,92 @@ footer a i {
 
 [data-side="bottom"] {
   animation: slideUpAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================
+   RESPONSIVIDAD - SECCIÓN AGENDAR
+========================== */
+
+/* Contenedor principal de agendar */
+.agendar-container {
+  display: grid;
+  grid-template-columns: minmax(540px, 2fr) minmax(480px, 1.1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ----- Ajustes para tablets (<= 992px) ----- */
+@media (max-width: 992px) {
+  .agendar-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  /* Calendario ocupa toda la pantalla */
+  .calendar-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Panel de formulario debajo del calendario */
+  .agendar-form-panel {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Horas en una sola columna */
+  .horas-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .horas-grid button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+/* ----- Ajustes para móviles medianos (<= 768px) ----- */
+@media (max-width: 768px) {
+  .agendar-container {
+    padding: 0.5rem;
+    gap: 1.5rem;
+  }
+
+  .calendar-wrapper {
+    padding: 0 !important;
+  }
+
+  .horas-grid button {
+    font-size: 0.95rem;
+    padding: 0.8rem 0.5rem;
+  }
+
+  .agendar-form-panel {
+    padding: 1rem !important;
+  }
+}
+
+/* ----- Móviles pequeños (<= 576px) ----- */
+@media (max-width: 576px) {
+  .agendar-container {
+    gap: 1rem;
+  }
+
+  .horas-grid button {
+    font-size: 0.9rem;
+    padding: 0.7rem;
+  }
+
+  .agendar-form-panel h3 {
+    font-size: 1.4rem;
+  }
+
+  .agendar-form-panel input,
+  .agendar-form-panel select,
+  .agendar-form-panel textarea {
+    font-size: 0.9rem;
+  }
 }

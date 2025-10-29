@@ -5,10 +5,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { getCurrentUser, clearCurrentUser } from "../../app/utils/auth";
+import {
+  getCurrentUser,
+  clearCurrentUser,
+  restoreRememberedSession,
+} from "../../app/utils/auth";
 import { Menu } from "lucide-react";
 
-export default function NavbarClient() {
+export default function Navbar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -18,18 +22,19 @@ export default function NavbarClient() {
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // --- Cargar usuario y foto ---
+  // --- Cargar sesión persistente o actual ---
   useEffect(() => {
-    const u = getCurrentUser();
-    setCurrentUser(u);
+    const remembered = restoreRememberedSession();
+    const user = remembered || getCurrentUser();
+    setCurrentUser(user);
 
-    if (u && u.email) {
-      const stored = localStorage.getItem(`photo_${u.email}`);
-      setUserPhoto(stored || u.photo || null);
+    if (user && user.email) {
+      const stored = localStorage.getItem(`photo_${user.email}`);
+      setUserPhoto(stored || user.photo || null);
     }
 
     const updateUser = () => {
-      const nu = getCurrentUser();
+      const nu = getCurrentUser() || restoreRememberedSession();
       setCurrentUser(nu);
 
       if (nu && nu.email) {
@@ -52,6 +57,14 @@ export default function NavbarClient() {
 
   // --- Indicador animado ---
   useEffect(() => {
+    const menuItems = [
+      { label: "Inicio", href: "/" },
+      { label: "Dra. Vanessa Medina", href: "/doctora" },
+      { label: "Consultorio", href: "/consultorio" },
+      { label: "Procedimientos", href: "/procedimientos" },
+      { label: "Testimonios", href: "/testimonios" },
+      { label: "Agendar cita", href: "/agendar" },
+    ];
     const activeIndex = menuItems.findIndex((item) => item.href === pathname);
     if (activeIndex !== -1 && linkRefs.current[activeIndex]) {
       const el = linkRefs.current[activeIndex];
@@ -71,6 +84,7 @@ export default function NavbarClient() {
   // --- Logout ---
   const handleLogout = () => {
     clearCurrentUser();
+    localStorage.removeItem("rememberUser");
     setCurrentUser(null);
     window.dispatchEvent(new Event("authChange"));
     window.location.href = "/";
@@ -103,6 +117,7 @@ export default function NavbarClient() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- Animaciones y renderizado ---
   return (
     <>
       {/* MENSAJE DE BIENVENIDA */}
@@ -114,9 +129,9 @@ export default function NavbarClient() {
           transition={{ duration: 0.45, ease: "easeOut" }}
           className="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 bg-[#B08968] text-white px-6 py-3 rounded-xl shadow-lg"
         >
-          Se ha iniciado sesión correctamente, Bienvenido{" "}
+          Se ha iniciado sesión correctamente. Bienvenido{" "}
           <span className="font-semibold">
-            {currentUser.name?.split(" ")[0]}
+            {currentUser.nombres?.split(" ")[0] || "usuario"}
           </span>
         </motion.div>
       )}
@@ -333,7 +348,7 @@ export default function NavbarClient() {
                             color: "#000",
                           }}
                         >
-                          {currentUser?.name || "Usuario"}
+                          {currentUser?.nombres || "Usuario"}
                         </span>
                         <span style={{ fontSize: 12, color: "#6b6b6b" }}>
                           {currentUser?.email || ""}

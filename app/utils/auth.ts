@@ -1,24 +1,22 @@
 import {
-  fakeUsers,
-  registerUser as addUserToDB,
+  usuariosRegistrados,
+  createUser,
   findUserByEmail,
   validateUser,
-  updateUser,
+  updateUserData,
   User,
-} from "./fakeDB";
+} from "./localDB";
 
 /* ============================================================
-   EVENTO GLOBAL DE SESIÓN Y TOAST
+   EVENTOS Y TOAST DE SESIÓN
    ============================================================ */
 
-/** Emite un evento global para que Navbar y otros componentes se actualicen */
 function emitAuthChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("authChange"));
   }
 }
 
-/** Muestra un mensaje animado de bienvenida (una sola vez por inicio de sesión) */
 function showWelcomeToast(name?: string) {
   if (typeof window === "undefined") return;
 
@@ -71,20 +69,18 @@ function showWelcomeToast(name?: string) {
 /* ============================================================
    LOGIN MANUAL
    ============================================================ */
-
 export function loginUser(email: string, password: string) {
   const user = validateUser(email, password);
   if (!user) return { ok: false, error: "Credenciales incorrectas." };
 
-  // ⚡ Asegurar que tenga una foto (avatar por defecto)
   if (!user.photo) {
     user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      user.name || "Usuario"
+      user.nombres || "Usuario"
     )}&background=E6CCB2&color=7F5539`;
   }
 
   setCurrentUser(user);
-  showWelcomeToast(user.name);
+  showWelcomeToast(user.nombres);
 
   return { ok: true, user };
 }
@@ -92,7 +88,6 @@ export function loginUser(email: string, password: string) {
 /* ============================================================
    LOGIN CON GOOGLE
    ============================================================ */
-
 export function loginWithGoogle(decodedUser: any) {
   const email = decodedUser.email?.toLowerCase();
   if (!email) return null;
@@ -100,44 +95,42 @@ export function loginWithGoogle(decodedUser: any) {
   let user = findUserByEmail(email);
 
   if (!user) {
-    // ⚡ Crear usuario nuevo con avatar por defecto (sin foto de Google)
     const defaultPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(
       decodedUser.name || "Usuario Google"
     )}&background=E6CCB2&color=7F5539`;
 
-    user = {
-      id: fakeUsers.length + 1,
-      name: decodedUser.name || "Usuario Google",
+    user = createUser({
+      nombres: decodedUser.name || "Usuario Google",
+      apellidos: "",
       email,
       password: "",
+      telefono: "",
       edad: 0,
       genero: "Otro",
-      telefono: "",
       antecedentes: "",
       antecedentesDescripcion: "",
       alergias: "",
       alergiasDescripcion: "",
       medicamentos: "",
       medicamentosDescripcion: "",
-      rol: "user",
       photo: defaultPhoto,
-    };
-
-    fakeUsers.push(user);
-    localStorage.setItem("fakeUsers", JSON.stringify(fakeUsers));
+    });
   } else {
-    // ⚡ Si ya existe, forzar a tener avatar por defecto si no tiene
+    // Si ya existía, pero no tenía foto guardada
     if (!user.photo) {
       user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-        user.name || "Usuario"
+        user.nombres || "Usuario"
       )}&background=E6CCB2&color=7F5539`;
-      updateUser(user.id, user);
-      localStorage.setItem("fakeUsers", JSON.stringify(fakeUsers));
+
+      // ✅ se usa correctamente el email
+      updateUserData({ photo: user.photo }, user.email);
     }
   }
 
-  setCurrentUser(user);
-  showWelcomeToast(user.name);
+  if (user) {
+    setCurrentUser(user);
+    showWelcomeToast(user.nombres);
+  }
 
   return user;
 }
@@ -145,9 +138,9 @@ export function loginWithGoogle(decodedUser: any) {
 /* ============================================================
    REGISTRO DE NUEVO USUARIO
    ============================================================ */
-
 export function registerUser(
-  name: string,
+  nombres: string,
+  apellidos: string,
   email: string,
   password: string,
   telefono: string,
@@ -161,34 +154,39 @@ export function registerUser(
   medicamentosDescripcion: string,
   photo?: string
 ): { ok: boolean; error?: string } {
-  const exists = fakeUsers.some((u) => u.email === email);
+  const exists = usuariosRegistrados.some((u) => u.email === email);
   if (exists) return { ok: false, error: "El correo ya está registrado." };
 
   const defaultPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    name || "Usuario"
+    nombres || "Usuario"
   )}&background=E6CCB2&color=7F5539`;
 
-  addUserToDB({
-    name,
-    email,
-    password,
-    edad,
-    genero,
-    telefono,
-    antecedentes,
-    antecedentesDescripcion,
-    alergias,
-    alergiasDescripcion,
-    medicamentos,
-    medicamentosDescripcion,
-    photo: photo || defaultPhoto,
-  });
+  try {
+    createUser({
+      nombres,
+      apellidos,
+      email,
+      password,
+      telefono,
+      edad,
+      genero,
+      antecedentes,
+      antecedentesDescripcion,
+      alergias,
+      alergiasDescripcion,
+      medicamentos,
+      medicamentosDescripcion,
+      photo: photo || defaultPhoto,
+    });
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error creando el usuario." };
+  }
 
   return { ok: true };
 }
 
 /* ============================================================
-   UTILIDADES DE SESIÓN
+   SESIÓN Y UTILIDADES
    ============================================================ */
 
 export function setCurrentUser(user: User) {
@@ -219,25 +217,56 @@ export function isLoggedIn(): boolean {
   return !!localStorage.getItem("currentUser");
 }
 
+/** ✅ versión final corregida */
 export function updateCurrentUser(data: Partial<User>) {
   if (typeof window === "undefined") return;
 
   const current = getCurrentUser();
   if (!current) return;
 
-  const updatedUser = { ...current, ...data };
-  updateUser(updatedUser.id, updatedUser);
+  const updatedUserData = { ...current, ...data };
 
-  localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+  // ✅ llamada correcta según localDB.ts
+  updateUserData(updatedUserData, updatedUserData.email);
+
+  localStorage.setItem("currentUser", JSON.stringify(updatedUserData));
   emitAuthChange();
 }
 
 /* ============================================================
-   Tipo base
+   SESIÓN PERSISTENTE (RECORDAR 30 DÍAS)
+   ============================================================ */
+
+export function restoreRememberedSession(): User | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const remembered = localStorage.getItem("rememberUser");
+    if (!remembered) return null;
+
+    const parsed = JSON.parse(remembered);
+
+    if (!parsed.expiresAt || Date.now() > parsed.expiresAt) {
+      localStorage.removeItem("rememberUser");
+      return null;
+    }
+
+    localStorage.setItem("currentUser", JSON.stringify(parsed));
+    window.dispatchEvent(new Event("authChange"));
+    return parsed;
+  } catch (err) {
+    console.warn("Error restaurando sesión recordada:", err);
+    localStorage.removeItem("rememberUser");
+    return null;
+  }
+}
+
+/* ============================================================
+   TIPO BASE
    ============================================================ */
 
 export type UserData = {
-  name: string;
+  nombres: string;
   email: string;
   photo?: string;
 };

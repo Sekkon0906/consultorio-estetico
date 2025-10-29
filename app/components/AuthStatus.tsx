@@ -5,23 +5,27 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getCurrentUser, clearCurrentUser } from "../utils/auth";
 import { FaUserCircle } from "react-icons/fa";
-import type { UserData } from "../utils/auth";
+import type { User } from "../utils/localDB"; // ✅ el tipo correcto
 
 export default function AuthStatus() {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Cargar usuario inicial
     setUser(getCurrentUser());
 
-    const onStorage = () => setUser(getCurrentUser());
-    window.addEventListener("storage", onStorage);
+    // Actualizar en tiempo real si cambia el almacenamiento
+    const updateUser = () => setUser(getCurrentUser());
+    window.addEventListener("storage", updateUser);
+    window.addEventListener("authChange", updateUser); // ✅ sincroniza con logout/login
 
     return () => {
-      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("storage", updateUser);
+      window.removeEventListener("authChange", updateUser);
     };
   }, []);
 
-  // No hay sesión → botón Iniciar sesión
+  // Si no hay sesión → mostrar botón de login
   if (!user) {
     return (
       <Link
@@ -46,7 +50,7 @@ export default function AuthStatus() {
     );
   }
 
-  // Hay sesión → icono/avatar del usuario
+  // Si hay sesión → mostrar avatar
   return (
     <div className="d-flex align-items-center">
       {user.photo ? (

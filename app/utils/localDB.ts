@@ -188,13 +188,14 @@ export interface Cita {
   nota?: string;
   fecha: string;
   hora: string;
-  metodoPago?: "Consultorio" | "Online" | null;         // ✅ ahora acepta null
-  tipoPagoConsultorio?: "Efectivo" | "Tarjeta" | null;  // ✅ ahora acepta null
-  tipoPagoOnline?: "PayU" | "PSE" | null;               // ✅ ahora acepta null
+  metodoPago?: "Consultorio" | "Online" | null;
+  tipoPagoConsultorio?: "Efectivo" | "Tarjeta" | null;
+  tipoPagoOnline?: "PayU" | "PSE" | null;
   pagado: boolean;
   creadaPor: "usuario" | "doctora";
   fechaCreacion: string;
 }
+
 
 
 // Base local
@@ -223,22 +224,28 @@ function saveCitas() {
   }
 }
 
-/** Crear nueva cita */
 export function crearCita(
-  citaData: Omit<Cita, "id" | "pagado" | "fechaCreacion">
+  citaData: Omit<
+    Cita,
+    "id" | "pagado" | "fechaCreacion" | "tipoCita" | "creadaPor"
+  >
 ): Cita {
   const cita: Cita = {
-    id: nextCitaId++,
+    id: nextCitaId++, // autoincremental
     ...citaData,
-    pagado:
-      citaData.metodoPago === "Online" ||
-      citaData.tipoPagoConsultorio === "Tarjeta",
+    tipoCita: citaData.procedimiento.includes("valoración")
+      ? "valoracion"
+      : "implementacion",
+    pagado: false,
+    creadaPor: "usuario",
     fechaCreacion: new Date().toISOString(),
   };
+
   citasAgendadas.push(cita);
   saveCitas();
   return cita;
 }
+
 
 /** Obtener citas por usuario */
 export function getCitasByUser(userId: number): Cita[] {

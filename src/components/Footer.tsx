@@ -2,6 +2,24 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
+const procedimientos = [
+  { nombre: "Limpieza Facial Básica", categoria: "Facial" },
+  { nombre: "Hydrafacial Elite", categoria: "Facial" },
+  { nombre: "Peeling Químico", categoria: "Facial" },
+  { nombre: "Ácido Hialurónico Facial", categoria: "Facial" },
+  { nombre: "Toxina Botulínica (Bótox)", categoria: "Facial" },
+  { nombre: "Plasma Rico en Plaquetas Facial", categoria: "Facial" },
+
+  { nombre: "Sueroterapia", categoria: "Corporal" },
+  { nombre: "Enzimas Lipolíticas", categoria: "Corporal" },
+  { nombre: "Tratamiento de Estrías", categoria: "Corporal" },
+  { nombre: "Hiperhidrosis Axilar / Palmar", categoria: "Corporal" },
+
+  { nombre: "Hydrafacial Capilar (Keravive)", categoria: "Capilar" },
+  { nombre: "Mesocapilar", categoria: "Capilar" },
+  { nombre: "Plasma Rico en Plaquetas Capilar", categoria: "Capilar" },
+];
+
 export default function Footer() {
   const [animateIcons, setAnimateIcons] = useState(false);
   const [showProcedures, setShowProcedures] = useState(false);
@@ -21,28 +39,16 @@ export default function Footer() {
     terms: false,
   });
 
-  const proceduresList = {
-    Faciales: [
-      "Limpieza facial básica",
-      "Limpieza facial profunda (Vortex Fusion)",
-      "Hydrafacial Elite (Básico, Detox, VIP)",
-      "Peeling químico",
-      "NCTF 135 polirevitalizante",
-      "Toxina botulínica facial (líneas de expresión)",
-      "Ácido hialurónico (labios, ojeras, mentón, mandíbula)",
-      "Plasma rico en plaquetas facial",
-      "Skinbooster facial",
-    ],
-    Corporales: [
-      "Sueroterapia (energizante / detox / rejuvenecedora)",
-      "Aplicación de enzimas lipolíticas (grasa localizada)",
-    ],
-    Capilares: [
-      "Protocolo capilar Keravive con Hydrafacial",
-      "Mesocapilar (vitaminas y nutrientes)",
-      "Plasma rico en plaquetas capilar (bioestimulación capilar)",
-    ],
-  };
+  const procedimientosList = procedimientos.reduce<{ [key: string]: string[] }>(
+    (acc, proc) => {
+      if (!acc[proc.categoria]) {
+        acc[proc.categoria] = [];
+      }
+      acc[proc.categoria].push(proc.nombre);
+      return acc;
+    },
+    {}
+  );
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -71,7 +77,7 @@ export default function Footer() {
 
     const texto = `*Nuevo mensaje desde la web de la Clínica Estética Dra. Juliet Medina*  
 
-Mi nombre es ${name}, mi correo es ${email} y mi número de contacto es ${phone || "No especificado"}. 
+Mi nombre es ${name}, mi correo es ${email} y mi número de contacto es ${phone || "No especificado"}.
 Tengo una pregunta con respecto al siguiente procedimiento: ${procedure || "No especificado"}  
 Mi mensaje es: ${message}`;
 
@@ -172,7 +178,7 @@ Mi mensaje es: ${message}`;
                 style={{ maxHeight: menuHeight }}
               >
                 <div className="bg-[#6C584C] border border-[#B08968] rounded-md mt-1 z-20 shadow-lg">
-                  {Object.entries(proceduresList).map(([categoria, items]) => (
+                  {Object.entries(procedimientosList).map(([categoria, items]) => (
                     <div key={categoria}>
                       <p className="px-4 py-2 font-semibold text-[#E9DED2] bg-[#B08968]/30 sticky top-0">
                         {categoria}
@@ -246,8 +252,7 @@ Mi mensaje es: ${message}`;
               Clínica Estética Dra. Juliet Medina
             </h4>
             <p className="text-[#E9DED2]/80 text-sm">
-              Atención personalizada y tratamientos de estética facial, corporal
-              y capilar.
+              Atención personalizada y tratamientos de estética facial, corporal y capilar.
             </p>
           </div>
 
@@ -256,8 +261,7 @@ Mi mensaje es: ${message}`;
               Dirección
             </h4>
             <p className="text-[#E9DED2]/80 text-sm">
-              
-Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
+              Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tolima.
               <br />
               Horarios: Lunes a Sábado, 9:00 a.m. - 6:00 p.m.
             </p>
@@ -278,7 +282,7 @@ Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tol
         {/* === REDES === */}
         <div className="border-t border-[#B08968]/60 mt-10 pt-6 text-center">
           <div className="flex justify-center gap-8 mb-5">
-            {[
+            {[ 
               {
                 href: "https://www.instagram.com/dravanessamedinao28/",
                 icon: "fab fa-instagram",
@@ -305,8 +309,7 @@ Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tol
           </div>
 
           <p style={{ color: "#E9DED2", fontSize: "0.9rem" }}>
-            © 2023 Clínica Estética Dra. Juliet Medina. Todos los derechos
-            reservados.
+            © 2023 Clínica Estética Dra. Juliet Medina. Todos los derechos reservados.
           </p>
 
           {/* === Créditos === */}
@@ -346,7 +349,7 @@ Carrera 5ta #11-24. Edificio Torre Empresarial. Consultorio 502. Ibagué – Tol
         }
         .designer-link:hover {
           color: #f0d8b0;
-          text-shadow: 0 0 8px #d6b68c;
+          text-shadow: 0 0 8px #80561fff;
         }
         .underline-anim {
           position: absolute;

@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation"; // Asegúrate de importar useRouter
 import { motion } from "framer-motion";
 import { PALETTE } from "./page";
 import { Procedimiento } from "../utils/localDB";
-import React from "react";
 
 export default function AgendarForm({
   usuario,
@@ -22,12 +23,27 @@ export default function AgendarForm({
   handleConfirmar: () => void;
   goBack: () => void;
 }) {
-  const listaProcedimientos = Array.isArray(procedimientos)
-    ? procedimientos
-    : [];
+  const router = useRouter(); // Instanciamos el router
+  const listaProcedimientos = Array.isArray(procedimientos) ? procedimientos : [];
+
+  // Filtrar procedimientos por categoría
+  const procedimientosFaciales = listaProcedimientos.filter(
+    (p) => p.categoria === "Facial"
+  );
+  const procedimientosCorporales = listaProcedimientos.filter(
+    (p) => p.categoria === "Corporal"
+  );
+  const procedimientosCapilares = listaProcedimientos.filter(
+    (p) => p.categoria === "Capilar"
+  );
 
   const handleChange = (key: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  const handleContinue = () => {
+    // Llamamos a la función handleConfirmar (si tiene lógica adicional)
+    handleConfirmar();
   };
 
   return (
@@ -61,7 +77,8 @@ export default function AgendarForm({
             }}
           >
             La <b>primera cita</b> es una <b>consulta de valoración</b>, y
-            <b> dependiendo del diagnóstico</b>, se podria <b>realizar el procedimiento</b> indicado en la <b>misma cita</b>.
+            <b> dependiendo del diagnóstico</b>, se podría <b>realizar el
+            procedimiento</b> indicado en la <b>misma cita</b>.
           </div>
         )}
       </div>
@@ -71,7 +88,7 @@ export default function AgendarForm({
         className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4"
         onSubmit={(e) => {
           e.preventDefault();
-          handleConfirmar();
+          handleContinue(); // Llamamos a la función que maneja la redirección
         }}
       >
         {/* Nombre */}
@@ -186,17 +203,33 @@ export default function AgendarForm({
             }}
           >
             <option value="">Selecciona un procedimiento</option>
-            {listaProcedimientos.length > 0 ? (
-              listaProcedimientos.map((p) => (
+
+            {/* Procedimientos Faciales */}
+            <optgroup label="Faciales">
+              {procedimientosFaciales.map((p) => (
                 <option key={p.id} value={p.nombre}>
                   {p.nombre}
                 </option>
-              ))
-            ) : (
-              <option disabled value="">
-                No hay procedimientos disponibles
-              </option>
-            )}
+              ))}
+            </optgroup>
+
+            {/* Procedimientos Corporales */}
+            <optgroup label="Corporales">
+              {procedimientosCorporales.map((p) => (
+                <option key={p.id} value={p.nombre}>
+                  {p.nombre}
+                </option>
+              ))}
+            </optgroup>
+
+            {/* Procedimientos Capilares */}
+            <optgroup label="Capilares">
+              {procedimientosCapilares.map((p) => (
+                <option key={p.id} value={p.nombre}>
+                  {p.nombre}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </div>
 

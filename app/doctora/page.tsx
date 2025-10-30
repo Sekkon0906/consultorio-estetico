@@ -119,98 +119,65 @@ export default function DoctoraPage() {
   // =============================
   return (
     <main>
-      {/* ===== HERO ===== */}
-      <section className="d-flex flex-column flex-md-row align-items-stretch" style={{ height: "100vh", overflow: "hidden" }}>
-        {/* IZQUIERDA */}
-        <div style={{ flex: "1 1 50%", background: "linear-gradient(135deg,#FAF9F7 0%,#E9DED2 100%)", padding: "4rem" }}>
-          <h1 className="fw-bold display-5 mb-4" style={{ color: "#4E3B2B", fontFamily: "'Playfair Display',serif" }}>
-            ¿Quien es la doctora Julieth Vanessa Medina?
-          </h1>
-          <p className="lead mb-4" style={{ color: "#6C584C" }}>
-  Julieth Vanessa Medina es una médica colombiana apasionada por el bienestar y la belleza natural. Desde mis primeros años trabajando
-  en hospitales, descubrí que mi verdadera vocación estaba en la medicina estética, donde podía unir ciencia, arte y empatía para 
-  resaltar la mejor versión de cada persona.
-</p>
+     {/* ===== HERO DOCTORA ===== */}
+<section className="doc-hero">
+  {/* IZQUIERDA: texto */}
+  <div className="doc-hero-left">
+    <div className="doc-hero-content container">
+      <h1 className="doc-hero-title">
+        ¿Quién es la doctora Julieth Vanessa Medina?
+      </h1>
 
-<p className="lead mb-4" style={{ color: "#6C584C" }}>
-  Con el tiempo, decidí abrir mi propio consultorio, un espacio diseñado para ofrecer confianza, resultados naturales y 
-  tratamientos con tecnología de última generación. Hoy, mi mayor satisfacción es ver cómo cada paciente se siente más seguro 
-  y feliz al reflejar en su rostro la armonía que siempre ha tenido por dentro.
-</p>
+      <p className="doc-hero-paragraph">
+        Julieth Vanessa Medina es una médica colombiana apasionada por el bienestar y la
+        belleza natural. Desde mis primeros años trabajando en hospitales, descubrí que mi
+        verdadera vocación estaba en la medicina estética, donde podía unir ciencia, arte y
+        empatía para resaltar la mejor versión de cada persona.
+      </p>
 
-<p className="lead" style={{ color: "#6C584C" }}>
-  “La autenticidad, sofisticación y elegancia son la nueva era de la Medicina estética. Invertir en ti debe tratarse de
-  resaltar lo que te hace único/a generando una belleza real y sin excesos.” — <b>Julieth Medina</b>.
-</p>
-<div className="d-flex flex-wrap gap-3 mt-4">
-    <Link
-      href="/agendar"
-      className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
-      style={{
-        backgroundColor: "#B08968",
-        color: "white",
-        border: "none",
-        borderRadius: "50px",
-        padding: "0.9rem 2.5rem",
-        transition: "all 0.3s ease, transform 0.2s ease",
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.backgroundColor = "#A1724F";
-        e.currentTarget.style.transform = "scale(1.07)";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.backgroundColor = "#B08968";
-        e.currentTarget.style.transform = "scale(1)";
-      }}
-    >
-      <i className="fas fa-calendar-check me-2" /> Agendar Cita
-    </Link>
+      <p className="doc-hero-paragraph">
+        Con el tiempo, decidí abrir mi propio consultorio, un espacio diseñado para ofrecer
+        confianza, resultados naturales y tratamientos con tecnología de última generación.
+        Hoy, mi mayor satisfacción es ver cómo cada paciente se siente más seguro y feliz al
+        reflejar en su rostro la armonía que siempre ha tenido por dentro.
+      </p>
 
-    <a
-      href="https://www.instagram.com/dravanessamedinao28/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
-      style={{
-        backgroundColor: "#B08968",
-        color: "white",
-        border: "none",
-        borderRadius: "50px",
-        padding: "0.9rem 2.5rem",
-        transition: "all 0.3s ease, transform 0.2s ease",
-      }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.backgroundColor = "#A1724F";
-        e.currentTarget.style.transform = "scale(1.07)";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.backgroundColor = "#B08968";
-        e.currentTarget.style.transform = "scale(1)";
-      }}
-    >
-      <i className="fab fa-instagram me-2" /> Conocer más sobre la doctora
-    </a>
+      <p className="doc-hero-quote">
+        “La autenticidad, sofisticación y elegancia son la nueva era de la Medicina estética.
+        Invertir en ti debe tratarse de resaltar lo que te hace único/a generando una belleza
+        real y sin excesos.” — <b>Julieth Medina</b>.
+      </p>
+
+      <div className="doc-hero-cta">
+        <Link href="/agendar" className="btn btn-accent">
+          <i className="fas fa-calendar-check me-2" /> Agendar Cita
+        </Link>
+        <a
+          href="https://www.instagram.com/dravanessamedinao28/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-accent"
+        >
+          <i className="fab fa-instagram me-2" /> Conocer más sobre la doctora
+        </a>
+      </div>
+    </div>
   </div>
-</div>
 
-        {/* DERECHA */}
-        <div style={{ flex: "1 1 50%", position: "relative", overflow: "hidden" }}>
-          {imagenes.map((img, i) => (
-            <div
-              key={i}
-              style={{
-                position: "absolute",
-                inset: 0,
-                opacity: i === imagenActual ? 1 : 0,
-                transform: i === imagenActual ? "scale(1)" : "scale(1.05)",
-                transition: "opacity 2s ease, transform 5s ease",
-              }}
-            >
-              <Image src={img} alt={`Img${i}`} fill style={{ objectFit: "cover" }} />
-            </div>
-          ))}
-        </div>
-      </section>
+  {/* DERECHA: carrusel de imágenes */}
+  <div className="doc-hero-right">
+    {imagenes.map((img, i) => (
+      <Image
+        key={i}
+        src={img}
+        alt={`Doctora ${i + 1}`}
+        fill
+        priority={i === 0}
+        className={`doc-hero-slide ${i === imagenActual ? "is-active" : ""}`}
+      />
+    ))}
+  </div>
+</section>
 
       {/* ===== INSPIRACIONES ===== */}
       <section style={{ background: "linear-gradient(180deg,#FAF9F7 0%,#F1E9E0 100%)", padding: "5rem 2rem" }}>

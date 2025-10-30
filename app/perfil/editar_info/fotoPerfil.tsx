@@ -1,7 +1,5 @@
-"use client";
-
 import { motion } from "framer-motion";
-import { User } from "../../utils/localDB";
+import { useState, useEffect } from "react";
 import { PALETTE } from "./palette";
 
 interface Props {
@@ -12,19 +10,31 @@ interface Props {
 }
 
 export default function FotoPerfil({ photo, email, canEdit, setPhoto }: Props) {
+  const [finalPhoto, setFinalPhoto] = useState<string | undefined>(photo);
+
+  // Cargar la foto desde localStorage si existe
+  useEffect(() => {
+    const savedPhoto = email ? localStorage.getItem(`photo_${email}`) : null;
+    if (savedPhoto) {
+      setFinalPhoto(savedPhoto); // Usar la foto guardada en localStorage
+    } else {
+      setFinalPhoto(photo || "/default-avatar.png"); // Usar la foto predeterminada si no hay foto personalizada
+    }
+  }, [email, photo]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
-      setPhoto(base64);
-      if (email) localStorage.setItem(`photo_${email}`, base64);
+      setFinalPhoto(base64); // Actualiza la foto en el estado
+      if (email) localStorage.setItem(`photo_${email}`, base64); // Guarda la foto en localStorage
+      setPhoto(base64); // Llama a la función setPhoto proporcionada para actualizar el estado global si es necesario
     };
     reader.readAsDataURL(file);
   };
-
-  const finalPhoto = photo || "/default-avatar.png";
 
   return (
     <motion.div

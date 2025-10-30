@@ -238,7 +238,7 @@ export default function VideoAnim() {
               <Counter value={680} label="Pacientes satisfechos" emoji="✌🏻" suffix="+" position="right" />
               <Counter value={15} label="Tratamientos especializados" emoji="💉" suffix="+" position="right" />
               <Counter value={4} label="Años de experiencia" emoji="⏳" suffix="+" position="right" />
-              <Counter value={4.9} label="Calificación promedio" emoji="⭐" suffix="/5" position="right" />
+              <Counter value={4.8} label="Calificación promedio" emoji="⭐" suffix="/5" position="right" />
             </div>
           </div>
         </div>

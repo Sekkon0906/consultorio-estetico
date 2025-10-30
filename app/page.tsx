@@ -38,217 +38,80 @@ export default function HomePage() {
 
   return (
     <>
-      {/* HERO */}
-      <section
-        className="d-flex align-items-stretch"
-        style={{
-          height: "100vh",
-          overflow: "hidden",
-          position: "relative",
-        }}
+      {/* ===== HERO ===== */}
+<section className="hero">
+  {/* Lado izquierdo: carrusel de imágenes */}
+  <div className="hero-left">
+    {imagenes.map((img, index) => (
+      <Image
+        key={index}
+        src={img}
+        alt={`Imagen ${index + 1}`}
+        fill
+        priority={index === 0}
+        className={`hero-slide ${index === imagenActual ? "is-active" : ""}`}
+      />
+    ))}
+  </div>
+
+  {/* Lado derecho: texto + CTA */}
+  <div className="hero-right">
+    <div className="hero-content container">
+      <h1 className="hero-title">
+        ¡La innovadora y exclusiva tecnología de Hydrafacial está en el
+        consultorio de la Dra. Vanessa Medina!
+      </h1>
+
+      {/* Texto escritorio */}
+      <p className="hero-desc-long">
+        <strong>¿Qué es HydraFacial?</strong> Es una tecnología estética de
+        última generación que combina limpieza profunda, exfoliación, extracción
+        de impurezas e hidratación avanzada en un solo procedimiento. Su sistema
+        patentado utiliza un aplicador con succión controlada y sueros
+        enriquecidos que renuevan la piel desde la primera sesión, sin
+        necesidad de tiempo de recuperación.
+        <br /><br />
+        <strong>¿Para qué sirve?</strong> Revitaliza la piel, trata poros
+        dilatados, líneas de expresión, manchas y deshidratación, devolviendo
+        su luminosidad natural.
+        <br /><br />
+        <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio
+        de la Dra. Vanessa Medina es el único en la región con tecnología
+        original HydraFacial®, certificada internacionalmente.
+      </p>
+
+      {/* Texto móvil */}
+      <p className="hero-desc-short">
+        <strong>HydraFacial:</strong> tecnología que limpia, exfolia e hidrata
+        profundamente la piel con resultados visibles desde la primera sesión.
+      </p>
+
+      <div className="hero-cta">
+        <Link href="/agendar" className="btn btn-accent">
+          <i className="fas fa-calendar-check me-2"></i> Agendar Cita
+        </Link>
+        <a
+          href="https://www.instagram.com/hydrafacialcolombia/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-accent"
+        >
+          <i className="fab fa-instagram me-2"></i> Conocer más de HydraFacial
+        </a>
+      </div>
+
+      {/* Botón leer más solo móvil */}
+      <button
+        className="hero-readmore d-lg-none"
+        onClick={() =>
+          document.querySelector(".hero-desc-short")?.classList.toggle("open")
+        }
       >
-        {/* Carrusel izquierdo */}
-        <div
-          className="hero-left position-relative"
-          style={{
-            flex: "1 1 50%",
-            height: "100%",
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          {imagenes.map((img, index) => (
-            <div
-              key={index}
-              style={{
-                position: "absolute",
-                inset: 0,
-                opacity: index === imagenActual ? 1 : 0,
-                transform: index === imagenActual ? "scale(1)" : "scale(1.05)",
-                transition: "opacity 2s ease-in-out, transform 5s ease",
-              }}
-            >
-              <Image
-                src={img}
-                alt={`Imagen ${index + 1}`}
-                fill
-                priority={index === 0}
-                style={{
-                  objectFit: "cover",
-                  objectPosition: "center",
-                }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Texto derecho */}
-        <div
-          className="hero-right d-flex flex-column justify-content-center"
-          style={{
-            flex: "1 1 50%",
-            background: "linear-gradient(135deg, #FAF9F7 0%, #E9DED2 100%)",
-            padding: "4rem",
-            color: "#4E3B2B",
-          }}
-        >
-          <div className="container">
-            <h1
-              className="fw-bold display-5 mb-4"
-              style={{
-                color: "#4E3B2B",
-                fontFamily: "'Playfair Display', serif",
-                lineHeight: "1.2",
-              }}
-            >
-              ¡La innovadora y exclusiva tecnología de Hydrafacial está en el
-              consultorio de la Dra. Vanessa Medina!
-            </h1>
-
-            {/* Texto visible en pantallas grandes */}
-            <p
-              className="lead mb-4 d-none d-lg-block"
-              style={{
-                color: "#6C584C",
-                fontSize: "1.05rem",
-                lineHeight: "1.7",
-                textAlign: "justify",
-              }}
-            >
-              <strong>Que es HydraFacial? Es innovación en cuidado facial.</strong> HydraFacial es una
-              tecnología estética de última generación que combina limpieza profunda,
-              exfoliación, extracción de impurezas e hidratación avanzada en un solo
-              procedimiento. Su sistema patentado utiliza un aplicador con succión
-              controlada y sueros enriquecidos que renuevan la piel desde la primera sesión,
-              sin necesidad de tiempo de recuperación. Es un tratamiento médico-estético
-              seguro, eficaz y con resultados visibles al instante.
-              <br />
-              <br />
-              <strong>¿Para qué sirve?</strong> Este procedimiento está diseñado para revitalizar la piel y tratar múltiples necesidades al mismo tiempo: poros dilatados, textura irregular, líneas de expresión, manchas, acné y deshidratación. Gracias a su tecnología de vórtice, elimina células muertas e impurezas mientras infunde potentes antioxidantes, péptidos y ácido hialurónico, devolviendo al rostro su luminosidad natural.
-              <br />
-              <br />
-              <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio de la
-              Dra. Vanessa Medina es el único en el Tolima que cuenta con la tecnología
-              original HydraFacial®, certificada internacionalmente. Esta exclusividad
-              garantiza que cada paciente experimente el auténtico procedimiento avalado
-              por la marca, con equipos originales y protocolos clínicos de precisión.
-              Disfrutar de un HydraFacial en Ibagué es ahora posible gracias a la Dra.
-              Vanessa, quien ha traído a la región un servicio estético de estándar
-              internacional que antes solo se encontraba en grandes capitales.
-            </p>
-
-            {/* Texto corto + Leer más (solo móvil) */}
-            <p
-              className="lead mb-4 d-lg-none"
-              style={{
-                color: "#6C584C",
-                fontSize: "1.05rem",
-                lineHeight: "1.7",
-                textAlign: "justify",
-                overflow: "hidden",
-              }}
-            >
-              {!mostrarTextoCompleto ? (
-                <>
-                  <strong>HydraFacial:</strong> la tecnología que transforma el
-                  cuidado facial, combinando limpieza, exfoliación e hidratación
-                  profunda en un solo procedimiento. Resultados visibles desde la
-                  primera sesión, con piel más luminosa y saludable.
-                </>
-              ) : (
-                <>
-                  <strong>HydraFacial: innovación en cuidado facial.</strong> HydraFacial
-                  es una tecnología estética de última generación que combina limpieza
-                  profunda, exfoliación, extracción de impurezas e hidratación avanzada
-                  en un solo procedimiento. Su sistema patentado utiliza un aplicador
-                  con succión controlada y sueros enriquecidos que renuevan la piel desde
-                  la primera sesión, sin necesidad de tiempo de recuperación.
-                  <br />
-                  <br />
-                  <strong>¿Para qué sirve?</strong> Revitaliza la piel, trata poros
-                  dilatados, líneas finas, manchas y deshidratación, devolviendo su
-                  luminosidad natural. <br />
-                  <br />
-                  <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio
-                  de la Dra. Vanessa Medina es el único en la región con tecnología
-                  original HydraFacial®, certificada internacionalmente.
-                </>
-              )}
-            </p>
-
-            {/* Botón Leer más solo móvil */}
-            <div className="mt-3 d-lg-none text-center">
-              <button
-                onClick={() => setMostrarTextoCompleto(!mostrarTextoCompleto)}
-                className="btn btn-sm fw-semibold"
-                style={{
-                  backgroundColor: "transparent",
-                  color: "#A1724F",
-                  border: "none",
-                  textDecoration: "underline",
-                }}
-              >
-                {mostrarTextoCompleto ? "Mostrar menos" : "Leer más"}
-              </button>
-            </div>
-
-            {/* BOTONES */}
-            <div className="d-flex flex-wrap gap-3 mt-3">
-              <Link
-                href="/agendar"
-                className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
-                style={{
-                  backgroundColor: "#B08968",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "50px",
-                  padding: "0.9rem 2.5rem",
-                  boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
-                  fontSize: "1.05rem",
-                  transition: "all 0.35s ease, transform 0.2s ease",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#A1724F";
-                  e.currentTarget.style.transform = "scale(1.07)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "#B08968";
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
-              >
-                <i className="fas fa-calendar-check me-2"></i> Agendar Cita
-              </Link>
-
-              <a
-                href="https://www.instagram.com/hydrafacialcolombia/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-lg fw-semibold d-inline-flex align-items-center justify-content-center"
-                style={{
-                  backgroundColor: "#B08968",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "50px",
-                  padding: "0.9rem 2.5rem",
-                  boxShadow: "0 4px 12px rgba(176, 137, 104, 0.25)",
-                  fontSize: "1.05rem",
-                  transition: "all 0.35s ease, transform 0.2s ease",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#A1724F";
-                  e.currentTarget.style.transform = "scale(1.07)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "#B08968";
-                  e.currentTarget.style.transform = "scale(1)";
-                }}
-              >
-                <i className="fab fa-instagram me-2"></i> Conocer más de HydraFacial
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
+        Leer más
+      </button>
+    </div>
+  </div>
+</section>
 
       {/* VIDEO CENTRAL */}
       {memoizedVideo}

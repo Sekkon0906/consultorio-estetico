@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { PALETTE } from "./page";
+import { useRouter } from "next/navigation"; // Asegúrate de importar useRouter
 
 export default function AgendarPago({
   metodoPago,
@@ -19,6 +20,13 @@ export default function AgendarPago({
   setTipoPagoOnline: (v: "PayU" | "PSE" | undefined) => void;
   onConfirmar: () => void;
 }) {
+  const router = useRouter(); // For redirecting to confirmation page
+
+  const handleConfirmar = () => {
+    onConfirmar();
+    // Navigate to the confirmation page after payment selection
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -26,12 +34,8 @@ export default function AgendarPago({
       transition={{ duration: 0.5 }}
       className="rounded-3xl shadow-lg p-8 bg-white border border-[#E9DED2]"
     >
-      <h2 className="text-2xl font-serif mb-4 text-[#4E3B2B]">
-        Método de pago
-      </h2>
-      <p className="text-[#6C584C] mb-4">
-        Valor de la consulta de valoración: <b>$120.000 COP</b>
-      </p>
+      <h2 className="text-2xl font-serif mb-4 text-[#4E3B2B]">Método de pago</h2>
+      <p className="text-[#6C584C] mb-4">Valor de la consulta de valoración: <b>$120.000 COP</b></p>
 
       <div className="flex flex-col gap-3">
         <label>
@@ -41,7 +45,7 @@ export default function AgendarPago({
             value="Consultorio"
             checked={metodoPago === "Consultorio"}
             onChange={() => setMetodoPago("Consultorio")}
-          />{" "}
+          /> 
           Pagar en consultorio
         </label>
 
@@ -54,7 +58,7 @@ export default function AgendarPago({
                 value="Efectivo"
                 checked={tipoPagoConsultorio === "Efectivo"}
                 onChange={() => setTipoPagoConsultorio("Efectivo")}
-              />{" "}
+              /> 
               Efectivo
             </label>
             <label>
@@ -64,7 +68,7 @@ export default function AgendarPago({
                 value="Tarjeta"
                 checked={tipoPagoConsultorio === "Tarjeta"}
                 onChange={() => setTipoPagoConsultorio("Tarjeta")}
-              />{" "}
+              /> 
               Tarjeta
             </label>
           </div>
@@ -77,7 +81,7 @@ export default function AgendarPago({
             value="Online"
             checked={metodoPago === "Online"}
             onChange={() => setMetodoPago("Online")}
-          />{" "}
+          /> 
           Pago en línea
         </label>
 
@@ -90,7 +94,7 @@ export default function AgendarPago({
                 value="PayU"
                 checked={tipoPagoOnline === "PayU"}
                 onChange={() => setTipoPagoOnline("PayU")}
-              />{" "}
+              /> 
               PayU
             </label>
             <label>
@@ -100,7 +104,7 @@ export default function AgendarPago({
                 value="PSE"
                 checked={tipoPagoOnline === "PSE"}
                 onChange={() => setTipoPagoOnline("PSE")}
-              />{" "}
+              /> 
               PSE
             </label>
           </div>
@@ -111,7 +115,7 @@ export default function AgendarPago({
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={onConfirmar}
+          onClick={handleConfirmar}
           disabled={!metodoPago}
           className="px-8 py-3 rounded-md font-semibold text-white disabled:opacity-60"
           style={{
@@ -119,9 +123,7 @@ export default function AgendarPago({
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           }}
         >
-          {metodoPago === "Consultorio"
-            ? "Confirmar cita"
-            : "Proceder al pago"}
+          {metodoPago === "Consultorio" ? "Confirmar cita" : "Confirmar cita"}
         </motion.button>
       </div>
     </motion.div>

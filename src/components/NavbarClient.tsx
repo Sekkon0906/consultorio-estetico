@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import {
   getCurrentUser,
   restoreRememberedSession,
@@ -16,12 +16,13 @@ export default function Navbar() {
   const pathname = usePathname() || "/";
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const linkRefs = useRef<(HTMLLIElement | null)[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  /* --- Cargar usuario actual o recordado --- */
+  /* === SESIÓN === */
   useEffect(() => {
     const remembered = restoreRememberedSession();
     const user = remembered || getCurrentUser();
@@ -49,7 +50,7 @@ export default function Navbar() {
     };
   }, []);
 
-  /* --- Menú principal (MEMO para evitar renders infinitos) --- */
+  /* === MENÚ PRINCIPAL === */
   const menuItems = useMemo(() => {
     const base = [
       { label: "Inicio", href: "/" },
@@ -59,32 +60,28 @@ export default function Navbar() {
       { label: "Testimonios", href: "/testimonios" },
       { label: "Agendar cita", href: "/agendar" },
     ];
-    if (currentUser?.rol === "admin") {
+    if (currentUser?.rol === "admin")
       base.push({ label: "Administrar", href: "/administrar" });
-    }
     return base;
   }, [currentUser?.rol]);
 
-  /* --- Indicador animado bajo enlace activo --- */
+  /* === INDICADOR ACTIVO === */
   const updateIndicatorTo = (el: HTMLLIElement | null) => {
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const parent = el.parentElement?.getBoundingClientRect();
     if (!rect || !parent) return;
     const next = { left: rect.left - parent.left, width: rect.width };
-    // Evita setState si no cambió (corta la cascada de renders)
     setIndicator((prev) =>
       prev.left !== next.left || prev.width !== next.width ? next : prev
     );
   };
 
-  // Activa indicador en ruta activa
   useEffect(() => {
     const activeIndex = menuItems.findIndex((item) => item.href === pathname);
     const activeEl = activeIndex !== -1 ? linkRefs.current[activeIndex] : null;
     updateIndicatorTo(activeEl);
 
-    // Recalcula al redimensionar/orientación
     const onResize = () => updateIndicatorTo(activeEl);
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -92,10 +89,9 @@ export default function Navbar() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
-    // ⚠️ Dependemos solo de pathname y cantidad de items (no de la referencia del array)
   }, [pathname, menuItems.length]);
 
-  /* --- Logout --- */
+  /* === LOGOUT === */
   const handleLogout = () => {
     clearCurrentUser();
     setCurrentUser(null);
@@ -103,7 +99,7 @@ export default function Navbar() {
     window.location.href = "/";
   };
 
-  /* --- Cerrar dropdown al hacer clic fuera --- */
+  /* === CERRAR PERFIL SI CLIC FUERA === */
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -117,7 +113,6 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /* --- Handlers de hover para guiar la línea --- */
   const handleItemEnter = (index: number) => {
     const el = linkRefs.current[index];
     updateIndicatorTo(el);
@@ -127,7 +122,7 @@ export default function Navbar() {
     updateIndicatorTo(linkRefs.current[activeIndex] || null);
   };
 
-  /* --- Render --- */
+  /* === RENDER === */
   return (
     <nav
       className="navbar shadow-sm py-3"
@@ -139,25 +134,25 @@ export default function Navbar() {
       }}
     >
       <div
-        className="container-fluid d-flex justify-content-between align-items-center"
-        style={{ padding: "0 70px" }}
+        className="container-fluid d-flex align-items-center justify-content-between"
+        style={{ padding: "0 1.2rem", position: "relative" }}
       >
         {/* === LOGO === */}
-        <Link href="/" className="d-flex align-items-center">
+        <Link href="/" className="navbar-logo d-flex align-items-center">
           <Image
             src="/imagenes/logo/logoJM.jpg"
             alt="Logo JM"
-            width={80}
-            height={60}
+            width={75}
+            height={55}
             className="me-2"
             priority
           />
         </Link>
 
-        {/* === MENÚ PRINCIPAL === */}
+        {/* === MENÚ DESKTOP === */}
         <div
-          className="position-relative"
-          style={{ flex: 1.5, position: "relative" }}
+          className="position-relative d-none d-md-block"
+          style={{ flex: 1.5 }}
           onMouseLeave={handleMenuLeave}
         >
           <ul
@@ -194,7 +189,6 @@ export default function Navbar() {
             })}
           </ul>
 
-          {/* Indicador animado */}
           <motion.div
             layout
             initial={{ opacity: 0, y: -8, scaleX: 0 }}
@@ -218,12 +212,41 @@ export default function Navbar() {
           />
         </div>
 
-        {/* === PERFIL === */}
-        <div ref={dropdownRef} style={{ position: "relative" }}>
+        {/* === PERFIL / HAMBURGUESA === */}
+        <div
+          ref={dropdownRef}
+          className="navbar-user"
+          style={{
+            position: "relative",
+            display: "flex",
+            justifyContent: "flex-end",
+            flex: "0 0 auto",
+          }}
+        >
+          {/* === BOTÓN HAMBURGUESA (móvil) === */}
+          <button
+            className={`hamburger-btn d-md-none ${mobileOpen ? "active" : ""}`}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Abrir menú"
+          >
+            <motion.div
+              initial={{ rotate: 0 }}
+              animate={{ rotate: mobileOpen ? 180 : 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              {mobileOpen ? (
+                <X size={30} strokeWidth={2.5} color="#6B4E3D" />
+              ) : (
+                <Menu size={30} strokeWidth={2.5} color="#6B4E3D" />
+              )}
+            </motion.div>
+          </button>
+
+          {/* === PERFIL DESKTOP === */}
           {!currentUser ? (
             <button
               onClick={() => (window.location.href = "/login")}
-              className="btn btn-outline-dark rounded-4 px-3 py-2"
+              className="btn btn-outline-dark rounded-4 px-3 py-2 d-none d-md-inline"
               style={{
                 borderColor: "#B08968",
                 color: "#6B4E3D",
@@ -235,9 +258,11 @@ export default function Navbar() {
             </button>
           ) : (
             <>
-              <button
+              <motion.button
                 onClick={() => setMenuOpen((p) => !p)}
-                className="d-flex align-items-center border-0 bg-white rounded-pill shadow-sm px-2 py-1"
+                className="user-button d-none d-md-flex align-items-center border-0 bg-white rounded-pill shadow-sm px-2 py-1"
+                animate={{ rotateY: menuOpen ? 90 : 0 }}
+                transition={{ duration: 0.3 }}
               >
                 <img
                   src={
@@ -253,65 +278,117 @@ export default function Navbar() {
                     border: "2px solid #FFDDBF",
                   }}
                 />
-                <Menu
-                  size={22}
-                  color="#6B6B6B"
-                  strokeWidth={2.3}
-                  className="ms-2"
-                />
-              </button>
+              </motion.button>
 
               <AnimatePresence>
                 {menuOpen && (
                   <motion.div
+                    key="perfil-menu"
                     initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 6 }}
+                    animate={{ opacity: 1, y: 10 }}
                     exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.25 }}
-                    className="position-absolute bg-white border rounded-3 shadow p-3"
+                    transition={{ duration: 0.3 }}
+                    className="position-absolute bg-white border rounded-4 shadow-lg p-3"
                     style={{
-                      top: "100%",
+                      top: "110%",
                       right: 0,
-                      minWidth: "220px",
+                      minWidth: "260px",
                       zIndex: 100,
+                      textAlign: "center",
+                      background:
+                        "linear-gradient(135deg, #fffdfb 0%, #f8f3ed 100%)",
                     }}
                   >
-                    <div className="mb-2">
-                      <strong style={{ fontSize: "14px" }}>
-                        {currentUser?.nombres || "Usuario"}
-                      </strong>
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <X size={20} strokeWidth={2} color="#6b4e3d" />
+                    </div>
+
+                    <div
+                      className="text-center mb-3"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                      }}
+                    >
+                      <img
+                        src={
+                          userPhoto ||
+                          "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                        }
+                        alt="Perfil"
+                        style={{
+                          width: 70,
+                          height: 70,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2px solid #FFDDBF",
+                          marginBottom: "0.4rem",
+                        }}
+                      />
                       <div
                         style={{
-                          fontSize: "12px",
-                          color: "#666",
+                          fontWeight: 700,
+                          color: "#6B4E3D",
                         }}
                       >
+                        {currentUser?.nombres || "Usuario"}
+                      </div>
+                      <div style={{ fontSize: "0.85rem", color: "#8d7a6a" }}>
                         {currentUser?.email}
                       </div>
                     </div>
-                    <hr />
-                    <div
-                      onClick={() =>
-                        (window.location.href = "/perfil/editar_info")
-                      }
-                      className="cursor-pointer py-1 text-secondary hover-bg"
-                    >
-                      Editar datos personales
-                    </div>
-                    <div
-                      onClick={() =>
-                        (window.location.href = "/perfil/citas_agendadas")
-                      }
-                      className="cursor-pointer py-1 text-secondary hover-bg"
-                    >
-                      Citas agendadas
-                    </div>
-                    <hr />
-                    <div
-                      onClick={handleLogout}
-                      className="cursor-pointer text-danger py-1"
-                    >
-                      Cerrar sesión
+
+                    <div className="d-grid gap-2">
+                      <button
+                        className="btn"
+                        style={{
+                          background: "#E9E0D1",
+                          color: "#4B3A2E",
+                          fontWeight: 600,
+                          border: "none",
+                          borderRadius: "10px",
+                        }}
+                        onClick={() => (window.location.href = "/perfil/editar_info")}
+                      >
+                        Editar perfil
+                      </button>
+                      <button
+                        className="btn"
+                        style={{
+                          background: "#C9AD8D",
+                          color: "#fff",
+                          fontWeight: 600,
+                          border: "none",
+                          borderRadius: "10px",
+                        }}
+                        onClick={() =>
+                          (window.location.href = "/perfil/citas_agendadas")
+                        }
+                      >
+                        Citas agendadas
+                      </button>
+                      <button
+                        className="btn mt-2"
+                        style={{
+                          background: "#fff3ef",
+                          color: "#b02e2e",
+                          fontWeight: 600,
+                          border: "1px solid #e4bfbf",
+                          borderRadius: "10px",
+                        }}
+                        onClick={handleLogout}
+                      >
+                        Cerrar sesión
+                      </button>
                     </div>
                   </motion.div>
                 )}
@@ -320,6 +397,103 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {/* === SIDEBAR MÓVIL === */}
+      <div
+        className={`mobile-sidebar ${mobileOpen ? "open" : ""}`}
+        style={{
+          transition: "transform 0.4s ease, opacity 0.4s ease",
+        }}
+      >
+        {currentUser ? (
+          <div
+            className="mobile-sidebar-header"
+            style={{
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <img
+              src={
+                userPhoto ||
+                "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+              }
+              alt="Perfil"
+              className="user-avatar"
+              style={{
+                marginBottom: "0.8rem",
+              }}
+            />
+            <div className="user-name">{currentUser?.nombres || "Usuario"}</div>
+            <div className="user-email">{currentUser?.email}</div>
+            <div className="user-actions">
+              <button
+                className="user-action-btn"
+                onClick={() => {
+                  setMobileOpen(false);
+                  window.location.href = "/perfil/editar_info";
+                }}
+              >
+                Editar perfil
+              </button>
+              <button
+                className="user-action-btn"
+                onClick={() => {
+                  setMobileOpen(false);
+                  window.location.href = "/perfil/citas_agendadas";
+                }}
+              >
+                Citas agendadas
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mobile-sidebar-header">
+            <button
+              onClick={() => (window.location.href = "/login")}
+              className="user-action-btn"
+            >
+              Iniciar sesión
+            </button>
+          </div>
+        )}
+
+        <div className="mobile-sidebar-menu">
+          <ul>
+            {menuItems.map((item, i) => (
+              <li key={i}>
+                <Link href={item.href} onClick={() => setMobileOpen(false)}>
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* === BACKDROP OSCURO === */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="mobile-backdrop"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.35)",
+              backdropFilter: "blur(2px)",
+              zIndex: 80,
+            }}
+          />
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

@@ -403,8 +403,8 @@ footer a:hover i {
 }
 
 .navbar-logo:hover {
-  transform: scale(1.05);
-  filter: brightness(1.1);
+  transform: scale(1.07);
+  filter: brightness(1.08);
 }
 
 .navbar-logo img {
@@ -469,6 +469,14 @@ footer a:hover i {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
   padding: 5px 8px;
   cursor: pointer;
+  position: relative;
+  overflow: visible;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.user-button:hover {
+  transform: scale(1.07);
+  filter: brightness(1.08);
 }
 
 .user-avatar {
@@ -479,6 +487,36 @@ footer a:hover i {
   border: 2px solid #ffcfab;
 }
 
+/* === EFECTO ESPIRAL ENROLLADO (solo avatar) === */
+.user-button::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 999px;
+  padding: 3px;
+  background: repeating-conic-gradient(
+    from 0deg,
+    #b08968 0deg 10deg,
+    #ffe4c0 10deg 20deg,
+    transparent 20deg 30deg
+  );
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+
+  opacity: 0;
+  transform: scale(0.82) rotate(0deg);
+  transition: opacity 0.3s ease, transform 0.8s cubic-bezier(0.22, 0.7, 0.2, 1);
+  pointer-events: none;
+}
+
+.user-button:hover::after {
+  opacity: 1;
+  transform: scale(1.1) rotate(540deg); /* 1.5 vueltas aprox */
+}
 
 /* === DROPDOWN === */
 .dropdown-menu {
@@ -557,6 +595,173 @@ footer a:hover i {
     height: 40px;
   }
 }
+
+/* === HAMBURGUESA ANIMADA === */
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.hamburger-btn:hover {
+  transform: scale(1.1);
+}
+
+.hamburger-line {
+  width: 28px;
+  height: 2px;
+  background-color: #6b4e3d;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger-btn.active .line1 {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+.hamburger-btn.active .line2 {
+  opacity: 0;
+}
+.hamburger-btn.active .line3 {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* === PANEL LATERAL === */
+.mobile-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 78%;
+  max-width: 350px;
+  height: 100%;
+  background: #faf9f7;
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 0.7, 0.2, 1),
+    opacity 0.35s ease;
+  z-index: 90;
+}
+
+.mobile-sidebar.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* === CABECERA DE USUARIO === */
+.mobile-sidebar-header {
+  background: linear-gradient(135deg, #e9e0d1 0%, #c9ad8d 100%);
+  padding: 2rem 1rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid #e2d3c3;
+}
+
+.mobile-sidebar-header .user-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  object-fit: cover;
+  margin-bottom: 0.8rem;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-sidebar-header .user-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #4b3a2e;
+  margin-bottom: 0.2rem;
+}
+
+.mobile-sidebar-header .user-email {
+  font-size: 0.82rem;
+  color: #6b5a4b;
+  margin-bottom: 1rem;
+}
+
+.mobile-sidebar-header .user-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.user-action-btn {
+  background: #fffaf5;
+  color: #6b4e3d;
+  border: 1px solid #d6bfa4;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  width: 70%;
+}
+
+.user-action-btn:hover {
+  background: #e9e0d1;
+  color: #3e2f22;
+}
+
+/* === CONTENEDOR DE MENÚ === */
+.mobile-sidebar-menu {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.mobile-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.mobile-sidebar li {
+  text-align: center;
+  padding: 0.9rem 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #e8dcd1;
+  color: #4b3a2e;
+  transition: color 0.25s ease;
+}
+
+.mobile-sidebar a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.mobile-sidebar a:hover {
+  color: #b08968;
+}
+
+@keyframes fadeInSlide {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 
 /* ==========================
    HERO DOCTORA (layout + responsive)

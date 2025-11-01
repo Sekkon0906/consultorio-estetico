@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import "react-calendar/dist/Calendar.css";
 import { PALETTE } from "./page";
 
-// ✅ Import dinámico para evitar errores SSR
+// Import dinámico para evitar errores SSR
 const Calendar = dynamic(() => import("react-calendar"), { ssr: false });
 
 // ======= HORAS DISPONIBLES =======

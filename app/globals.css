@@ -962,3 +962,15 @@ footer a:hover i {
   0%,100% { filter: hue-rotate(0deg); }
   50% { filter: hue-rotate(45deg); }
 }
+/* === Corrige enlaces azules globalmente en el panel admin === */
+a {
+  text-decoration: none !important;
+  color: inherit !important;
+}
+a:visited {
+  color: inherit !important;
+}
+a:hover {
+  text-decoration: none !important;
+  color: inherit !important;
+}

@@ -60,7 +60,7 @@ export default function Navbar() {
       { label: "Agendar cita", href: "/agendar" },
     ];
     if (currentUser?.rol === "admin") {
-      base.push({ label: "Administrar", href: "/admin" });
+      base.push({ label: "Administrar", href: "/administrar" });
     }
     return base;
   }, [currentUser?.rol]);

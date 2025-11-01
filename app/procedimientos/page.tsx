@@ -218,7 +218,7 @@ export default function ProcedimientosPage() {
                               }}
                             >
                               <FaEye className="text-base" />
-                              Ver más
+                              Ver resultados
                             </Link>
                           </div>
                         </div>

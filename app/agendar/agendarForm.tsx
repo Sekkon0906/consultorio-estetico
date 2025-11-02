@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // Asegúrate de importar useRouter
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./page";
 import { Procedimiento } from "../utils/localDB";
+import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
 
 export default function AgendarForm({
   usuario,
@@ -23,10 +23,18 @@ export default function AgendarForm({
   handleConfirmar: () => void;
   goBack: () => void;
 }) {
-  const router = useRouter(); // Instanciamos el router
-  const listaProcedimientos = Array.isArray(procedimientos) ? procedimientos : [];
+  const router = useRouter();
 
-  // Filtrar procedimientos por categoría
+  const listaProcedimientos = Array.isArray(procedimientos)
+    ? procedimientos
+    : [];
+
+  const DARK_PALETTE = {
+    ...PALETTE,
+    text: "#2A1C12",
+    textSoft: "#4B3726",
+  };
+
   const procedimientosFaciales = listaProcedimientos.filter(
     (p) => p.categoria === "Facial"
   );
@@ -42,60 +50,163 @@ export default function AgendarForm({
   };
 
   const handleContinue = () => {
-    // Llamamos a la función handleConfirmar (si tiene lógica adicional)
     handleConfirmar();
   };
+
+  // === FORMATOS DE FECHA Y HORA ===
+  const fmtDiaHumano = (date: Date) => {
+    const dias = [
+      "domingo",
+      "lunes",
+      "martes",
+      "miércoles",
+      "jueves",
+      "viernes",
+      "sábado",
+    ];
+    return dias[date.getDay()];
+  };
+
+  const fmtFechaHumana = (date: Date) => {
+    const meses = [
+      "enero",
+      "febrero",
+      "marzo",
+      "abril",
+      "mayo",
+      "junio",
+      "julio",
+      "agosto",
+      "septiembre",
+      "octubre",
+      "noviembre",
+      "diciembre",
+    ];
+    return `${date.getDate()} de ${meses[date.getMonth()]} de ${date.getFullYear()}`;
+  };
+
+  const fmtHoraHumana = (hhmm: string) => {
+    const [hStr, mStr] = hhmm.split(":");
+    let h = Number(hStr);
+    const suf = h >= 12 ? "p.m." : "a.m.";
+    if (h === 0) h = 12;
+    if (h > 12) h -= 12;
+    return `${h}:${mStr} ${suf}`;
+  };
+
+  const fechaObj = formData.fecha ? new Date(formData.fecha) : null;
 
   return (
     <motion.div
       key="panel-form"
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      transition={{ duration: 0.45, ease: "easeInOut" }}
-      className="rounded-3xl shadow-2xl"
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -40 }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+      className="rounded-3xl shadow-2xl overflow-hidden"
       style={{
-        background: PALETTE.surface,
-        border: `1px solid ${PALETTE.border}`,
+        background: "linear-gradient(180deg, #FBF7F2 0%, #F4EBE2 100%)",
+        border: `1px solid ${DARK_PALETTE.border}`,
+        color: DARK_PALETTE.text,
       }}
     >
-      {/* ===== Encabezado ===== */}
+      {/* === BOTÓN VOLVER === */}
       <div
-        className="p-6 border-b flex flex-col gap-2 text-center"
-        style={{ borderColor: PALETTE.border }}
+        className="p-6 flex items-center gap-2 cursor-pointer w-fit"
+        onClick={goBack}
       >
-        <h2 className="text-3xl font-serif" style={{ color: PALETTE.main }}>
+        <ArrowLeft size={20} className="text-[#5C4533]" />
+        <span className="text-sm font-medium text-[#5C4533] hover:text-[#8B6A4B] transition-colors">
+          Volver
+        </span>
+      </div>
+
+      {/* === ENCABEZADO === */}
+      <div
+        className="pb-6 text-center border-b"
+        style={{ borderColor: DARK_PALETTE.border }}
+      >
+        <h2
+          className="text-3xl font-serif mb-2"
+          style={{ color: DARK_PALETTE.text }}
+        >
           Completa tus datos
         </h2>
+
         {usuario && esPrimeraCita && (
-          <div
-            className="text-sm rounded-lg p-3 mx-auto max-w-lg"
-            style={{
-              background: "#E8E1D4",
-              border: `1px solid ${PALETTE.border}`,
-              color: PALETTE.textSoft,
-            }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-sm rounded-lg p-3 mx-auto max-w-lg bg-[#E8E1D4] border border-[#E0D3C0]"
+            style={{ color: DARK_PALETTE.textSoft }}
           >
-            La <b>primera cita</b> es una <b>consulta de valoración</b>, y
-            <b> dependiendo del diagnóstico</b>, se podría <b>realizar el
-            procedimiento</b> indicado en la <b>misma cita</b>.
-          </div>
+            La <b>primera cita</b> es una <b>consulta de valoración</b>, y{" "}
+            <b>dependiendo del diagnóstico</b>, se podría{" "}
+            <b>realizar el procedimiento</b> indicado en la{" "}
+            <b>misma cita</b>.
+          </motion.div>
         )}
       </div>
 
-      {/* ===== Formulario ===== */}
+      {/* === FORMULARIO === */}
       <form
-        className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4"
+        className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6"
         onSubmit={(e) => {
           e.preventDefault();
-          handleContinue(); // Llamamos a la función que maneja la redirección
+          handleContinue();
         }}
       >
+        {/* === BLOQUE DÍA Y HORA SELECCIONADA === */}
+        {fechaObj && formData.hora && (
+          <motion.div
+            className="md:col-span-2 p-5 rounded-2xl border bg-[#FAF5EF] shadow-inner"
+            style={{
+              borderColor: "#E0CDB5",
+              color: DARK_PALETTE.textSoft,
+            }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3
+              className="text-lg font-serif mb-2 text-center"
+              style={{ color: DARK_PALETTE.text }}
+            >
+              Fecha y hora seleccionadas
+            </h3>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-[#B08968]" />
+                <span>
+                  <b>
+                    {fmtDiaHumano(fechaObj)} {fmtFechaHumana(fechaObj)}
+                  </b>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-[#B08968]" />
+                <span>
+                  <b>{fmtHoraHumana(formData.hora)}</b>
+                </span>
+              </div>
+            </div>
+            <div className="text-center text-sm mt-2 italic text-[#6C584C]">
+              Seleccionado:{" "}
+              <b>
+                {fmtDiaHumano(fechaObj)} {fmtFechaHumana(fechaObj)} —{" "}
+                {fmtHoraHumana(formData.hora)}
+              </b>
+            </div>
+          </motion.div>
+        )}
+
+        {/* === CAMPOS DE FORMULARIO === */}
+
         {/* Nombre */}
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Nombre completo *
           </label>
@@ -104,11 +215,10 @@ export default function AgendarForm({
             onChange={(e) => handleChange("nombre", e.target.value)}
             placeholder="Ej: Laura Gómez"
             required
-            className="w-full p-3 rounded-lg shadow-sm focus:outline-none transition-all"
+            className="w-full p-3 rounded-lg border bg-white focus:border-[#B08968] focus:ring-2 focus:ring-[#C7A27A]/30 outline-none transition-all"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              background: "white",
-              color: PALETTE.text,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.text,
             }}
           />
         </div>
@@ -117,7 +227,7 @@ export default function AgendarForm({
         <div>
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Teléfono *
           </label>
@@ -128,11 +238,10 @@ export default function AgendarForm({
             placeholder="Solo números"
             required
             pattern="[0-9]{7,}"
-            className="w-full p-3 rounded-lg shadow-sm focus:outline-none transition-all"
+            className="w-full p-3 rounded-lg border bg-white focus:border-[#B08968] focus:ring-2 focus:ring-[#C7A27A]/30 outline-none transition-all"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              background: "white",
-              color: PALETTE.text,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.text,
             }}
           />
         </div>
@@ -141,7 +250,7 @@ export default function AgendarForm({
         <div>
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Correo electrónico *
           </label>
@@ -151,11 +260,10 @@ export default function AgendarForm({
             type="email"
             placeholder="ejemplo@correo.com"
             required
-            className="w-full p-3 rounded-lg shadow-sm focus:outline-none transition-all"
+            className="w-full p-3 rounded-lg border bg-white focus:border-[#B08968] focus:ring-2 focus:ring-[#C7A27A]/30 outline-none transition-all"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              background: "white",
-              color: PALETTE.text,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.text,
             }}
           />
         </div>
@@ -164,30 +272,29 @@ export default function AgendarForm({
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Tipo de cita
           </label>
-          <input
-            value={
-              esPrimeraCita
-                ? "Consulta de valoración (primera cita)"
-                : "Procedimiento / Implementación"
-            }
-            readOnly
-            className="w-full p-3 rounded-lg shadow-sm bg-[#FDFBF9] cursor-not-allowed"
+          <motion.div
+            initial={{ opacity: 0.8 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="w-full p-3 rounded-lg border bg-[#FBF7F2] font-medium shadow-inner"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              color: PALETTE.textSoft,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.textSoft,
             }}
-          />
+          >
+            Valoración / Procedimiento
+          </motion.div>
         </div>
 
         {/* Procedimiento */}
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Procedimiento *
           </label>
@@ -195,16 +302,14 @@ export default function AgendarForm({
             value={formData.procedimiento}
             onChange={(e) => handleChange("procedimiento", e.target.value)}
             required
-            className="w-full p-3 rounded-lg shadow-sm focus:outline-none"
+            className="w-full p-3 rounded-lg border bg-white focus:border-[#B08968] focus:ring-2 focus:ring-[#C7A27A]/30 outline-none transition-all"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              background: "white",
-              color: PALETTE.text,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.text,
             }}
           >
             <option value="">Selecciona un procedimiento</option>
 
-            {/* Procedimientos Faciales */}
             <optgroup label="Faciales">
               {procedimientosFaciales.map((p) => (
                 <option key={p.id} value={p.nombre}>
@@ -213,7 +318,6 @@ export default function AgendarForm({
               ))}
             </optgroup>
 
-            {/* Procedimientos Corporales */}
             <optgroup label="Corporales">
               {procedimientosCorporales.map((p) => (
                 <option key={p.id} value={p.nombre}>
@@ -222,7 +326,6 @@ export default function AgendarForm({
               ))}
             </optgroup>
 
-            {/* Procedimientos Capilares */}
             <optgroup label="Capilares">
               {procedimientosCapilares.map((p) => (
                 <option key={p.id} value={p.nombre}>
@@ -237,7 +340,7 @@ export default function AgendarForm({
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"
-            style={{ color: PALETTE.textSoft }}
+            style={{ color: DARK_PALETTE.textSoft }}
           >
             Nota (opcional)
           </label>
@@ -245,35 +348,24 @@ export default function AgendarForm({
             value={formData.nota}
             onChange={(e) => handleChange("nota", e.target.value)}
             rows={3}
-            className="w-full p-3 rounded-lg shadow-sm focus:outline-none transition-all"
+            placeholder="Ej: tengo nervios a las agujas, es mi primera vez"
+            className="w-full p-3 rounded-lg border bg-white focus:border-[#B08968] focus:ring-2 focus:ring-[#C7A27A]/30 outline-none transition-all"
             style={{
-              border: `1px solid ${PALETTE.border}`,
-              background: "white",
-              color: PALETTE.text,
+              borderColor: DARK_PALETTE.border,
+              color: DARK_PALETTE.text,
             }}
           />
         </div>
 
-        {/* Botones */}
-        <div className="md:col-span-2 mt-8 flex justify-center gap-4">
-          <motion.button
-            type="button"
-            onClick={goBack}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-6 py-2 rounded-lg text-[#4E3B2B] border border-[#E9DED2] hover:bg-[#F5EFE7] transition"
-          >
-            ← Volver
-          </motion.button>
-
+        {/* Botón continuar */}
+        <div className="md:col-span-2 mt-8 flex justify-center">
           <motion.button
             type="submit"
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-6 py-2 rounded-lg font-semibold shadow-md transition"
+            whileTap={{ scale: 0.97 }}
+            className="px-8 py-2 rounded-lg font-semibold shadow-md text-white transition"
             style={{
-              background: PALETTE.main,
-              color: "white",
+              background: DARK_PALETTE.main,
               opacity:
                 !formData.nombre ||
                 !formData.telefono ||
@@ -281,13 +373,6 @@ export default function AgendarForm({
                 !formData.procedimiento
                   ? 0.6
                   : 1,
-              cursor:
-                !formData.nombre ||
-                !formData.telefono ||
-                !formData.correo ||
-                !formData.procedimiento
-                  ? "not-allowed"
-                  : "pointer",
             }}
             disabled={
               !formData.nombre ||
@@ -299,22 +384,6 @@ export default function AgendarForm({
             Continuar
           </motion.button>
         </div>
-
-        {/* Recordatorio */}
-        {!usuario && (
-          <div
-            className="md:col-span-2 mt-4 p-3 rounded-lg text-sm text-center"
-            style={{
-              background: "#FFF7E6",
-              border: `1px solid ${PALETTE.border}`,
-              color: PALETTE.textSoft,
-            }}
-          >
-            <b>Recuerda:</b> debes tener una cuenta para que tus datos se
-            guarden y puedas consultar o cancelar tus citas futuras desde tu
-            perfil.
-          </div>
-        )}
       </form>
     </motion.div>
   );

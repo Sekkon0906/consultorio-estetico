@@ -1,20 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 import { PALETTE } from "./palette";
 import Step1DatosPersonales from "./step1DatosPersonales";
 import Step2DatosMedicos from "./step2DatosMedicos";
 import Step3Exito from "./step3exito";
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams();
+
+  // si tu flujo de login con Google hace: router.push(`/register?email=...&nombres=...&apellidos=...&telefono=...`)
+  const pre_email = searchParams?.get("email") ?? "";
+  const pre_nombres = searchParams?.get("nombres") ?? "";
+  const pre_apellidos = searchParams?.get("apellidos") ?? "";
+  const pre_telefono = searchParams?.get("telefono") ?? "";
+
   const [step, setStep] = useState(1);
   const [err, setErr] = useState<string | null>(null);
+
+  // Inicializa con los valores prellenados (si vienen). Son editables.
   const [formData, setFormData] = useState<any>({
-    nombres: "",
-    apellidos: "",
-    email: "",
-    telefono: "",
+    nombres: pre_nombres || "",
+    apellidos: pre_apellidos || "",
+    email: pre_email || "",
+    telefono: pre_telefono || "",
     password: "",
     confirm: "",
     edad: "",
@@ -26,6 +37,19 @@ export default function RegisterPage() {
     alergiasDescripcion: "",
     medicamentosDescripcion: "",
   });
+
+  // Si llegas con query params *después* de la inicialización (rare), no sobreescribas
+  // valores que el usuario ya haya tecleado. Solo escribe si están vacíos.
+  useEffect(() => {
+    setFormData((prev: any) => ({
+      ...prev,
+      nombres: prev.nombres || pre_nombres || "",
+      apellidos: prev.apellidos || pre_apellidos || "",
+      email: prev.email || pre_email || "",
+      telefono: prev.telefono || pre_telefono || "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pre_email, pre_nombres, pre_apellidos, pre_telefono]);
 
   const nextStep = () => setStep((s) => s + 1);
   const prevStep = () => setStep((s) => Math.max(1, s - 1));

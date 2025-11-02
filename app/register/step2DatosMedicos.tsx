@@ -264,6 +264,25 @@ export default function Step2InfoMedica({
           menuPortalTarget={document.body}
           placeholder="Selecciona antecedentes..."
         />
+
+        {/* Descripción condicional */}
+        {formData.antecedentes?.length > 0 &&
+          !formData.antecedentes.some((a: any) => a.value.includes("No tengo")) && (
+            <textarea
+              className="form-control mt-2 rounded-3 shadow-sm"
+              placeholder="Explica tu antecedente médico (Opcional)"
+              value={formData.antecedentesDescripcion || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, antecedentesDescripcion: e.target.value })
+              }
+              style={{
+                borderColor: PALETTE.border,
+                backgroundColor: PALETTE.surface,
+                color: PALETTE.text,
+                minHeight: "90px",
+              }}
+            />
+          )}
       </div>
 
       {/* Alergias */}
@@ -280,6 +299,24 @@ export default function Step2InfoMedica({
           menuPortalTarget={document.body}
           placeholder="Selecciona alergias..."
         />
+
+        {formData.alergias?.length > 0 &&
+          !formData.alergias.some((a: any) => a.value.includes("No tengo")) && (
+            <textarea
+              className="form-control mt-2 rounded-3 shadow-sm"
+              placeholder="Explica tu alergia (Opcional)"
+              value={formData.alergiasDescripcion || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, alergiasDescripcion: e.target.value })
+              }
+              style={{
+                borderColor: PALETTE.border,
+                backgroundColor: PALETTE.surface,
+                color: PALETTE.text,
+                minHeight: "90px",
+              }}
+            />
+          )}
       </div>
 
       {/* Medicamentos */}
@@ -296,6 +333,24 @@ export default function Step2InfoMedica({
           menuPortalTarget={document.body}
           placeholder="Selecciona medicamentos..."
         />
+
+        {formData.medicamentos?.length > 0 &&
+          !formData.medicamentos.some((a: any) => a.value.includes("No tomo")) && (
+            <textarea
+              className="form-control mt-2 rounded-3 shadow-sm"
+              placeholder="Explica tu medicamento actual (Opcional)"
+              value={formData.medicamentosDescripcion || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, medicamentosDescripcion: e.target.value })
+              }
+              style={{
+                borderColor: PALETTE.border,
+                backgroundColor: PALETTE.surface,
+                color: PALETTE.text,
+                minHeight: "90px",
+              }}
+            />
+          )}
       </div>
 
       {/* Botones */}

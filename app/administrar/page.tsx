@@ -11,6 +11,7 @@ import CitasAgendadas from "./citas/citasAgendadas";
 import ProcedimientosList from "./procedimientos/procedimientosList";
 import TestimoniosList from "./testimonios/testimoniosList";
 import Ingresos from "./ingresos/ingresos";
+import CharlasList from "./charlas/charlasList";
 
 
 
@@ -46,6 +47,7 @@ export default function AdministrarPage() {
         {selected === "citas" && <CitasAgendadas />}
         {selected === "procedimientos" && <ProcedimientosList />}
         {selected === "testimonios" && <TestimoniosList />}
+        {selected === "charlas" && <CharlasList />}
         {selected === "ingresos" && <Ingresos />}
       </motion.div>
     </AnimatePresence>

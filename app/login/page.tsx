@@ -69,7 +69,8 @@ export default function LoginPage() {
                     className="text-muted mb-4"
                     style={{ color: PALETTE.muted, fontSize: "0.95rem" }}
                   >
-                    Bienvenido de nuevo. Ingresa tus credenciales o usa Google.
+                    Ingresa tus credenciales para ingresar y disfrutar de todo lo
+                    que ofrecemos.
                   </p>
 
                   {err && (

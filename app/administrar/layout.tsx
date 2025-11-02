@@ -34,6 +34,7 @@ export default function AdminLayout({ children }: Props) {
     { id: "citas", label: "Citas Agendadas" },
     { id: "procedimientos", label: "Procedimientos" },
     { id: "testimonios", label: "Testimonios" },
+    { id: "charlas", label: "Formacion" },
     { id: "ingresos", label: "Ingresos" },
   ];
 

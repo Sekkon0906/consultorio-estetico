@@ -1,5 +1,5 @@
 import { jwtDecode } from "jwt-decode";
-import { getUsers, updateUserData, createUser } from "../utils/localDB";
+import { getUsers, updateUserData } from "../utils/localDB";
 import { setCurrentUser } from "../utils/auth";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
@@ -35,25 +35,34 @@ export async function handleGoogleSuccess(
       return;
     }
 
-    // ===== Flujo normal =====
+    // ===== Flujo normal (inicio de sesión existente) =====
     if (found) {
-      // Actualiza la foto si viene nueva
       if (decoded.picture && decoded.picture !== found.photo) {
-        updateUserData({ photo: decoded.picture }, found.email); // ✅ correcto
+        updateUserData({ photo: decoded.picture }, found.email);
       }
 
-      // Guarda sesión y redirige
       setCurrentUser(found);
       router.push("/");
       return;
     }
 
     // ===== Usuario nuevo → Registro prellenado =====
-    const nameParam = encodeURIComponent(decoded.name || "");
-    const emailParam = encodeURIComponent(decoded.email || "");
+
+    // Divide el nombre completo
+    const fullName = decoded.name || "";
+    const [firstName, ...rest] = fullName.split(" ");
+    const lastName = rest.join(" ");
+
+    const emailParam = encodeURIComponent(email);
+    const nombresParam = encodeURIComponent(firstName || "");
+    const apellidosParam = encodeURIComponent(lastName || "");
+    const telefonoParam = encodeURIComponent(decoded.phone_number || "");
     const photoParam = encodeURIComponent(decoded.picture || "");
 
-    router.push(`/register?name=${nameParam}&email=${emailParam}&photo=${photoParam}`);
+    // Redirige con todos los datos prellenados
+    router.push(
+      `/register?email=${emailParam}&nombres=${nombresParam}&apellidos=${apellidosParam}&telefono=${telefonoParam}&photo=${photoParam}`
+    );
   } catch (error) {
     console.error("Error durante la autenticación con Google:", error);
     setErr("Error al autenticar con Google.");

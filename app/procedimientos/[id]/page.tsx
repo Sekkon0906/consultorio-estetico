@@ -3,50 +3,43 @@
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { FaCalendarCheck, FaArrowLeft, FaPlay } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import {
+  FaCalendarCheck,
+  FaArrowLeft,
+  FaPlay,
+  FaChevronLeft,
+  FaChevronRight,
+} from "react-icons/fa";
 import { getProcedimientoById } from "../../utils/localDB";
-import { formatPrecio } from "../../utils/format";
 
-// =======================================================
-// Formateador universal de precios y rangos
-// Detecta todos los números y les aplica puntos de miles
-// Ejemplo: "3000000 – 8000000" → "3.000.000 – 8.000.000"
-// =======================================================
 function formatPrecioUniversal(precio: string | number): string {
-  // Si es numérico puro
   if (typeof precio === "number") {
-    return precio.toLocaleString("es-CO", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
+    return precio.toLocaleString("es-CO", { minimumFractionDigits: 0 });
   }
-
-  // Si es texto, busca todos los números
   return precio.replace(/\d{1,3}(?:\d{3})*(?:\.\d+)?/g, (match) => {
     const num = parseFloat(match.replace(/\./g, "").replace(/,/g, "."));
-    if (isNaN(num)) return match;
-    return num.toLocaleString("es-CO", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
+    return isNaN(num)
+      ? match
+      : num.toLocaleString("es-CO", { minimumFractionDigits: 0 });
   });
 }
 
-// =======================================================
-// 🩺 Página del procedimiento individual
-// =======================================================
 export default function ProcedimientoPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
   const procedimiento = getProcedimientoById(id);
 
-  // Si el procedimiento no existe
+  const [modalIndex, setModalIndex] = useState<number | null>(null);
+
   if (!procedimiento) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF9F7] text-[#4E3B2B]">
-        <p className="text-2xl font-semibold mb-4">Procedimiento no encontrado</p>
+        <p className="text-2xl font-semibold mb-4">
+          Procedimiento no encontrado
+        </p>
         <button
           onClick={() => router.push("/procedimientos")}
           className="px-6 py-3 bg-[#B08968] text-white rounded-full hover:bg-[#9A7458] transition-all"
@@ -56,6 +49,25 @@ export default function ProcedimientoPage() {
       </div>
     );
   }
+
+  // 🔧 Siempre asegurar que galeria sea un arreglo
+  const galeria = Array.isArray(procedimiento.galeria)
+    ? procedimiento.galeria
+    : [];
+
+  const handlePrev = () => {
+    if (modalIndex === null) return;
+    setModalIndex((prev) =>
+      prev! > 0 ? prev! - 1 : galeria.length - 1
+    );
+  };
+
+  const handleNext = () => {
+    if (modalIndex === null) return;
+    setModalIndex((prev) =>
+      prev! < galeria.length - 1 ? prev! + 1 : 0
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#FAF9F7] py-10 px-6 sm:px-10 text-[#4E3B2B]">
@@ -68,13 +80,19 @@ export default function ProcedimientoPage() {
         >
           {/* ===== Imagen principal ===== */}
           <div className="relative w-full h-[500px] overflow-hidden">
-            <Image
-              src={procedimiento.imagen}
-              alt={procedimiento.nombre}
-              fill
-              priority
-              className="object-cover transition-transform duration-700 hover:scale-110"
-            />
+            {procedimiento.imagen ? (
+              <Image
+                src={procedimiento.imagen}
+                alt={procedimiento.nombre}
+                fill
+                priority
+                className="object-cover transition-transform duration-700 hover:scale-110"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-[#E9DED2] text-[#6C584C]">
+                Sin imagen principal
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-[#00000055] to-transparent" />
             <h1
               className="absolute bottom-6 left-6 text-3xl md:text-4xl font-bold text-white drop-shadow-lg"
@@ -84,13 +102,13 @@ export default function ProcedimientoPage() {
             </h1>
           </div>
 
-          {/* ===== Contenido principal ===== */}
+          {/* ===== Contenido ===== */}
           <div className="p-8">
             <p className="text-[#6C584C] leading-relaxed mb-6 text-[1.05rem]">
               {procedimiento.desc}
             </p>
 
-            {/* ===== Precio con formato universal ===== */}
+            {/* Precio */}
             <div className="mb-8">
               <p className="text-lg font-semibold text-[#B08968]">
                 Precio estándar: {formatPrecioUniversal(procedimiento.precio)}
@@ -100,8 +118,8 @@ export default function ProcedimientoPage() {
               </small>
             </div>
 
-            {/* ===== Galería multimedia (imágenes + videos) ===== */}
-            {procedimiento.galeria && procedimiento.galeria.length > 0 && (
+            {/* ===== Galería ===== */}
+            {galeria.length > 0 && (
               <div className="mb-10">
                 <h2
                   className="text-2xl font-semibold mb-4"
@@ -110,33 +128,32 @@ export default function ProcedimientoPage() {
                   Galería multimedia
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {procedimiento.galeria.map((media, i) => (
+                  {galeria.map((media, i) => (
                     <motion.div
                       key={media.id || i}
                       initial={{ opacity: 0, scale: 0.9 }}
                       whileInView={{ opacity: 1, scale: 1 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.4, delay: i * 0.1 }}
-                      className="relative rounded-2xl overflow-hidden shadow-md bg-black/5"
+                      className="relative rounded-2xl overflow-hidden shadow-md bg-black/5 cursor-pointer group"
+                      onClick={() => setModalIndex(i)}
                     >
                       {media.tipo === "imagen" ? (
-                        <Image
+                        <img
                           src={media.url}
-                          alt={`Imagen ${i + 1} de ${procedimiento.nombre}`}
-                          width={400}
-                          height={300}
-                          className="object-cover w-full h-56 hover:scale-105 transition-transform duration-500"
+                          alt={media.titulo || ""}
+                          className="object-cover w-full h-56 group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="aspect-video w-full">
+                        <div className="aspect-video relative">
                           <iframe
                             src={media.url}
-                            title={`Video ${i + 1} de ${procedimiento.nombre}`}
+                            title={media.titulo || ""}
                             allowFullScreen
                             className="w-full h-full border-0 rounded-2xl"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <FaPlay className="text-white text-4xl opacity-60" />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition">
+                            <FaPlay className="text-white text-4xl opacity-80" />
                           </div>
                         </div>
                       )}
@@ -146,17 +163,17 @@ export default function ProcedimientoPage() {
               </div>
             )}
 
-            {/* ===== Botones ===== */}
+            {/* Botones */}
             <div className="flex flex-wrap gap-4 mt-8">
-              {/* Agendar cita con procedimiento preseleccionado */}
               <Link
-                href={`/agendar?proc=${encodeURIComponent(procedimiento.nombre)}`}
+                href={`/agendar?proc=${encodeURIComponent(
+                  procedimiento.nombre
+                )}`}
                 className="flex items-center gap-2 bg-[#B08968] text-white px-6 py-3 rounded-full font-medium hover:bg-[#9A7458] transition-all shadow-sm hover:shadow-md no-underline"
               >
                 <FaCalendarCheck /> Agendar cita
               </Link>
 
-              {/* Volver */}
               <Link
                 href="/procedimientos"
                 className="flex items-center gap-2 border border-[#B08968] text-[#4E3B2B] px-6 py-3 rounded-full font-medium bg-[#FAF9F7] hover:bg-[#B08968] hover:text-white transition-all shadow-sm hover:shadow-md no-underline"
@@ -167,6 +184,69 @@ export default function ProcedimientoPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* ===== Modal ===== */}
+      <AnimatePresence>
+        {modalIndex !== null && galeria[modalIndex] && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="relative bg-white rounded-2xl shadow-xl max-w-3xl w-[90%] p-6 text-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <button
+                onClick={() => setModalIndex(null)}
+                className="absolute top-3 right-4 text-[#4E3B2B] hover:text-red-600 text-2xl"
+              >
+                ×
+              </button>
+
+              <h3 className="text-xl font-semibold mb-2 text-[#4E3B2B]">
+                {galeria[modalIndex].titulo}
+              </h3>
+              <p className="text-[#6C584C] mb-4">
+                {galeria[modalIndex].descripcion}
+              </p>
+
+              <div className="relative flex items-center justify-center">
+                {galeria[modalIndex].tipo === "imagen" ? (
+                  <img
+                    src={galeria[modalIndex].url}
+                    alt={galeria[modalIndex].titulo || ""}
+                    className="rounded-lg max-h-[60vh] mx-auto"
+                  />
+                ) : (
+                  <iframe
+                    src={galeria[modalIndex].url}
+                    title={galeria[modalIndex].titulo || ""}
+                    allowFullScreen
+                    className="w-full max-h-[60vh] rounded-lg"
+                  />
+                )}
+
+                <button
+                  onClick={handlePrev}
+                  className="absolute left-2 text-white bg-[#00000055] hover:bg-[#00000088] rounded-full p-3"
+                >
+                  <FaChevronLeft />
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="absolute right-2 text-white bg-[#00000055] hover:bg-[#00000088] rounded-full p-3"
+                >
+                  <FaChevronRight />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

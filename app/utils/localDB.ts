@@ -528,6 +528,94 @@ export function deleteTestimonio(id: number): boolean {
   if (before !== after) saveTestimonios();
   return before !== after;
 }
+// ============================================================
+// 🎓 CHARLAS / FORMACIÓN CONTINUA
+// ============================================================
+export interface Charla {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  detalle: string;
+  imagen: string;
+  galeria: string[]; // puede incluir URLs base64 o enlaces YouTube
+  fecha?: string;
+}
+
+export let charlas: Charla[] = [];
+
+if (typeof window !== "undefined") {
+  const stored = localStorage.getItem("charlas");
+  if (stored) {
+    charlas = JSON.parse(stored);
+  } else {
+    charlas = [
+      {
+        id: 1,
+        titulo: "Simposio Internacional de Medicina Estética 2024",
+        descripcion:
+          "Exploré innovaciones en rejuvenecimiento facial no invasivo y la importancia del equilibrio entre salud, técnica y naturalidad.",
+        imagen: "/imagenes/charla1.jpg",
+        galeria: [
+          "/imagenes/charla1_1.jpg",
+          "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // ejemplo
+        ],
+        detalle:
+          "Durante este simposio profundicé en técnicas avanzadas de bioestimulación con péptidos y hilos tensores.",
+        fecha: "2024-03-12",
+      },
+    ];
+    localStorage.setItem("charlas", JSON.stringify(charlas));
+  }
+}
+
+let nextCharlaId =
+  charlas.length > 0 ? Math.max(...charlas.map((c) => c.id)) + 1 : 1;
+
+function saveCharlas() {
+  try {
+    // Filtramos blobs muy grandes (base64) que saturen el localStorage
+    const filtradas = charlas.map((c) => ({
+      ...c,
+      imagen:
+        c.imagen?.startsWith("data:") && c.imagen.length > 1000
+          ? "blob://temporal-imagen"
+          : c.imagen,
+      galeria: c.galeria?.map((g) =>
+        g.startsWith("data:") && g.length > 1000 ? "blob://temporal" : g
+      ),
+    }));
+    localStorage.setItem("charlas", JSON.stringify(filtradas));
+  } catch (err) {
+    console.warn("⚠️ No se pudieron guardar las charlas:", err);
+  }
+}
+
+
+export function getCharlas(): Charla[] {
+  return JSON.parse(JSON.stringify(charlas));
+}
+
+export function addCharla(data: Omit<Charla, "id">): Charla {
+  const nueva: Charla = { id: nextCharlaId++, ...data };
+  charlas.push(nueva);
+  saveCharlas();
+  return nueva;
+}
+
+export function updateCharla(id: number, data: Partial<Charla>): Charla | null {
+  const idx = charlas.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  charlas[idx] = { ...charlas[idx], ...data };
+  saveCharlas();
+  return charlas[idx];
+}
+
+export function deleteCharla(id: number): boolean {
+  const before = charlas.length;
+  charlas = charlas.filter((c) => c.id !== id);
+  saveCharlas();
+  return charlas.length < before;
+}
 
 // ============================================================
 // LIMPIEZA GENERAL

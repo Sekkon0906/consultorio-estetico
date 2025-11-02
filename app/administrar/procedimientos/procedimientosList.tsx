@@ -8,13 +8,16 @@ import {
   deleteProcedimiento,
   Procedimiento,
   CategoriaProcedimiento,
+  MediaItem,
 } from "../../utils/localDB";
 import { motion, AnimatePresence } from "framer-motion";
+import ModalGaleriaItem from "./modalGaleriaItem";
 
 export default function ProcedimientosList() {
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
   const [modo, setModo] = useState<"lista" | "crear" | "editar">("lista");
   const [actual, setActual] = useState<Procedimiento | null>(null);
+  const [mostrarModal, setMostrarModal] = useState(false);
 
   const [form, setForm] = useState({
     nombre: "",
@@ -24,14 +27,14 @@ export default function ProcedimientosList() {
     categoria: "Facial" as CategoriaProcedimiento,
     duracionMin: "",
     destacado: false,
-    galeria: [] as string[],
+    galeria: [] as MediaItem[],
   });
 
   useEffect(() => {
     setProcedimientos(getProcedimientos());
   }, []);
 
-  // === Guardar nuevo o editar ===
+  // === Guardar ===
   const handleGuardar = () => {
     if (!form.nombre.trim() || !form.desc.trim()) {
       alert("Por favor completa el nombre y la descripción.");
@@ -46,18 +49,11 @@ export default function ProcedimientosList() {
       categoria: form.categoria,
       duracionMin: Number(form.duracionMin) || undefined,
       destacado: form.destacado,
-      galeria: form.galeria.map((url) => ({
-        id: crypto.randomUUID(),
-        tipo: "imagen",
-        url,
-      })),
+      galeria: form.galeria,
     };
 
-    if (modo === "crear") {
-      addProcedimiento(data);
-    } else if (modo === "editar" && actual) {
-      updateProcedimiento(actual.id, data);
-    }
+    if (modo === "crear") addProcedimiento(data);
+    else if (modo === "editar" && actual) updateProcedimiento(actual.id, data);
 
     setForm({
       nombre: "",
@@ -73,7 +69,7 @@ export default function ProcedimientosList() {
     setProcedimientos(getProcedimientos());
   };
 
-  // === Editar existente ===
+  // === Editar ===
   const handleEditar = (p: Procedimiento) => {
     setActual(p);
     setForm({
@@ -84,7 +80,7 @@ export default function ProcedimientosList() {
       categoria: p.categoria,
       duracionMin: p.duracionMin?.toString() || "",
       destacado: p.destacado || false,
-      galeria: p.galeria?.map((m) => m.url) || [],
+      galeria: p.galeria || [],
     });
     setModo("editar");
   };
@@ -97,15 +93,21 @@ export default function ProcedimientosList() {
     }
   };
 
-  // === Manejar galería ===
-  const handleAgregarImagen = (url: string) => {
-    if (url.trim() && !form.galeria.includes(url)) {
-      setForm({ ...form, galeria: [...form.galeria, url] });
-    }
+  // === Manejo de imágenes ===
+  const handleImagenPrincipal = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => setForm({ ...form, imagen: e.target?.result as string });
+    reader.readAsDataURL(file);
   };
 
-  const handleEliminarImagen = (url: string) => {
-    setForm({ ...form, galeria: form.galeria.filter((img) => img !== url) });
+  const handleEliminarMedia = (id: string) => {
+    setForm({ ...form, galeria: form.galeria.filter((m) => m.id !== id) });
+  };
+
+  // === Guardar medio desde modal ===
+  const handleSaveMedia = (item: MediaItem) => {
+    setForm({ ...form, galeria: [...form.galeria, item] });
+    setMostrarModal(false);
   };
 
   return (
@@ -127,7 +129,6 @@ export default function ProcedimientosList() {
               {modo === "crear" ? "Agregar Procedimiento" : "Editar Procedimiento"}
             </h3>
 
-            {/* Nombre */}
             <input
               type="text"
               value={form.nombre}
@@ -136,7 +137,6 @@ export default function ProcedimientosList() {
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
 
-            {/* Descripción */}
             <textarea
               value={form.desc}
               onChange={(e) => setForm({ ...form, desc: e.target.value })}
@@ -144,7 +144,6 @@ export default function ProcedimientosList() {
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
 
-            {/* Precio */}
             <input
               type="number"
               value={form.precio}
@@ -153,23 +152,10 @@ export default function ProcedimientosList() {
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
 
-            {/* Duración */}
-            <input
-              type="number"
-              value={form.duracionMin}
-              onChange={(e) => setForm({ ...form, duracionMin: e.target.value })}
-              placeholder="Duración (minutos)"
-              className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
-            />
-
-            {/* Categoría */}
             <select
               value={form.categoria}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  categoria: e.target.value as CategoriaProcedimiento,
-                })
+                setForm({ ...form, categoria: e.target.value as CategoriaProcedimiento })
               }
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3 bg-white"
             >
@@ -179,30 +165,43 @@ export default function ProcedimientosList() {
             </select>
 
             {/* Imagen principal */}
-            <input
-              type="text"
-              value={form.imagen}
-              onChange={(e) => setForm({ ...form, imagen: e.target.value })}
-              placeholder="URL de imagen principal"
-              className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
-            />
-
-            {form.imagen && (
-              <img
-                src={form.imagen}
-                alt="Vista previa"
-                className="w-40 rounded mb-3 border"
-              />
-            )}
-
-            {/* Destacado */}
-            <div className="flex items-center gap-2 mb-4">
-              <label className="text-[#6E4F37] font-medium">Destacado:</label>
-              <button
-                onClick={() =>
-                  setForm({ ...form, destacado: !form.destacado })
+            <div
+              className="border-2 border-dashed border-[#C7A27A] rounded-md p-4 text-center mb-3 cursor-pointer"
+              onClick={() =>
+                document.getElementById("uploadPrincipal")?.click()
+              }
+            >
+              {form.imagen ? (
+                <img
+                  src={form.imagen}
+                  alt="Vista previa"
+                  className="mx-auto w-40 h-40 object-cover rounded"
+                />
+              ) : (
+                <p className="text-[#6E4F37] opacity-80">
+                  Presiona para subir una imagen principal
+                </p>
+              )}
+              <input
+                id="uploadPrincipal"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) =>
+                  e.target.files && handleImagenPrincipal(e.target.files[0])
                 }
-                className={`px-3 py-1 rounded transition ${
+              />
+            </div>
+
+            {/* Procedimiento en demanda */}
+            <div className="mb-3 d-flex align-items-center gap-3">
+              <label className="fw-semibold" style={{ color: "#4E3B2B" }}>
+                Procedimiento en demanda:
+              </label>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, destacado: !form.destacado })}
+                className={`px-3 py-1 rounded-md font-medium ${
                   form.destacado
                     ? "bg-[#8B6A4B] text-white"
                     : "bg-[#E5D8C8] text-[#6E4F37]"
@@ -213,20 +212,32 @@ export default function ProcedimientosList() {
             </div>
 
             {/* Galería */}
-            <div className="mb-3">
-              <label className="text-sm text-[#6E4F37] font-medium">
-                Galería de imágenes:
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {form.galeria.map((url, i) => (
-                  <div key={i} className="relative">
-                    <img
-                      src={url}
-                      alt={`Galería ${i}`}
-                      className="w-24 h-24 object-cover rounded border"
-                    />
+            <div className="mb-4">
+              <h5 className="text-[#4E3B2B] font-semibold mb-2">
+                Galería multimedia del procedimiento
+              </h5>
+              <div className="flex flex-wrap gap-3">
+                {form.galeria.map((m) => (
+                  <div
+                    key={m.id}
+                    className="relative rounded-md overflow-hidden border border-[#E5D8C8] shadow-sm"
+                    style={{ width: "140px", height: "110px" }}
+                  >
+                    {m.tipo === "imagen" ? (
+                      <img
+                        src={m.url}
+                        alt={m.titulo}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <iframe
+                        src={m.url}
+                        title={m.titulo}
+                        className="w-full h-full"
+                      />
+                    )}
                     <button
-                      onClick={() => handleEliminarImagen(url)}
+                      onClick={() => handleEliminarMedia(m.id)}
                       className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded-bl"
                     >
                       ✕
@@ -235,32 +246,27 @@ export default function ProcedimientosList() {
                 ))}
               </div>
 
-              <div className="flex gap-2 mt-3">
-                <input
-                  type="text"
-                  placeholder="Agregar URL de imagen"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAgregarImagen((e.target as HTMLInputElement).value);
-                      (e.target as HTMLInputElement).value = "";
-                    }
-                  }}
-                  className="flex-1 p-2 border border-[#E5D8C8] rounded"
-                />
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModal(true)}
+                  className="bg-[#B08968] text-white px-3 py-1 rounded hover:bg-[#9b7450] transition"
+                >
+                  + Añadir
+                </button>
               </div>
             </div>
 
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleGuardar}
-                className="bg-[#C7A27A] text-white px-4 py-2 rounded hover:bg-[#B08968] transition"
+                className="bg-[#C7A27A] text-white px-4 py-2 rounded hover:bg-[#B08968]"
               >
                 Guardar
               </button>
               <button
                 onClick={() => setModo("lista")}
-                className="border border-[#C7A27A] text-[#6E4F37] px-4 py-2 rounded hover:bg-[#F3E9E0] transition"
+                className="border border-[#C7A27A] text-[#6E4F37] px-4 py-2 rounded hover:bg-[#F3E9E0]"
               >
                 Cancelar
               </button>
@@ -269,12 +275,12 @@ export default function ProcedimientosList() {
         )}
       </AnimatePresence>
 
-      {/* === LISTADO === */}
+      {/* === LISTA === */}
       {modo === "lista" && (
         <div>
           <button
             onClick={() => setModo("crear")}
-            className="mb-4 bg-[#8B6A4B] text-white px-4 py-2 rounded hover:bg-[#6E4F37] transition"
+            className="mb-4 bg-[#8B6A4B] text-white px-4 py-2 rounded hover:bg-[#6E4F37]"
           >
             + Agregar Procedimiento
           </button>
@@ -284,9 +290,8 @@ export default function ProcedimientosList() {
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {procedimientos.map((p) => (
-                <motion.div
+                <div
                   key={p.id}
-                  layout
                   className="p-4 bg-white border border-[#E5D8C8] rounded-lg shadow-sm"
                 >
                   <h3 className="text-lg font-semibold text-[#6E4F37]">
@@ -294,12 +299,8 @@ export default function ProcedimientosList() {
                   </h3>
                   <p className="text-[#6E5A49] mb-2">{p.desc}</p>
                   <p className="text-sm text-[#8B6A4B] font-medium mb-2">
-                    Precio: ${p.precio}
+                    ${p.precio}
                   </p>
-                  <p className="text-xs text-[#8B6A4B] mb-2">
-                    {p.categoria} · {p.duracionMin ? `${p.duracionMin} min` : ""}
-                  </p>
-
                   {p.imagen && (
                     <img
                       src={p.imagen}
@@ -307,26 +308,35 @@ export default function ProcedimientosList() {
                       className="w-full h-40 object-cover rounded mb-3"
                     />
                   )}
-
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditar(p)}
-                      className="px-3 py-1 rounded bg-[#E5D8C8] text-[#6E4F37] hover:bg-[#C7A27A] transition"
+                      className="px-3 py-1 rounded bg-[#E5D8C8] text-[#6E4F37] hover:bg-[#C7A27A]"
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleEliminar(p.id)}
-                      className="px-3 py-1 rounded bg-red-200 text-red-700 hover:bg-red-300 transition"
+                      className="px-3 py-1 rounded bg-red-200 text-red-700 hover:bg-red-300"
                     >
                       Eliminar
                     </button>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal de galería */}
+      {mostrarModal && (
+        <ModalGaleriaItem
+          show={mostrarModal}
+          onClose={() => setMostrarModal(false)}
+          onSave={handleSaveMedia}
+          modo="crear"
+        />
       )}
     </div>
   );

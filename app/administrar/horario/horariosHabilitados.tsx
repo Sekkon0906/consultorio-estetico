@@ -11,7 +11,10 @@ import {
   HoraDisponible,
   aplicarHorarioGlobalATodosLosDias,
   getCitasByDay,
+  getCitaById,
+  Cita,
 } from "../../utils/localDB";
+import CitasAgendadasModalSimple from "../citas/citasAgendadasModalSimple";
 
 export default function HorariosHabilitados() {
   const hoy = new Date();
@@ -22,6 +25,7 @@ export default function HorariosHabilitados() {
   const [horarioGlobal, setHorarioGlobalState] = useState<HoraDisponible[]>(getHorarioGlobal());
   const [toast, setToast] = useState<string | null>(null);
   const [modalGlobal, setModalGlobal] = useState(false);
+  const [modalCita, setModalCita] = useState<Cita | null>(null);
 
   // === NUEVO: lista de citas ocupadas con detalles ===
   const [citasOcupadas, setCitasOcupadas] = useState<
@@ -102,7 +106,9 @@ export default function HorariosHabilitados() {
 
     if (selectedDate) {
       setHorarioPorFecha(selectedDate, nuevas);
-      window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "dia", fecha: selectedDate, hora } }));
+      window.dispatchEvent(
+        new CustomEvent("horarioCambiado", { detail: { tipo: "dia", fecha: selectedDate, hora } })
+      );
       showToast(`Hora ${hora} actualizada en ${selectedDate}`);
     }
   };
@@ -260,7 +266,10 @@ export default function HorariosHabilitados() {
                             Procedimiento: {citaOcupada?.procedimiento}
                           </p>
                           <button
-                            onClick={() => (window.location.href = "/administrar?section=citas")}
+                            onClick={() => {
+                              const citaCompleta = getCitaById(citaOcupada?.id || 0);
+                              if (citaCompleta) setModalCita(citaCompleta);
+                            }}
                             className="px-3 py-1 rounded-md bg-[#B08968] text-white hover:bg-[#9C7A54] text-xs transition"
                           >
                             Ver más
@@ -348,6 +357,30 @@ export default function HorariosHabilitados() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* === MODAL DE CITA === */}
+      <AnimatePresence>
+        {modalCita && (
+          <CitasAgendadasModalSimple
+  cita={modalCita}
+  onClose={() => setModalCita(null)}
+  onUpdated={() => {
+    setModalCita(null);
+    // refresca lista
+            if (selectedDate) {
+                const citas = getCitasByDay(selectedDate);
+                const horasOcupadas = citas.map((c) => ({
+                  horaNorm: c.hora.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, ""),
+                  paciente: c.nombres,
+                  procedimiento: c.procedimiento,
+                  id: c.id,
+                }));
+                setCitasOcupadas(horasOcupadas);
+              }
+            }}
+          />
         )}
       </AnimatePresence>
 

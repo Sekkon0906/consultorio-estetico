@@ -11,8 +11,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { calcularIngresos } from "./helpers";
-import { getCitasByMonth, Cita } from "../../utils/localDB";
+import {
+  getTotalesMes,
+  getCitasPagadasMes,
+  Cita,
+} from "../../utils/localDB";
 import { generarReporteMensualPDF } from "./reportePDF";
 import HistorialReportes from "./historialReportes";
 
@@ -25,26 +28,42 @@ export default function IngresosPage() {
     totalConsultorio: 0,
     totalEsperado: 0,
   });
-  const [filtro, setFiltro] = useState<"todos" | "online" | "consultorio">("todos");
+  const [filtro, setFiltro] = useState<"todos" | "online" | "consultorio">(
+    "todos"
+  );
   const [dataSemanal, setDataSemanal] = useState<any[]>([]);
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [actualizarHistorial, setActualizarHistorial] = useState(0);
 
-  // === Cargar datos iniciales ===
+  // === Recalcular al montar o al cambiar filtros ===
   useEffect(() => {
     recalcularDatos();
   }, [mes, anio, filtro]);
 
+  // === Escuchar cambios en localStorage (cita concluida, ingreso nuevo) ===
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "ingresosRegistrados" || e.key === "citasAgendadas") {
+        recalcularDatos();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // === Función de recálculo ===
   const recalcularDatos = () => {
-    const citasMes = getCitasByMonth(anio, mes);
-    const resumen = calcularIngresos();
+    const resumen = getTotalesMes(anio, mes);
     setIngresos(resumen);
+
+    const citasMes = getCitasPagadasMes(anio, mes);
 
     const semanas = [1, 2, 3, 4];
     const datos = semanas.map((semana) => {
       const inicio = (semana - 1) * 7 + 1;
       const fin = semana * 7;
+
       const citasSemana = citasMes.filter((cita) => {
         const dia = new Date(cita.fecha).getDate();
         return dia >= inicio && dia <= fin;
@@ -57,10 +76,10 @@ export default function IngresosPage() {
           ? citasSemana.filter((c) => c.metodoPago === "Consultorio")
           : citasSemana;
 
-      const total = filtradas.reduce((acc, c) => {
-        const precio = parseInt(String(c.procedimiento).replace(/\D/g, "")) || 0;
-        return acc + (c.pagado ? precio : 0);
-      }, 0);
+      const total = filtradas.reduce(
+        (acc, c) => acc + (c.montoPagado || c.monto || 0),
+        0
+      );
 
       return { semana: `Semana ${semana}`, total };
     });
@@ -79,7 +98,6 @@ export default function IngresosPage() {
         chartId: "grafica-ingresos",
       });
 
-      // Refresca el historial automáticamente
       setActualizarHistorial((n) => n + 1);
       if (!mostrarHistorial) setMostrarHistorial(true);
     } finally {
@@ -88,8 +106,18 @@ export default function IngresosPage() {
   };
 
   const nombresMes = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
   const aniosDisponibles = [2024, 2025, 2026];
@@ -221,10 +249,10 @@ export default function IngresosPage() {
               dataKey="total"
               stroke={
                 filtro === "online"
-                  ? "#C7A27A" // Dorado cálido
+                  ? "#C7A27A"
                   : filtro === "consultorio"
-                  ? "#EAB308" // Amarillo cálido
-                  : "#8B6A4B" // Marrón principal
+                  ? "#EAB308"
+                  : "#8B6A4B"
               }
               strokeWidth={3}
               dot={{ r: 5 }}
@@ -234,7 +262,7 @@ export default function IngresosPage() {
         </ResponsiveContainer>
       </div>
 
-      {/* === HISTORIAL DE REPORTES === */}
+      {/* === HISTORIAL === */}
       <AnimatePresence>
         {mostrarHistorial && (
           <motion.div

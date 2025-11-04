@@ -3,10 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PALETTE } from "../../agendar/page";
-import { getCitasByDay, Cita } from "../../utils/localDB";
+import {
+  getCitasByDay,
+  confirmarCita,
+  updateCita,
+  Cita,
+} from "../../utils/localDB";
 import CitasAgendadasCard from "./citasAgendadasCard";
 import CitasAgendadasModal from "./citasAgendadasModal";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, CalendarDays } from "lucide-react";
 
 export default function CitasAgendadas() {
   const [isClient, setIsClient] = useState(false);
@@ -14,9 +19,11 @@ export default function CitasAgendadas() {
   const [anio, setAnio] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<Cita | null>(null);
-  const [ascendente, setAscendente] = useState(true);
+  const [ascendente, setAscendente] = useState(false); // 🔹 default descendente
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [recargar, setRecargar] = useState(false);
 
-  // Montaje del cliente
+  // === Montaje inicial ===
   useEffect(() => {
     const hoy = new Date();
     setMes(hoy.getMonth());
@@ -24,16 +31,34 @@ export default function CitasAgendadas() {
     setIsClient(true);
   }, []);
 
-  // Citas del día — usamos useMemo sin condicionales
+  // === Citas del día ===
   const citas = useMemo(() => {
     if (!selectedDate) return [];
-    const citasDia = getCitasByDay(selectedDate);
+    let citasDia = getCitasByDay(selectedDate);
+
+    if (filtroEstado !== "todos") {
+      citasDia = citasDia.filter((c) => c.estado === filtroEstado);
+    }
+
     return citasDia.sort((a, b) =>
       ascendente ? a.hora.localeCompare(b.hora) : b.hora.localeCompare(a.hora)
     );
-  }, [selectedDate, ascendente]);
+  }, [selectedDate, ascendente, filtroEstado, recargar]);
 
-  // Generar calendario
+  // === Resumen ===
+  const resumen = useMemo(() => {
+    if (!selectedDate)
+      return { pendiente: 0, confirmada: 0, atendida: 0, cancelada: 0 };
+    const lista = getCitasByDay(selectedDate);
+    return {
+      pendiente: lista.filter((c) => c.estado === "pendiente").length,
+      confirmada: lista.filter((c) => c.estado === "confirmada").length,
+      atendida: lista.filter((c) => c.estado === "atendida").length,
+      cancelada: lista.filter((c) => c.estado === "cancelada").length,
+    };
+  }, [selectedDate, recargar]);
+
+  // === Calendario ===
   const diasEnMes = useMemo(() => new Date(anio, mes + 1, 0).getDate(), [anio, mes]);
   const primerDiaSemana = useMemo(() => new Date(anio, mes, 1).getDay(), [anio, mes]);
   const nombresMes = [
@@ -55,13 +80,33 @@ export default function CitasAgendadas() {
     setSelectedDate(fecha);
   };
 
+  // === Acciones ===
+  const handleConfirmar = (cita: Cita) => {
+    confirmarCita(cita.id);
+    setRecargar((v) => !v);
+  };
+
+  const handleCancelar = (cita: Cita) => {
+    const motivo = prompt("Motivo de la cancelación:");
+    if (!motivo) return;
+    updateCita(cita.id, { ...cita, estado: "cancelada", motivoCancelacion: motivo });
+    setRecargar((v) => !v);
+  };
+
+  const handleReagendar = (cita: Cita) => {
+    setDetalle(cita);
+  };
+
   if (!isClient)
     return <div className="text-center py-20 text-[#6E5A49]">Cargando citas...</div>;
 
   return (
     <div className="p-6 space-y-6 relative">
-      <h2 className="text-2xl font-semibold text-center" style={{ color: PALETTE.main }}>
-        Citas Agendadas
+      <h2
+        className="text-2xl font-semibold text-center flex items-center justify-center gap-2"
+        style={{ color: PALETTE.main }}
+      >
+        <CalendarDays size={22} /> Citas Agendadas
       </h2>
 
       <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
@@ -90,8 +135,11 @@ export default function CitasAgendadas() {
 
           {/* Días */}
           <div className="grid grid-cols-7 w-full mb-2">
-            {["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map((d) => (
-              <div key={d} className="text-center font-semibold text-[#6E5A49] text-sm border-b border-[#E5D8C8] pb-1">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => (
+              <div
+                key={d}
+                className="text-center font-semibold text-[#6E5A49] text-sm border-b border-[#E5D8C8] pb-1"
+              >
                 {d}
               </div>
             ))}
@@ -132,40 +180,82 @@ export default function CitasAgendadas() {
             <p className="text-[#6E5A49] text-center mt-16 italic">
               Selecciona un día para ver las citas agendadas.
             </p>
-          ) : citas.length === 0 ? (
-            <p className="text-[#6E5A49] text-center mt-16 italic">
-              No hay citas registradas para el {selectedDate}.
-            </p>
           ) : (
             <>
-              <div className="flex justify-between items-center mb-4">
+              {/* === FILTROS === */}
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-3">
                 <h3 className="text-lg font-semibold text-[#8B6A4B]">
                   Citas del {selectedDate}
                 </h3>
-                <button
-                  onClick={() => setAscendente(!ascendente)}
-                  className="flex items-center gap-1 text-sm text-[#6E5A49] hover:text-[#8B6A4B]"
-                >
-                  {ascendente ? (
-                    <>
-                      <ChevronUp size={16} /> Ascendente
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown size={16} /> Descendente
-                    </>
-                  )}
-                </button>
+
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={filtroEstado}
+                    onChange={(e) => setFiltroEstado(e.target.value)}
+                    className="border border-[#E5D8C8] rounded-lg px-3 py-2 text-sm text-[#4E3B2B] bg-white hover:border-[#B08968] focus:outline-none"
+                  >
+                    <option value="todos">Todos los estados</option>
+                    <option value="pendiente">Pendientes</option>
+                    <option value="confirmada">Confirmadas</option>
+                    <option value="atendida">Atendidas</option>
+                    <option value="cancelada">Canceladas</option>
+                  </select>
+
+                  <button
+                    onClick={() => setAscendente(!ascendente)}
+                    className="flex items-center gap-1 text-sm text-[#6E5A49] hover:text-[#8B6A4B]"
+                  >
+                    {ascendente ? (
+                      <>
+                        <ChevronUp size={16} /> Ascendente
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} /> Descendente
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
+              {/* === RESUMEN === */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-sm font-medium">
+                <div className="bg-[#FFF8E1] rounded-lg py-2 text-center border border-[#F1D58A] text-[#A07800]">
+                  Pendientes: {resumen.pendiente}
+                </div>
+                <div className="bg-[#E3F2FD] rounded-lg py-2 text-center border border-[#90CAF9] text-[#1976D2]">
+                  Confirmadas: {resumen.confirmada}
+                </div>
+                <div className="bg-[#E8F5E9] rounded-lg py-2 text-center border border-[#A5D6A7] text-[#2E7D32]">
+                  Atendidas: {resumen.atendida}
+                </div>
+                <div className="bg-[#FCE4EC] rounded-lg py-2 text-center border border-[#F48FB1] text-[#C2185B]">
+                  Canceladas: {resumen.cancelada}
+                </div>
+              </div>
+
+              {/* === TARJETAS O MENSAJE === */}
               <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2">
-                {citas.map((cita) => (
-                  <CitasAgendadasCard
-                    key={cita.id}
-                    cita={cita}
-                    onVerDetalles={setDetalle}
-                  />
-                ))}
+                {citas.length > 0 ? (
+                  citas.map((cita) => (
+                    <CitasAgendadasCard
+                      key={cita.id}
+                      cita={cita}
+                      onVerDetalles={setDetalle}
+                      onConfirmar={handleConfirmar}
+                      onCancelar={handleCancelar}
+                      onReagendar={handleReagendar}
+                    />
+                  ))
+                ) : (
+                  <p className="text-[#6E5A49] text-center mt-20 italic">
+                    No hay citas{" "}
+                    {filtroEstado !== "todos" && (
+                      <>con el estado “{filtroEstado}” </>
+                    )}
+                    para el {selectedDate}.
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -178,9 +268,10 @@ export default function CitasAgendadas() {
           <CitasAgendadasModal
             cita={detalle}
             onClose={() => setDetalle(null)}
-            onUpdated={() =>
-              selectedDate && setDetalle(null)
-            }
+            onUpdated={() => {
+              setDetalle(null);
+              setRecargar((v) => !v);
+            }}
           />
         )}
       </AnimatePresence>

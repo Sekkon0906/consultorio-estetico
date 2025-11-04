@@ -153,6 +153,7 @@ export interface Cita {
   montoPagado?: number;
   montoRestante?: number;
   qrCita?: string;
+  motivoCancelacion?: string;
 }
 
 export let citasAgendadas: Cita[] = [];
@@ -360,6 +361,10 @@ export function deleteCita(id: number) {
 // INGRESOS Y PAGOS
 // =====================
 
+// =====================
+// INGRESOS Y PAGOS — ACTUALIZADO
+// =====================
+
 export function getCitasPagadasMes(year: number, monthIdx: number): Cita[] {
   return getCitasByMonth(year, monthIdx).filter((c) => c.pagado);
 }
@@ -368,41 +373,67 @@ export function getPagosOnline(): Cita[] {
   return citasAgendadas.filter((c) => c.metodoPago === "Online" && c.pagado);
 }
 
+/**
+ * 🧾 Registra un ingreso único en localStorage cuando se paga una cita.
+ * Evita duplicados y mantiene la estructura mensual.
+ */
+export function registrarIngreso(cita: Cita) {
+  if (!cita.pagado || !cita.monto) return;
+
+  const ingresos = JSON.parse(localStorage.getItem("ingresosRegistrados") || "[]");
+  const existe = ingresos.some((i: any) => i.citaId === cita.id);
+  if (existe) return;
+
+  ingresos.push({
+    citaId: cita.id,
+    paciente: `${cita.nombres} ${cita.apellidos}`,
+    procedimiento: cita.procedimiento,
+    monto: cita.montoPagado || cita.monto || 0,
+    metodoPago: cita.metodoPago || "Consultorio",
+    fecha: cita.fecha,
+  });
+
+  localStorage.setItem("ingresosRegistrados", JSON.stringify(ingresos));
+}
+
+/**
+ * Calcula los totales reales del mes (Online, Consultorio, y Esperado)
+ */
 export function getTotalesMes(year: number, monthIdx: number) {
   const citas = getCitasByMonth(year, monthIdx);
-  const parsePrecio = (valor: string) => {
-    const num = parseInt(valor.replace(/[^\d]/g, ""));
-    return isNaN(num) ? 0 : num;
-  };
 
   const totalOnline = citas
     .filter((c) => c.pagado && c.metodoPago === "Online")
-    .reduce((acc, c) => acc + parsePrecio(String(c.procedimiento)), 0);
+    .reduce((acc, c) => acc + (c.montoPagado || c.monto || 0), 0);
 
   const totalConsultorio = citas
     .filter((c) => c.pagado && c.metodoPago === "Consultorio")
-    .reduce((acc, c) => acc + parsePrecio(String(c.procedimiento)), 0);
+    .reduce((acc, c) => acc + (c.montoPagado || c.monto || 0), 0);
 
   const totalEsperado = citas.reduce(
-    (acc, c) => acc + parsePrecio(String(c.procedimiento)),
+    (acc, c) => acc + (c.monto || 0),
     0
   );
 
   return { totalOnline, totalConsultorio, totalEsperado };
 }
 
+/**
+ * Marca una cita como pagada y registra el ingreso.
+ */
 export function updateCitaPago(id: number, pagado: boolean) {
-  const stored = localStorage.getItem("citas");
+  const stored = localStorage.getItem("citasAgendadas");
   const citas: Cita[] = stored ? JSON.parse(stored) : [];
   const index = citas.findIndex((c) => c.id === id);
   if (index !== -1) {
     citas[index].pagado = pagado;
-    localStorage.setItem("citas", JSON.stringify(citas));
+    localStorage.setItem("citasAgendadas", JSON.stringify(citas));
+    if (pagado) registrarIngreso(citas[index]);
   }
 }
 
 export function getAllCitas(): Cita[] {
-  const stored = localStorage.getItem("citas");
+  const stored = localStorage.getItem("citasAgendadas");
   return stored ? JSON.parse(stored) : [];
 }
 
@@ -431,6 +462,7 @@ export function formatCurrency(valor: number): string {
     minimumFractionDigits: 0,
   });
 }
+
 
 // ============================================================
 // BLOQUEOS DE HORAS — Sistema persistente

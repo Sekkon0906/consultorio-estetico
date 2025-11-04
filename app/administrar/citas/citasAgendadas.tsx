@@ -1,235 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Calendar from "react-calendar";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  getCitasByDay,
-  getBloqueosPorFecha,
-  addBloqueo,
-  removeBloqueo,
-  isHoraBloqueada,
-  Cita,
-  BloqueoHora,
-} from "../../utils/localDB";
 import { PALETTE } from "../../agendar/page";
+import { getCitasByDay, Cita } from "../../utils/localDB";
+import CitasAgendadasCard from "./citasAgendadasCard";
+import CitasAgendadasModal from "./citasAgendadasModal";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
-type ValuePiece = Date | null;
-type Value = ValuePiece | [ValuePiece, ValuePiece];
-
-// Componente principal
 export default function CitasAgendadas() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [citas, setCitas] = useState<Cita[]>([]);
-  const [bloqueos, setBloqueos] = useState<BloqueoHora[]>([]);
-  const [motivo, setMotivo] = useState("");
-  const [popup, setPopup] = useState<{ hora: string; modo: "bloquear" | "desbloquear" | null }>({
-    hora: "",
-    modo: null,
-  });
-  const [toast, setToast] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [mes, setMes] = useState(0);
+  const [anio, setAnio] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [detalle, setDetalle] = useState<Cita | null>(null);
+  const [ascendente, setAscendente] = useState(true);
 
-  const fechaISO = selectedDate.toISOString().slice(0, 10);
-  const horas = [
-    "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
-    "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
+  // Montaje del cliente
+  useEffect(() => {
+    const hoy = new Date();
+    setMes(hoy.getMonth());
+    setAnio(hoy.getFullYear());
+    setIsClient(true);
+  }, []);
+
+  // Citas del día — usamos useMemo sin condicionales
+  const citas = useMemo(() => {
+    if (!selectedDate) return [];
+    const citasDia = getCitasByDay(selectedDate);
+    return citasDia.sort((a, b) =>
+      ascendente ? a.hora.localeCompare(b.hora) : b.hora.localeCompare(a.hora)
+    );
+  }, [selectedDate, ascendente]);
+
+  // Generar calendario
+  const diasEnMes = useMemo(() => new Date(anio, mes + 1, 0).getDate(), [anio, mes]);
+  const primerDiaSemana = useMemo(() => new Date(anio, mes, 1).getDay(), [anio, mes]);
+  const nombresMes = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
   ];
 
-  // Cargar citas y bloqueos del día
-  useEffect(() => {
-    setCitas(getCitasByDay(fechaISO));
-    setBloqueos(getBloqueosPorFecha(fechaISO));
-  }, [selectedDate]);
+  const generarDias = useMemo(() => {
+    const dias: (number | null)[] = [];
+    const offset = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
+    for (let i = 0; i < offset; i++) dias.push(null);
+    for (let i = 1; i <= diasEnMes; i++) dias.push(i);
+    return dias;
+  }, [diasEnMes, primerDiaSemana]);
 
-  // Manejar selección de fecha (corrección de tipo)
-  const handleSelectDate = (value: Value, _event: any) => {
-    if (value instanceof Date) {
-      setSelectedDate(value);
-    } else if (Array.isArray(value) && value[0] instanceof Date) {
-      setSelectedDate(value[0]);
-    }
+  const handleDateClick = (dia: number | null) => {
+    if (!dia) return;
+    const fecha = new Date(anio, mes, dia).toISOString().slice(0, 10);
+    setSelectedDate(fecha);
   };
 
-  // Al hacer clic en una hora
-  const handleHoraClick = (hora: string) => {
-    const bloqueada = isHoraBloqueada(fechaISO, hora);
-    if (bloqueada) {
-      setPopup({ hora, modo: "desbloquear" });
-    } else {
-      setPopup({ hora, modo: "bloquear" });
-    }
-  };
-
-  // Confirmar acción (bloquear o desbloquear)
-  const handleConfirm = () => {
-    if (popup.modo === "bloquear") {
-      if (!motivo.trim()) {
-        alert("Debes escribir un motivo para el bloqueo");
-        return;
-      }
-      addBloqueo({ fechaISO, hora: popup.hora, motivo });
-      setToast(`Hora ${popup.hora} bloqueada correctamente`);
-    } else if (popup.modo === "desbloquear") {
-      removeBloqueo(fechaISO, popup.hora);
-      setToast(`Hora ${popup.hora} desbloqueada correctamente`);
-    }
-
-    setBloqueos(getBloqueosPorFecha(fechaISO));
-    setMotivo("");
-    setPopup({ hora: "", modo: null });
-
-    // Autoocultar el toast
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const handleCancel = () => {
-    setMotivo("");
-    setPopup({ hora: "", modo: null });
-  };
+  if (!isClient)
+    return <div className="text-center py-20 text-[#6E5A49]">Cargando citas...</div>;
 
   return (
     <div className="p-6 space-y-6 relative">
       <h2 className="text-2xl font-semibold text-center" style={{ color: PALETTE.main }}>
-        Citas y Bloqueos del Día
+        Citas Agendadas
       </h2>
 
       <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
         {/* === CALENDARIO === */}
-        <div className="bg-[--surface] p-4 rounded-xl shadow-md">
-          <Calendar value={selectedDate} onChange={handleSelectDate} />
-        </div>
+        <div
+          className="bg-[#FBF7F2] p-6 rounded-xl shadow-md w-full md:w-[45%] flex flex-col items-center"
+          style={{ border: `1px solid ${PALETTE.border}` }}
+        >
+          <div className="flex justify-between items-center mb-4 w-full">
+            <button
+              onClick={() => setMes((m) => (m === 0 ? 11 : m - 1))}
+              className="text-[#8B6A4B] hover:text-[#C7A27A] text-lg font-semibold"
+            >
+              ◀
+            </button>
+            <span className="text-[#8B6A4B] font-bold capitalize tracking-wide text-lg">
+              {nombresMes[mes]} {anio}
+            </span>
+            <button
+              onClick={() => setMes((m) => (m === 11 ? 0 : m + 1))}
+              className="text-[#8B6A4B] hover:text-[#C7A27A] text-lg font-semibold"
+            >
+              ▶
+            </button>
+          </div>
 
-        {/* === HORARIO === */}
-        <div className="flex-1 bg-[--surface] p-4 rounded-xl shadow-md">
-          <h3 className="text-lg font-semibold text-center mb-3">
-            Horario del {fechaISO}
-          </h3>
+          {/* Días */}
+          <div className="grid grid-cols-7 w-full mb-2">
+            {["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map((d) => (
+              <div key={d} className="text-center font-semibold text-[#6E5A49] text-sm border-b border-[#E5D8C8] pb-1">
+                {d}
+              </div>
+            ))}
+          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {horas.map((hora) => {
-              const cita = citas.find((c) => c.hora === hora);
-              const bloqueo = bloqueos.find((b) => b.hora === hora);
-              const bloqueada = Boolean(bloqueo);
-
+          <div className="grid grid-cols-7 gap-1 w-full mb-4">
+            {generarDias.map((d, i) => {
+              const fechaISO = d ? new Date(anio, mes, d).toISOString().slice(0, 10) : "";
+              const isSelected = selectedDate === fechaISO;
+              const tieneCitas = d && getCitasByDay(fechaISO).length > 0;
               return (
-                <motion.div
-                  key={hora}
-                  whileHover={{ scale: 1.03 }}
-                  className={`p-3 text-center rounded-lg border cursor-pointer relative transition-all ${
-                    cita
-                      ? "bg-[--main]/10 border-[--main] text-[--main]"
-                      : bloqueada
-                      ? "bg-red-100 border-red-300 text-red-800"
-                      : "bg-white border-gray-200 hover:bg-[--main]/5"
+                <motion.button
+                  key={i}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleDateClick(d)}
+                  disabled={!d}
+                  className={`h-10 w-full rounded-md text-sm font-medium transition-all relative ${
+                    !d
+                      ? "bg-transparent cursor-default"
+                      : isSelected
+                      ? "bg-[#B08968] text-white shadow-inner"
+                      : "bg-white hover:bg-[#F1E6DA] text-[#32261C]"
                   }`}
-                  onClick={() => handleHoraClick(hora)}
                 >
-                  <span className="block font-medium">{hora}</span>
-
-                  {bloqueada && (
-                    <span className="text-xs italic text-red-700 block">
-                      {bloqueo?.motivo || "Bloqueada"}
-                    </span>
+                  {d ?? ""}
+                  {tieneCitas && (
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#B08968] rounded-full"></span>
                   )}
-                  {cita && (
-                    <span className="text-xs italic text-[--textSoft] block">
-                      {cita.nombres} {cita.apellidos}
-                    </span>
-                  )}
-                </motion.div>
+                </motion.button>
               );
             })}
           </div>
         </div>
+
+        {/* === LISTA DE CITAS === */}
+        <div className="flex-1 bg-[#FBF7F2] p-6 rounded-xl shadow-md border border-[#E5D8C8] min-h-[400px]">
+          {!selectedDate ? (
+            <p className="text-[#6E5A49] text-center mt-16 italic">
+              Selecciona un día para ver las citas agendadas.
+            </p>
+          ) : citas.length === 0 ? (
+            <p className="text-[#6E5A49] text-center mt-16 italic">
+              No hay citas registradas para el {selectedDate}.
+            </p>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-[#8B6A4B]">
+                  Citas del {selectedDate}
+                </h3>
+                <button
+                  onClick={() => setAscendente(!ascendente)}
+                  className="flex items-center gap-1 text-sm text-[#6E5A49] hover:text-[#8B6A4B]"
+                >
+                  {ascendente ? (
+                    <>
+                      <ChevronUp size={16} /> Ascendente
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={16} /> Descendente
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2">
+                {citas.map((cita) => (
+                  <CitasAgendadasCard
+                    key={cita.id}
+                    cita={cita}
+                    onVerDetalles={setDetalle}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* === POPUP DE BLOQUEO / DESBLOQUEO === */}
+      {/* === MODAL DETALLE === */}
       <AnimatePresence>
-        {popup.modo && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-[--surface] p-6 rounded-xl shadow-lg w-[90%] max-w-md text-center"
-            >
-              {popup.modo === "bloquear" ? (
-                <>
-                  <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: PALETTE.main }}
-                  >
-                    Bloquear hora {popup.hora}
-                  </h3>
-
-                  <textarea
-                    placeholder="Motivo del bloqueo..."
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    className="w-full p-2 border rounded-lg mb-4"
-                  />
-
-                  <div className="flex justify-center gap-3">
-                    <button
-                      onClick={handleConfirm}
-                      className="px-4 py-2 bg-[--main] text-white rounded-lg hover:bg-[--mainHover]"
-                    >
-                      Confirmar
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-lg font-semibold mb-4 text-red-700">
-                    Desbloquear hora {popup.hora}
-                  </h3>
-                  <p className="text-sm text-[--textSoft] mb-4">
-                    ¿Estás seguro de que quieres quitar el bloqueo para esta hora?
-                  </p>
-
-                  <div className="flex justify-center gap-3">
-                    <button
-                      onClick={handleConfirm}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                    >
-                      Sí, desbloquear
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* === TOAST (Notificación) === */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-5 right-5 bg-[--main] text-white px-5 py-3 rounded-lg shadow-lg z-[9999]"
-          >
-            {toast}
-          </motion.div>
+        {detalle && (
+          <CitasAgendadasModal
+            cita={detalle}
+            onClose={() => setDetalle(null)}
+            onUpdated={() =>
+              selectedDate && setDetalle(null)
+            }
+          />
         )}
       </AnimatePresence>
     </div>

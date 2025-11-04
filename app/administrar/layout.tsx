@@ -31,6 +31,7 @@ export default function AdminLayout({ children }: Props) {
   };
 
   const links = [
+    { id: "horarios", label: "Horarios" },
     { id: "citas", label: "Citas Agendadas" },
     { id: "procedimientos", label: "Procedimientos" },
     { id: "testimonios", label: "Testimonios" },
@@ -106,7 +107,7 @@ export default function AdminLayout({ children }: Props) {
             <div className="flex items-center gap-3">
               <div className="text-right leading-tight">
                 <p className="font-medium text-[#32261C]">
-                  👩‍⚕️ {currentUser.nombres || "Usuario"}
+                  {currentUser.nombres || "Usuario"}
                 </p>
                 <button
                   onClick={handleLogout}

@@ -179,7 +179,7 @@ export default function ProcedimientosPage() {
 
                           {/* Botones */}
                           <div className="flex justify-center gap-4 mt-auto pt-4 border-t border-[#E9DED2] pb-6">
-                            {/* ✅ Agendar cita */}
+                            {/* Agendar cita */}
                             <Link
                               href={`/agendar?proc=${encodeURIComponent(p.nombre)}`}
                               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-medium shadow-sm transition-all duration-300"
@@ -199,7 +199,7 @@ export default function ProcedimientosPage() {
                               Agendar cita
                             </Link>
 
-                            {/* 👁 Ver más */}
+                            {/* Ver más */}
                             <Link
                               href={`/procedimientos/${p.id}`}
                               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-full border font-medium shadow-sm transition-all duration-300"

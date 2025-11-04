@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./page";
 import { Procedimiento } from "../utils/localDB";
-import { ArrowLeft, CalendarDays, Clock } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, RotateCcw } from "lucide-react";
 
 export default function AgendarForm({
   usuario,
@@ -160,7 +160,7 @@ export default function AgendarForm({
         {/* === BLOQUE DÍA Y HORA SELECCIONADA === */}
         {fechaObj && formData.hora && (
           <motion.div
-            className="md:col-span-2 p-5 rounded-2xl border bg-[#FAF5EF] shadow-inner"
+            className="md:col-span-2 p-5 rounded-2xl border bg-[#e4d0b9] shadow-inner relative"
             style={{
               borderColor: "#E0CDB5",
               color: DARK_PALETTE.textSoft,
@@ -174,12 +174,13 @@ export default function AgendarForm({
             >
               Fecha y hora seleccionadas
             </h3>
+
             <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-5 h-5 text-[#B08968]" />
                 <span>
                   <b>
-                    {fmtDiaHumano(fechaObj)} {fmtFechaHumana(fechaObj)}
+                    {fmtDiaHumano(fechaObj)}, {fmtFechaHumana(fechaObj)}
                   </b>
                 </span>
               </div>
@@ -190,19 +191,28 @@ export default function AgendarForm({
                 </span>
               </div>
             </div>
-            <div className="text-center text-sm mt-2 italic text-[#6C584C]">
-              Seleccionado:{" "}
-              <b>
-                {fmtDiaHumano(fechaObj)} {fmtFechaHumana(fechaObj)} —{" "}
-                {fmtHoraHumana(formData.hora)}
-              </b>
+
+            <div className="text-center mt-3">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={goBack}
+                className="inline-flex items-center gap-2 px-4 py-2 mt-2 rounded-full text-sm font-medium shadow-sm transition-all"
+                style={{
+                  background: "#FFF",
+                  color: "#6C584C",
+                  border: "1px solid #E0CDB5",
+                }}
+              >
+                <RotateCcw size={16} />
+                Cambiar horario
+              </motion.button>
             </div>
           </motion.div>
         )}
 
         {/* === CAMPOS DE FORMULARIO === */}
-
-        {/* Nombre */}
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"
@@ -223,7 +233,6 @@ export default function AgendarForm({
           />
         </div>
 
-        {/* Teléfono */}
         <div>
           <label
             className="block mb-1 text-sm font-semibold"
@@ -246,7 +255,6 @@ export default function AgendarForm({
           />
         </div>
 
-        {/* Correo */}
         <div>
           <label
             className="block mb-1 text-sm font-semibold"
@@ -309,7 +317,6 @@ export default function AgendarForm({
             }}
           >
             <option value="">Selecciona un procedimiento</option>
-
             <optgroup label="Faciales">
               {procedimientosFaciales.map((p) => (
                 <option key={p.id} value={p.nombre}>
@@ -317,7 +324,6 @@ export default function AgendarForm({
                 </option>
               ))}
             </optgroup>
-
             <optgroup label="Corporales">
               {procedimientosCorporales.map((p) => (
                 <option key={p.id} value={p.nombre}>
@@ -325,7 +331,6 @@ export default function AgendarForm({
                 </option>
               ))}
             </optgroup>
-
             <optgroup label="Capilares">
               {procedimientosCapilares.map((p) => (
                 <option key={p.id} value={p.nombre}>

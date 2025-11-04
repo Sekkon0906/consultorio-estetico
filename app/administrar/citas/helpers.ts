@@ -1,27 +1,27 @@
-// ============================================================
-// helpers.ts — Funciones de apoyo para la administración de citas
-// ============================================================
+import { Cita } from "../../utils/localDB";
 
-import { Cita, citasAgendadas, BloqueoHora, addBloqueo, removeBloqueo } from "../../utils/localDB";
-
-/** Obtener todas las citas de una fecha específica */
-export function getCitasPorFecha(fecha: string): Cita[] {
-  return citasAgendadas.filter((cita) => cita.fecha === fecha);
+// ✅ Formateo de moneda (peso colombiano)
+export function formatCurrency(value: number): string {
+  return "$ " + value.toLocaleString("es-CO");
 }
 
-/** Bloquear una hora específica con motivo */
-export function bloquearCita(fecha: string, hora: string, motivo: string): BloqueoHora {
-  const bloqueo = { fechaISO: fecha, hora, motivo };
-  addBloqueo(bloqueo);
-  return bloqueo;
+// ✅ Ordena las citas por hora (ASC o DESC)
+export function ordenarCitasPorHora(citas: Cita[], asc = true): Cita[] {
+  return [...citas].sort((a, b) => {
+    const horaA = parseHora(a.hora);
+    const horaB = parseHora(b.hora);
+    return asc ? horaA - horaB : horaB - horaA;
+  });
 }
 
-/** Desbloquear una hora */
-export function desbloquearCita(fecha: string, hora: string): void {
-  removeBloqueo(fecha, hora);
-}
-
-/** Comprobar si una hora está bloqueada */
-export function isHoraBloqueada(bloqueos: BloqueoHora[], fecha: string, hora: string): boolean {
-  return bloqueos.some((b) => b.fechaISO === fecha && b.hora === hora);
+// ✅ Convierte "03:30 PM" a 24h numérico para ordenar
+function parseHora(hora: string): number {
+  const match = hora.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return 0;
+  let [_, h, m, ampm] = match;
+  let hour = parseInt(h);
+  const minutes = parseInt(m);
+  if (ampm.toUpperCase() === "PM" && hour !== 12) hour += 12;
+  if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return hour * 60 + minutes;
 }

@@ -4,7 +4,12 @@ import { motion, animate } from "framer-motion";
 import { useEffect, useState } from "react";
 import { interpolate } from "flubber";
 
-export default function SiluetasAnimadas() {
+
+interface Props {
+  tipo?: string | null; 
+}
+
+export default function SiluetasAnimadas({ tipo }: Props) {
   // === PATHS BASE ===
   // Movimiento inicial serpenteante desde los lados
   const pathInicialJ =

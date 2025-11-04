@@ -1179,3 +1179,67 @@ a:hover {
   text-decoration: none !important;
   color: inherit !important;
 }
+.fc {
+  --fc-border-color: #e5d8c8;
+  --fc-today-bg-color: #f7ede1;
+  --fc-button-bg-color: #b08968;
+  --fc-button-hover-bg-color: #8b6a4b;
+  --fc-button-active-bg-color: #c7a27a;
+  --fc-page-bg-color: #fbf7f2;
+  font-family: 'Poppins', sans-serif;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fc .fc-toolbar-title {
+  color: #5a4230;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.fc-daygrid-day-number {
+  color: #5a4230;
+  font-weight: 500;
+}
+/* Día seleccionado — brillo cálido coherente con la paleta */
+.selected-day {
+  background-color: rgba(192, 150, 100, 0.15) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 8px rgba(192, 150, 100, 0.4);
+  transition: all 0.3s ease-in-out;
+}
+.selected-day:hover {
+  background-color: rgba(192, 150, 100, 0.25) !important;
+}
+
+.fc {
+  font-family: 'Inter', sans-serif;
+  background: #fffaf6;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.fc-daygrid-day {
+  border: 1px solid #e5d8c8;
+  transition: background 0.2s ease;
+}
+
+.fc-daygrid-day:hover {
+  background: #f5ede3;
+}
+
+.fc-toolbar-title {
+  color: #8b6a4b;
+  font-weight: 600;
+}
+
+.fc-button-primary {
+  background: #c7a27a;
+  border: none;
+  color: white;
+  border-radius: 6px;
+}
+
+.fc-button-primary:hover {
+  background: #b08968;
+}

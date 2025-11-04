@@ -104,7 +104,7 @@ export function useEditarInfo() {
       photo,
     };
 
-    // ✅ llamada corregida
+    // llamada 
     updateUserData(updated, user.email);
     updateCurrentUser(updated);
 

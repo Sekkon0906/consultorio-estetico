@@ -22,7 +22,7 @@ export default function TestimoniosForm({ testimonio, onGuardar }: Props) {
     if (testimonio) {
       // Editar existente
       updateTestimonio(testimonio.id, { nombre, texto, video });
-      alert("✅ Testimonio actualizado correctamente");
+      alert("Testimonio actualizado correctamente");
     } else {
       // Crear nuevo
       addTestimonio({
@@ -33,7 +33,7 @@ export default function TestimoniosForm({ testimonio, onGuardar }: Props) {
         thumb: "",
         destacado: false,
       });
-      alert("✅ Testimonio creado correctamente");
+      alert("Testimonio creado correctamente");
     }
 
     setNombre("");

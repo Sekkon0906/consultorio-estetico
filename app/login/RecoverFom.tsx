@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { handleGoogleSuccess } from "./GoogleHandler";
-import { getUsers, updateUserData } from "../utils/localDB"; // ✅ Usamos la versión global
+import { getUsers, updateUserData } from "../utils/localDB"; 
 import { setCurrentUser } from "../utils/auth";
 import { PALETTE } from "./palette2";
 

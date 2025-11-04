@@ -57,7 +57,7 @@
 }
 
 /* ================= CORPORAL ================= */
-/* ☀️ Tonos dorados en movimiento cálido */
+/* Tonos dorados en movimiento cálido */
 .corporal {
   background: linear-gradient(180deg, #fff9eb 0%, #fce7bd 50%, #fff9f1 100%);
   animation: resplandorDorado 16s ease-in-out infinite;
@@ -105,7 +105,7 @@
 }
 
 /* ================= CAPILAR ================= */
-/* 🌿 Movimiento orgánico y partículas verdes ascendentes */
+/* Movimiento orgánico y partículas verdes ascendentes */
 .capilar {
   background: linear-gradient(180deg, #f6fff6 0%, #e0f6e0 50%, #f9fff9 100%);
   animation: respiracionVerde 18s ease-in-out infinite;

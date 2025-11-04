@@ -12,7 +12,7 @@ export default function Galeria3D() {
   const [selected, setSelected] = useState<number | null>(null);
   const [mouseTilt, setMouseTilt] = useState({ x: 0, y: 0 });
 
-  // === 🚀 Cargar y sincronizar procedimientos destacados ===
+  // === Cargar y sincronizar procedimientos destacados ===
   useEffect(() => {
     const load = () => {
       const all = getProcedimientos();
@@ -22,7 +22,7 @@ export default function Galeria3D() {
 
     load();
 
-    // 🔁 Actualiza automáticamente si cambia el localStorage
+    // Actualiza automáticamente si cambia el localStorage
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "procedimientos") load();
     };
@@ -103,7 +103,7 @@ export default function Galeria3D() {
         background: "radial-gradient(circle at center, #fffaf6 15%, #f4ece4 90%)",
       }}
     >
-      {/* 🌈 Halo giratorio */}
+      {/* Halo giratorio */}
       <div
         style={{
           position: "absolute",
@@ -121,7 +121,7 @@ export default function Galeria3D() {
         }}
       />
 
-      {/* 🌠 Partículas */}
+      {/*Partículas */}
       <div
         style={{
           position: "absolute",

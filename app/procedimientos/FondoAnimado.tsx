@@ -20,7 +20,7 @@ export default function FondoAnimado({ tipo }: { tipo: string | null }) {
       ? styles.capilar
       : "";
 
-  // 🧠 Si no hay tipo activo, fondo neutro
+  // Si no hay tipo activo, fondo neutro
   const fallbackBackground = "linear-gradient(180deg, #FAF9F7 0%, #FFFFFF 100%)";
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react"; // ✅ agrega useEffect aquí
+import { useMemo, useState, useEffect } from "react"; 
 import { useRouter } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
 import { motion } from "framer-motion";
@@ -21,7 +21,7 @@ export default function LoginForm({ setErr }: Props) {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(false);
 
-  // ✅ Este bloque centra la ventana emergente de Google
+  // Este bloque centra la ventana emergente de Google
   useEffect(() => {
     const originalOpen = window.open;
 
@@ -46,7 +46,7 @@ export default function LoginForm({ setErr }: Props) {
       window.open = originalOpen;
     };
   }, []);
-  // ✅ Fin del bloque de centrado
+  // Fin del bloque de centrado
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};

@@ -1,69 +1,99 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Cita } from "../utils/localDB";  // Importa correctamente el tipo Cita
-import QRCode from "react-qr-code";  // Aquí importa el componente QRCode
+import { Cita } from "../utils/localDB";
+import QRCode from "react-qr-code";
+import { Clock, CheckCircle2, FileText } from "lucide-react";
 
 interface Props {
-  cita: Cita;  // Asegúrate de que 'cita' sea de tipo Cita
+  cita: Cita;
   modo?: "confirmacion" | "lista" | "admin";
   mostrarQR?: boolean;
 }
 
-export default function TarjetaCita({ cita, modo = "confirmacion", mostrarQR = false }: Props) {
-  // Formateadores y otros métodos como antes
+export default function TarjetaCita({
+  cita,
+  modo = "confirmacion",
+  mostrarQR = false,
+}: Props) {
+  // ====== FORMATEADORES ======
   const fmtHoraHumana = (hhmm: string) => {
-    if (!hhmm) {
-      console.error("Hora no definida o inválida:", hhmm);
-      return "Hora no válida";
-    }
+    if (!hhmm) return "Hora no válida";
 
-    const [hStr, mStr] = hhmm.split(":");
+    // limpiar cualquier AM/PM que venga del backend o del input
+    const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
+
+    const [hStr, mStr] = limpio.split(":");
     let h = Number(hStr);
     const suf = h >= 12 ? "p.m." : "a.m.";
     if (h === 0) h = 12;
     if (h > 12) h -= 12;
+
     return `${h}:${mStr} ${suf}`;
   };
 
+  const fmtHoraMilitar = (hhmm: string) => {
+    if (!hhmm) return "--:--";
+    const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
+
+    let [hStr, mStr] = limpio.split(":");
+    let h = Number(hStr);
+
+    // Si la hora viene con PM o AM explícito, ajustamos
+    if (/p\.?m\.?/i.test(hhmm) && h < 12) h += 12;
+    if (/a\.?m\.?/i.test(hhmm) && h === 12) h = 0;
+
+    const hMil = h.toString().padStart(2, "0");
+    return `${hMil}:${mStr}`;
+  };
+
   const fmtDiaHumano = (date: Date) => {
-    const dias = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const dias = [
+      "domingo",
+      "lunes",
+      "martes",
+      "miércoles",
+      "jueves",
+      "viernes",
+      "sábado",
+    ];
     return dias[date.getDay()];
   };
 
   const fmtFechaHumana = (date: Date) => {
     const meses = [
-      "enero", "febrero", "marzo", "abril", "mayo", "junio",
-      "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+      "enero",
+      "febrero",
+      "marzo",
+      "abril",
+      "mayo",
+      "junio",
+      "julio",
+      "agosto",
+      "septiembre",
+      "octubre",
+      "noviembre",
+      "diciembre",
     ];
     return `${date.getDate()} de ${meses[date.getMonth()]}`;
-  };
-
-  const fmtFechaCreacion = (iso: string) => {
-    const d = new Date(iso);
-    return `${fmtDiaHumano(d)}, ${fmtFechaHumana(d)} ${fmtHoraHumana(
-      `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`
-    )}`;
   };
 
   const fechaObj = new Date(cita.fecha);
   const diaTxt = fmtDiaHumano(fechaObj);
   const fechaTxt = fmtFechaHumana(fechaObj);
-  const horaTxt = fmtHoraHumana(cita.hora);
+  const horaNormal = fmtHoraHumana(cita.hora);
+  const horaMilitar = fmtHoraMilitar(cita.hora);
+
   const numeroCita = String(cita.id).padStart(5, "0");
-
-  const tipoCitaTxt =
-    cita.tipoCita === "valoracion"
-      ? "Consulta de Valoración (primera cita)"
-      : "Procedimiento / Implementación";
-
-  const colorEstado = cita.pagado ? "#C5E1A5" : "#F5E1C0";
-  const textoEstado = cita.pagado ? "PAGADA" : "PENDIENTE";
 
   const metodoPagoTxt =
     cita.metodoPago === "Consultorio"
       ? `Pago en consultorio (${cita.tipoPagoConsultorio || "sin especificar"})`
       : `Pago en línea (${cita.tipoPagoOnline || "sin especificar"})`;
+
+  // === DETERMINAR PROGRESO ===
+  const estados = ["pendiente", "confirmada", "atendida"];
+  const progreso = estados.indexOf(cita.estado || "pendiente") + 1;
 
   return (
     <motion.div
@@ -72,10 +102,55 @@ export default function TarjetaCita({ cita, modo = "confirmacion", mostrarQR = f
       transition={{ duration: 0.45, ease: "easeOut" }}
       className="rounded-2xl border border-[#E9DED2] bg-white shadow-md p-6 relative overflow-hidden"
     >
-      <h3 className="text-lg font-bold mb-4" style={{ color: "#B08968" }}>
-        {modo === "confirmacion" ? "Cita confirmada ✅" : "Detalles de la cita"}
+      {/* === ENCABEZADO === */}
+      <h3 className="text-lg font-bold mb-5 text-[#bd8755] text-center">
+        {modo === "confirmacion" ? "Solicitud creada" : "Detalles de la cita"}
       </h3>
 
+      {/* === BARRA DE PROGRESO === */}
+      <div className="relative mb-6">
+        <div className="absolute top-1/2 left-0 w-full h-[3px] bg-[#E5D8C8] -translate-y-1/2"></div>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${(progreso - 1) * 50}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="absolute top-1/2 left-0 h-[3px] bg-[#B08968] -translate-y-1/2 rounded-full"
+        />
+
+        <div className="relative flex justify-between items-center">
+          {[
+            { label: "Cita pendiente", icon: <Clock size={18} /> },
+            { label: "Cita confirmada", icon: <CheckCircle2 size={18} /> },
+            { label: "Cita atendida", icon: <FileText size={18} /> },
+          ].map((step, i) => {
+            const activo = i < progreso;
+            return (
+              <div key={i} className="flex flex-col items-center w-1/3">
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: activo ? 1 : 0.9 }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    activo
+                      ? "bg-[#B08968] border-[#B08968] text-white shadow-md"
+                      : "bg-white border-[#E5D8C8] text-[#B89B82]"
+                  }`}
+                >
+                  {step.icon}
+                </motion.div>
+                <p
+                  className={`mt-2 text-xs font-medium ${
+                    activo ? "text-[#8B6A4B]" : "text-[#B89B82]"
+                  }`}
+                >
+                  {step.label}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* === INFORMACIÓN DE LA CITA === */}
       <div className="text-[#4E3B2B] leading-relaxed space-y-1">
         <p>
           <b>Número de Cita:</b> #{numeroCita}
@@ -90,7 +165,8 @@ export default function TarjetaCita({ cita, modo = "confirmacion", mostrarQR = f
           <b>Fecha:</b> {diaTxt}, {fechaTxt}
         </p>
         <p>
-          <b>Hora:</b> {horaTxt}
+          <b>Hora:</b> {horaNormal}{" "}
+          <span className="text-[#A78A75] text-sm">(formato 24h: {horaMilitar})</span>
         </p>
         <p>
           <b>Teléfono:</b> {cita.telefono}
@@ -101,50 +177,27 @@ export default function TarjetaCita({ cita, modo = "confirmacion", mostrarQR = f
         <p>
           <b>Método de pago:</b> {metodoPagoTxt}
         </p>
-        <p className="text-sm text-[#6C584C]/80 mt-3 italic">
-          Cita creada el {fmtFechaCreacion(cita.fechaCreacion)}
-        </p>
       </div>
 
       <hr className="my-4 border-[#E9DED2]" />
 
-      <div className="text-center text-[#6C584C]">
-        {!cita.pagado ? (
-          <p className="italic text-sm">
-            El pago se realizará en el consultorio o mediante el QR generado.
-          </p>
-        ) : (
+      <div className="text-center mt-2">
+        {cita.pagado ? (
           <p className="font-medium text-green-700">Pago confirmado ✅</p>
+        ) : (
+          <p className="italic text-sm text-[#6C584C]">
+            El pago se realizará al asistir o mediante el QR generado.
+          </p>
         )}
       </div>
 
-      {mostrarQR && (
+      {mostrarQR && !cita.pagado && (
         <div className="mt-6 flex flex-col items-center">
-          <p className="mb-2 text-sm">Comprobante de pago pendiente:</p>
-          <div className="w-28 h-28 border border-[#E9DED2] bg-[#FAF9F7] flex items-center justify-center rounded-lg text-xs text-[#6C584C]">
-            <QRCode
-              value={`Pago de valoración de $120000 para ${cita.nombres}`}
-              size={200}
-            />
+          <div className="w-28 h-28 border border-[#E9DED2] bg-[#FAF9F7] flex items-center justify-center rounded-lg">
+            <QRCode value={`Cita #${cita.id} - ${cita.nombres}`} size={120} />
           </div>
-          <p className="mt-3 text-sm text-[#6C584C]">
-            Escanea este código para pagar la valoración
-          </p>
         </div>
       )}
-
-      <div className="mt-6 flex justify-center gap-6">
-        <img
-          src="/logos/payu.jpg"
-          alt="PayU"
-          className="w-16 h-16 cursor-pointer"
-        />
-        <img
-          src="/logos/pse.jpg"
-          alt="PSE"
-          className="w-16 h-16 cursor-pointer"
-        />
-      </div>
     </motion.div>
   );
 }

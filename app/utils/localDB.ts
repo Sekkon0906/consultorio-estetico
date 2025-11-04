@@ -1,7 +1,7 @@
 // ============================================================
 // localDB.ts — Base de datos simulada con persistencia local
 // ============================================================
-
+import QRCode from "qrcode";
 // ==========================
 // MODELO USUARIO
 // ==========================
@@ -130,10 +130,6 @@ export function updateUserData(newData: Partial<User>, email: string) {
   if (idx !== -1) users[idx] = { ...users[idx], ...newData };
   localStorage.setItem("usuariosRegistrados", JSON.stringify(users));
 }
-
-// ============================================================
-// MODELO CITAS 
-// ============================================================
 export interface Cita {
   id: number;
   userId: number;
@@ -152,7 +148,11 @@ export interface Cita {
   pagado: boolean;
   creadaPor: "usuario" | "doctora";
   fechaCreacion: string;
-  estado?: "programada" | "cancelada" | "atendida";
+  estado: "pendiente" | "confirmada" | "atendida" | "cancelada";
+  monto?: number;
+  montoPagado?: number;
+  montoRestante?: number;
+  qrCita?: string;
 }
 
 export let citasAgendadas: Cita[] = [];
@@ -174,25 +174,127 @@ let nextCitaId =
 
 function saveCitas() {
   localStorage.setItem("citasAgendadas", JSON.stringify(citasAgendadas));
+  // 🔁 Sincroniza automáticamente con el resto del sistema
+  window.dispatchEvent(new CustomEvent("citasActualizadas", { detail: citasAgendadas }));
 }
 
-export function crearCita(
-  citaData: Omit<Cita, "id" | "pagado" | "fechaCreacion" | "tipoCita" | "creadaPor">
-): Cita {
+// ============================================================
+// FUNCIONES DE HORARIO (deben existir en el mismo archivo o importarse)
+// ============================================================
+
+export function estaDisponible(fechaISO: string, hora: string): boolean {
+  const horarioDia = getHorarioPorFecha(fechaISO);
+  const bloqueada = horarioDia.find((h: any) => h.hora === hora && !h.disponible);
+  const cita = getCitasByDay(fechaISO).find((c) => c.hora === hora);
+  return !bloqueada && !cita;
+}
+
+export function liberarHorario(fechaISO: string, hora: string) {
+  const horarioDia = getHorarioPorFecha(fechaISO);
+  const actualizado = horarioDia.map((h: any) =>
+    h.hora === hora ? { ...h, disponible: true } : h
+  );
+  setHorarioPorFecha(fechaISO, actualizado);
+
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "liberacion", fechaISO, hora } })
+  );
+}
+
+// ============================================================
+// CRUD DE CITAS CONECTADO A HORARIO + QR + PAGOS + ESTADOS
+// ============================================================
+
+export async function crearCita(
+  citaData: Omit<
+    Cita,
+    | "id"
+    | "pagado"
+    | "fechaCreacion"
+    | "tipoCita"
+    | "creadaPor"
+    | "estado"
+    | "qrCita"
+  >
+): Promise<Cita> {
   const cita: Cita = {
     id: nextCitaId++,
     ...citaData,
-    tipoCita: citaData.procedimiento.includes("valoración")
+    tipoCita: citaData.procedimiento.toLowerCase().includes("valoración")
       ? "valoracion"
       : "implementacion",
     pagado: false,
     creadaPor: "usuario",
     fechaCreacion: new Date().toISOString(),
-    estado: "programada",
+    estado: "pendiente",
   };
+
+  // Generar QR con enlace único
+  const url = `${window.location.origin}/cita?id=${cita.id}`;
+  cita.qrCita = await QRCode.toDataURL(url);
+
   citasAgendadas.push(cita);
   saveCitas();
+
+  // Bloquear hora seleccionada
+  const horarioDia = getHorarioPorFecha(cita.fecha);
+  const actualizado = horarioDia.map((h: any) =>
+    h.hora === cita.hora ? { ...h, disponible: false } : h
+  );
+  setHorarioPorFecha(cita.fecha, actualizado);
+
+  window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "nuevaCita", cita } }));
+
   return cita;
+}
+
+export function cancelarCita(id: number) {
+  const cita = citasAgendadas.find((c) => c.id === id);
+  if (!cita) return;
+  liberarHorario(cita.fecha, cita.hora);
+  cita.estado = "cancelada";
+  saveCitas();
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "cancelacion", id, cita } })
+  );
+}
+
+export function confirmarCita(id: number) {
+  updateCita(id, { estado: "confirmada" });
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "confirmacion", id } })
+  );
+}
+
+export function marcarCitaAtendida(id: number) {
+  updateCita(id, { estado: "atendida" });
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "atendida", id } })
+  );
+}
+
+export function marcarPagoCita(
+  id: number,
+  metodoPago: "Consultorio" | "Online",
+  tipoPagoConsultorio: "Efectivo" | "Tarjeta" | null,
+  monto: number,
+  montoPagado: number
+) {
+  const restante = Math.max(monto - montoPagado, 0);
+  const pagado = restante === 0;
+
+  updateCita(id, {
+    metodoPago,
+    tipoPagoConsultorio,
+    monto,
+    montoPagado,
+    montoRestante: restante,
+    pagado,
+  });
+
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "pago", id, restante } })
+  );
 }
 
 export function getCitas(): Cita[] {
@@ -207,7 +309,10 @@ export function updateCita(id: number, data: Partial<Cita>) {
   const index = citasAgendadas.findIndex((c) => c.id === id);
   if (index !== -1) {
     citasAgendadas[index] = { ...citasAgendadas[index], ...data };
-    localStorage.setItem("citasAgendadas", JSON.stringify(citasAgendadas));
+    saveCitas();
+    window.dispatchEvent(
+      new CustomEvent("horarioCambiado", { detail: { tipo: "update", id, data } })
+    );
   }
 }
 
@@ -215,8 +320,11 @@ export function getCitasByUser(userId: number): Cita[] {
   return citasAgendadas.filter((c) => c.userId === userId);
 }
 
-export function getCitasByDay(fechaISO: string): Cita[] {
-  return citasAgendadas.filter((c) => c.fecha.slice(0, 10) === fechaISO);
+export function getCitasByDay(fecha: string): Cita[] {
+  const fechaBase = new Date(fecha).toISOString().slice(0, 10);
+  return citasAgendadas
+    .filter((c) => new Date(c.fecha).toISOString().slice(0, 10) === fechaBase)
+    .sort((a, b) => a.hora.localeCompare(b.hora)); // ✅ ordenadas por hora
 }
 
 export function getCitasByMonth(year: number, monthIdx: number): Cita[] {
@@ -231,98 +339,35 @@ export function marcarCitaPagada(id: number) {
   if (cita) {
     cita.pagado = true;
     saveCitas();
+    window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "pago", id } }));
   }
 }
 
 export function deleteCita(id: number) {
+  const cita = citasAgendadas.find((c) => c.id === id);
+  if (cita) liberarHorario(cita.fecha, cita.hora);
   citasAgendadas = citasAgendadas.filter((c) => c.id !== id);
   saveCitas();
+  window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "delete", id } }));
 }
 
+
 // ============================================================
-// 🔧 EXTENSIONES ADICIONALES PARA PANEL ADMINISTRATIVO
+// EXTENSIONES ADICIONALES PARA PANEL ADMINISTRATIVO
 // ============================================================
 
 // =====================
-// 🔹 BLOQUEO DE HORAS
-// =====================
-// ============================================================
-// BLOQUEOS DE HORAS — Sistema persistente
-// ============================================================
-
-export interface BloqueoHora {
-  fechaISO: string; // formato YYYY-MM-DD
-  hora: string; // Ejemplo: "10:00 AM"
-  motivo: string;
-}
-
-export let bloqueos: BloqueoHora[] = [];
-
-if (typeof window !== "undefined") {
-  const stored = localStorage.getItem("bloqueos");
-  if (stored) {
-    try {
-      bloqueos = JSON.parse(stored);
-    } catch {
-      bloqueos = [];
-      localStorage.removeItem("bloqueos");
-    }
-  }
-}
-
-function saveBloqueos() {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("bloqueos", JSON.stringify(bloqueos));
-  }
-}
-
-/** Agregar bloqueo */
-export function addBloqueo(b: BloqueoHora) {
-  bloqueos.push(b);
-  saveBloqueos();
-}
-
-/** Eliminar bloqueo */
-export function removeBloqueo(fechaISO: string, hora: string) {
-  bloqueos = bloqueos.filter((b) => !(b.fechaISO === fechaISO && b.hora === hora));
-  saveBloqueos();
-}
-
-/** Obtener bloqueos por fecha */
-export function getBloqueosPorFecha(fechaISO: string): BloqueoHora[] {
-  return bloqueos.filter((b) => b.fechaISO === fechaISO);
-}
-
-/** Verificar si una hora está bloqueada */
-export function isHoraBloqueada(fechaISO: string, hora: string): boolean {
-  return bloqueos.some((b) => b.fechaISO === fechaISO && b.hora === hora);
-}
-
-
-// =====================
-// 💰 INGRESOS Y PAGOS
+// INGRESOS Y PAGOS
 // =====================
 
-/**
- * Retorna todas las citas pagadas del mes seleccionado.
- */
 export function getCitasPagadasMes(year: number, monthIdx: number): Cita[] {
   return getCitasByMonth(year, monthIdx).filter((c) => c.pagado);
 }
 
-/**
- * Retorna todas las citas pagadas online.
- */
 export function getPagosOnline(): Cita[] {
   return citasAgendadas.filter((c) => c.metodoPago === "Online" && c.pagado);
 }
 
-/**
- * Calcula totales mensuales:
- * - totalOnline
- * - totalConsultorio
- * - totalEsperado
- */
 export function getTotalesMes(year: number, monthIdx: number) {
   const citas = getCitasByMonth(year, monthIdx);
   const parsePrecio = (valor: string) => {
@@ -346,14 +391,24 @@ export function getTotalesMes(year: number, monthIdx: number) {
   return { totalOnline, totalConsultorio, totalEsperado };
 }
 
-// =====================
-// 💵 CONFIGURACIÓN DE VALOR CONSULTA GENERAL
-// =====================
+export function updateCitaPago(id: number, pagado: boolean) {
+  const stored = localStorage.getItem("citas");
+  const citas: Cita[] = stored ? JSON.parse(stored) : [];
+  const index = citas.findIndex((c) => c.id === id);
+  if (index !== -1) {
+    citas[index].pagado = pagado;
+    localStorage.setItem("citas", JSON.stringify(citas));
+  }
+}
 
-/**
- * Permite almacenar un valor base editable para la "consulta general".
- * Se guarda en localStorage como "valorConsultaGeneral".
- */
+export function getAllCitas(): Cita[] {
+  const stored = localStorage.getItem("citas");
+  return stored ? JSON.parse(stored) : [];
+}
+
+// =====================
+// CONFIGURACIÓN DE VALOR CONSULTA GENERAL
+// =====================
 export function setValorConsultaGeneral(valor: number) {
   if (typeof window !== "undefined") {
     localStorage.setItem("valorConsultaGeneral", valor.toString());
@@ -367,7 +422,7 @@ export function getValorConsultaGeneral(): number {
 }
 
 // =====================
-// 💵 FORMATO DE MONEDA
+// FORMATO DE MONEDA
 // =====================
 export function formatCurrency(valor: number): string {
   return valor.toLocaleString("es-CO", {
@@ -377,6 +432,53 @@ export function formatCurrency(valor: number): string {
   });
 }
 
+// ============================================================
+// BLOQUEOS DE HORAS — Sistema persistente
+// ============================================================
+
+export interface BloqueoHora {
+  fechaISO: string;
+  hora: string;
+  motivo: string;
+}
+
+export let bloqueos: BloqueoHora[] = [];
+
+if (typeof window !== "undefined") {
+  const stored = localStorage.getItem("bloqueos");
+  if (stored) {
+    try {
+      bloqueos = JSON.parse(stored);
+    } catch {
+      bloqueos = [];
+      localStorage.removeItem("bloqueos");
+    }
+  }
+}
+
+function saveBloqueos() {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("bloqueos", JSON.stringify(bloqueos));
+  }
+}
+
+export function addBloqueo(b: BloqueoHora) {
+  bloqueos.push(b);
+  saveBloqueos();
+}
+
+export function removeBloqueo(fechaISO: string, hora: string) {
+  bloqueos = bloqueos.filter((b) => !(b.fechaISO === fechaISO && b.hora === hora));
+  saveBloqueos();
+}
+
+export function getBloqueosPorFecha(fechaISO: string): BloqueoHora[] {
+  return bloqueos.filter((b) => b.fechaISO === fechaISO);
+}
+
+export function isHoraBloqueada(fechaISO: string, hora: string): boolean {
+  return bloqueos.some((b) => b.fechaISO === fechaISO && b.hora === hora);
+}
 
 // ============================================================
 // CRUD DE PROCEDIMIENTOS + GALERÍA
@@ -529,7 +631,7 @@ export function deleteTestimonio(id: number): boolean {
   return before !== after;
 }
 // ============================================================
-// 🎓 CHARLAS / FORMACIÓN CONTINUA
+// CHARLAS / FORMACIÓN CONTINUA
 // ============================================================
 export interface Charla {
   id: number;
@@ -615,6 +717,167 @@ export function deleteCharla(id: number): boolean {
   charlas = charlas.filter((c) => c.id !== id);
   saveCharlas();
   return charlas.length < before;
+}
+// ============================================================
+// HORARIOS Y DISPONIBILIDAD — SISTEMA DE CITAS
+// ============================================================
+
+export interface HoraDisponible {
+  hora: string; // ej: "08:30 AM"
+  disponible: boolean;
+  bloqueadoPor?: string | null;
+  idCita?: number | null;
+}
+
+export interface HorarioPorFecha {
+  fecha: string; // formato YYYY-MM-DD
+  horas: HoraDisponible[];
+}
+
+export interface HorarioGlobal {
+  dia: number; // 0=domingo ... 6=sábado
+  horas: string[];
+}
+
+// ============================================================
+// HORAS BASE DEL SISTEMA (08:00 AM a 06:00 PM)
+// ============================================================
+
+export const HORAS_BASE: string[] = [
+  "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM",
+  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
+  "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
+  "06:00 PM",
+];
+
+// ============================================================
+// ALMACENAMIENTO LOCAL
+// ============================================================
+
+let horarios: {
+  fecha: string;
+  hora: string;
+  disponible: boolean;
+  bloqueadoPor?: string;
+  idCita?: number | null;
+}[] = [];
+
+let horariosGlobales: HorarioGlobal[] = [];
+let horariosPorFecha: HorarioPorFecha[] = [];
+
+if (typeof window !== "undefined") {
+  horarios = JSON.parse(localStorage.getItem("horarios") || "[]");
+  horariosGlobales = JSON.parse(localStorage.getItem("horarios_globales") || "[]");
+  horariosPorFecha = JSON.parse(localStorage.getItem("horarios_por_fecha") || "[]");
+}
+
+// ============================================================
+// FUNCIONES BASE DE DISPONIBILIDAD
+// ============================================================
+
+export function setHorarioDisponible(fecha: string, hora: string, disponible: boolean, bloqueadoPor?: string) {
+  const idx = horarios.findIndex((h) => h.fecha === fecha && h.hora === hora);
+  if (idx !== -1) {
+    horarios[idx].disponible = disponible;
+    horarios[idx].bloqueadoPor = bloqueadoPor;
+  } else {
+    horarios.push({ fecha, hora, disponible, bloqueadoPor });
+  }
+  localStorage.setItem("horarios", JSON.stringify(horarios));
+}
+
+export function ocuparHorario(fecha: string, hora: string, idCita: number) {
+  const idx = horarios.findIndex((h) => h.fecha === fecha && h.hora === hora);
+  if (idx !== -1) {
+    horarios[idx].disponible = false;
+    horarios[idx].idCita = idCita;
+  } else {
+    horarios.push({ fecha, hora, disponible: false, idCita });
+  }
+  localStorage.setItem("horarios", JSON.stringify(horarios));
+}
+
+
+export function getHorariosDisponibles(fecha: string): HoraDisponible[] {
+  const delDia = horarios.filter((h) => h.fecha === fecha);
+  if (delDia.length > 0) return delDia.map((h) => ({ hora: h.hora, disponible: h.disponible }));
+  const global = getHorarioGlobal();
+  return global;
+}
+
+export function bloquearHorarioManual(fecha: string, hora: string, motivo = "doctora") {
+  setHorarioDisponible(fecha, hora, false, motivo);
+}
+
+
+
+// ============================================================
+// HORARIOS GLOBALES — CONFIGURADOS POR LA DOCTORA
+// ============================================================
+
+export function getHorarioGlobal(): HoraDisponible[] {
+  const stored = localStorage.getItem("horario_global");
+  if (stored) return JSON.parse(stored);
+  return HORAS_BASE.map((h) => ({ hora: h, disponible: true }));
+}
+
+export function setHorarioGlobal(horas: HoraDisponible[]) {
+  localStorage.setItem("horario_global", JSON.stringify(horas));
+}
+
+export function getHorariosDelDia(dia: number): string[] {
+  const data = horariosGlobales.find((h) => h.dia === dia);
+  return data ? data.horas : [];
+}
+
+export function setHorariosDelDia(dia: number, horas: string[]) {
+  const existing = horariosGlobales.find((h) => h.dia === dia);
+  if (existing) existing.horas = horas;
+  else horariosGlobales.push({ dia, horas });
+  localStorage.setItem("horarios_globales", JSON.stringify(horariosGlobales));
+}
+
+// ============================================================
+// HORARIOS POR FECHA ESPECÍFICA (SOBRESCRIBEN EL GLOBAL)
+// ============================================================
+
+export function getHorarioPorFecha(fecha: string): HoraDisponible[] {
+  const found = horariosPorFecha.find((d) => d.fecha === fecha);
+  if (found) return found.horas;
+  const global = getHorarioGlobal();
+  return global.map((h) => ({ ...h }));
+}
+
+export function setHorarioPorFecha(fecha: string, horas: HoraDisponible[]) {
+  const idx = horariosPorFecha.findIndex((d) => d.fecha === fecha);
+  if (idx !== -1) horariosPorFecha[idx].horas = horas;
+  else horariosPorFecha.push({ fecha, horas });
+  localStorage.setItem("horarios_por_fecha", JSON.stringify(horariosPorFecha));
+}
+
+// ============================================================
+// SINCRONIZACIÓN ENTRE HORARIO GLOBAL Y DÍAS ESPECÍFICOS
+// ============================================================
+
+export function aplicarHorarioGlobalATodosLosDias() {
+  const global = getHorarioGlobal();
+  const hoy = new Date();
+  const nuevos: HorarioPorFecha[] = [];
+
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(hoy);
+    d.setDate(hoy.getDate() + i);
+    const fechaISO = d.toISOString().slice(0, 10);
+    nuevos.push({
+      fecha: fechaISO,
+      horas: global.map((h) => ({ ...h })),
+    });
+  }
+
+  horariosPorFecha = nuevos;
+  localStorage.setItem("horarios_por_fecha", JSON.stringify(horariosPorFecha));
 }
 
 // ============================================================

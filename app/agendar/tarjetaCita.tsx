@@ -32,20 +32,20 @@ export default function TarjetaCita({
     return `${h}:${mStr} ${suf}`;
   };
 
-  const fmtHoraMilitar = (hhmm: string) => {
-    if (!hhmm) return "--:--";
-    const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
+const fmtHoraMilitar = (hhmm: string) => {
+  if (!hhmm) return "--:--";
+  const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
 
-    let [hStr, mStr] = limpio.split(":");
-    let h = Number(hStr);
+  const [hStr, mStr] = limpio.split(":"); // ✅ ahora const
+  let h = Number(hStr);
 
-    // Si la hora viene con PM o AM explícito, ajustamos
-    if (/p\.?m\.?/i.test(hhmm) && h < 12) h += 12;
-    if (/a\.?m\.?/i.test(hhmm) && h === 12) h = 0;
+  if (/p\.?m\.?/i.test(hhmm) && h < 12) h += 12;
+  if (/a\.?m\.?/i.test(hhmm) && h === 12) h = 0;
 
-    const hMil = h.toString().padStart(2, "0");
-    return `${hMil}:${mStr}`;
-  };
+  const hMil = h.toString().padStart(2, "0");
+  return `${hMil}:${mStr}`;
+};
+
 
   const fmtDiaHumano = (date: Date) => {
     const dias = [

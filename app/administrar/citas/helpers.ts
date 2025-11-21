@@ -14,14 +14,21 @@ export function ordenarCitasPorHora(citas: Cita[], asc = true): Cita[] {
   });
 }
 
+
 // ✅ Convierte "03:30 PM" a 24h numérico para ordenar
 function parseHora(hora: string): number {
   const match = hora.match(/(\d+):(\d+)\s*(AM|PM)/i);
   if (!match) return 0;
-  let [_, h, m, ampm] = match;
-  let hour = parseInt(h);
-  const minutes = parseInt(m);
+
+  // ✅ ignoramos el primer elemento con , y usamos const en lugar de let
+  const [, h, m, ampm] = match;
+
+  let hour = parseInt(h, 10);
+  const minutes = parseInt(m, 10);
+
   if (ampm.toUpperCase() === "PM" && hour !== 12) hour += 12;
   if (ampm.toUpperCase() === "AM" && hour === 12) hour = 0;
+
   return hour * 60 + minutes;
 }
+

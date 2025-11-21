@@ -9,11 +9,23 @@ import {
 } from "../../utils/localDB";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ✅ Definimos el tipo de una charla
+export interface Charla {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  detalle: string;
+  imagen: string;
+  galeria: string[];
+  fecha: string; // podrías usar Date si en localDB lo guardas como tal
+}
+
 export default function CharlasList() {
-  const [charlas, setCharlas] = useState<any[]>([]);
-  const [editando, setEditando] = useState<any | null>(null);
+  // ✅ Nada de any: usamos Charla[]
+  const [charlas, setCharlas] = useState<Charla[]>([]);
+  const [editando, setEditando] = useState<Charla | null>(null);
   const [formVisible, setFormVisible] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Omit<Charla, "id">>({
     titulo: "",
     descripcion: "",
     detalle: "",
@@ -23,7 +35,9 @@ export default function CharlasList() {
   });
 
   useEffect(() => {
-    setCharlas(getCharlas());
+    // 👀 Asegúrate de que getCharlas devuelve Charla[]
+    const data = getCharlas() as Charla[];
+    setCharlas(data);
   }, []);
 
   const resetForm = () => {
@@ -41,23 +55,33 @@ export default function CharlasList() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editando) updateCharla(editando.id, formData);
-    else addCharla(formData);
-    setCharlas(getCharlas());
+
+    if (editando) {
+      // editando tiene id, formData no
+      updateCharla(editando.id, formData);
+    } else {
+      // addCharla debe crear el id internamente
+      addCharla(formData);
+    }
+
+    setCharlas(getCharlas() as Charla[]);
     resetForm();
   };
 
   const handleDelete = (id: number) => {
     if (confirm("¿Seguro que deseas eliminar esta charla?")) {
       deleteCharla(id);
-      setCharlas(getCharlas());
+      setCharlas(getCharlas() as Charla[]);
     }
   };
 
-  const handleEdit = (charla: any) => {
+  // ✅ sin any
+  const handleEdit = (charla: Charla) => {
     setEditando(charla);
     setFormVisible(true);
-    setFormData({ ...charla });
+
+    const { id, ...rest } = charla;
+    setFormData(rest);
   };
 
   // === Subida de imagen principal ===

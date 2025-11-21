@@ -4,6 +4,11 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import domtoimage from "dom-to-image";
 
+interface PuntoSemanal {
+  semana: string;
+  total: number;
+}
+
 interface GenerarReporteMensualPDFProps {
   mes: number;
   anio: number;
@@ -12,9 +17,17 @@ interface GenerarReporteMensualPDFProps {
     totalConsultorio: number;
     totalEsperado: number;
   };
-  dataSemanal: any[];
+  dataSemanal: PuntoSemanal[]; // ✅ sin any
   chartId: string;
 }
+
+// ✅ tipo para jsPDF extendido por autotable
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+    // (si quisieras, aquí puedes añadir más campos)
+  };
+};
 
 export async function generarReporteMensualPDF({
   mes,
@@ -45,8 +58,16 @@ export async function generarReporteMensualPDF({
   doc.setFontSize(12);
   doc.setTextColor(70, 50, 30);
   doc.text(`Pagos Online: $${ingresos.totalOnline.toLocaleString()}`, 25, 55);
-  doc.text(`Pagos en Consultorio: $${ingresos.totalConsultorio.toLocaleString()}`, 25, 65);
-  doc.text(`Total Esperado: $${ingresos.totalEsperado.toLocaleString()}`, 25, 75);
+  doc.text(
+    `Pagos en Consultorio: $${ingresos.totalConsultorio.toLocaleString()}`,
+    25,
+    65
+  );
+  doc.text(
+    `Total Esperado: $${ingresos.totalEsperado.toLocaleString()}`,
+    25,
+    75
+  );
 
   // === Tabla de ingresos semanales ===
   autoTable(doc, {
@@ -70,7 +91,11 @@ export async function generarReporteMensualPDF({
   const chartElement = document.getElementById(chartId);
   if (chartElement) {
     const imgData = await domtoimage.toPng(chartElement);
-    const finalY = (doc as any).lastAutoTable?.finalY || 120;
+
+    // ✅ usamos el tipo extendido en vez de any
+    const docWithTable = doc as JsPDFWithAutoTable;
+    const finalY = docWithTable.lastAutoTable?.finalY ?? 120;
+
     doc.addImage(imgData, "PNG", 15, finalY + 10, 180, 90);
   }
 
@@ -99,15 +124,13 @@ export async function generarReporteMensualPDF({
     totalOnline: ingresos.totalOnline,
     totalConsultorio: ingresos.totalConsultorio,
     totalEsperado: ingresos.totalEsperado,
-    archivoURL: pdfBase64, 
+    archivoURL: pdfBase64,
   };
 
-  // Guardar en localStorage
   const stored = localStorage.getItem("reportesMensuales");
-  const lista = stored ? JSON.parse(stored) : [];
+  const lista: typeof reporte[] = stored ? JSON.parse(stored) : [];
   lista.push(reporte);
   localStorage.setItem("reportesMensuales", JSON.stringify(lista));
 
-  // === Descargar automáticamente ===
   doc.save(`Reporte-${nombresMes[mes]}-${anio}.pdf`);
 }

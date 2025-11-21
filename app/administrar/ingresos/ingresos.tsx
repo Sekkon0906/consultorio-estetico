@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -14,10 +14,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   getTotalesMes,
   getCitasPagadasMes,
-  Cita,
+  // Cita,   // ❌ ya no se usa
 } from "../../utils/localDB";
 import { generarReporteMensualPDF } from "./reportePDF";
 import HistorialReportes from "./historialReportes";
+
+// ✅ tipos auxiliares
+type Filtro = "todos" | "online" | "consultorio";
+
+interface PuntoSemanal {
+  semana: string;
+  total: number;
+}
 
 export default function IngresosPage() {
   const fechaActual = new Date();
@@ -28,39 +36,21 @@ export default function IngresosPage() {
     totalConsultorio: 0,
     totalEsperado: 0,
   });
-  const [filtro, setFiltro] = useState<"todos" | "online" | "consultorio">(
-    "todos"
-  );
-  const [dataSemanal, setDataSemanal] = useState<any[]>([]);
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [dataSemanal, setDataSemanal] = useState<PuntoSemanal[]>([]);
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [actualizarHistorial, setActualizarHistorial] = useState(0);
 
-  // === Recalcular al montar o al cambiar filtros ===
-  useEffect(() => {
-    recalcularDatos();
-  }, [mes, anio, filtro]);
-
-  // === Escuchar cambios en localStorage (cita concluida, ingreso nuevo) ===
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "ingresosRegistrados" || e.key === "citasAgendadas") {
-        recalcularDatos();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
-  // === Función de recálculo ===
-  const recalcularDatos = () => {
+  // === Función de recálculo, memorizada ===
+  const recalcularDatos = useCallback(() => {
     const resumen = getTotalesMes(anio, mes);
     setIngresos(resumen);
 
     const citasMes = getCitasPagadasMes(anio, mes);
 
     const semanas = [1, 2, 3, 4];
-    const datos = semanas.map((semana) => {
+    const datos: PuntoSemanal[] = semanas.map((semana) => {
       const inicio = (semana - 1) * 7 + 1;
       const fin = semana * 7;
 
@@ -85,7 +75,23 @@ export default function IngresosPage() {
     });
 
     setDataSemanal(datos);
-  };
+  }, [anio, mes, filtro]);
+
+  // === Recalcular al montar o al cambiar filtros ===
+  useEffect(() => {
+    recalcularDatos();
+  }, [recalcularDatos]);
+
+  // === Escuchar cambios en localStorage (cita concluida, ingreso nuevo) ===
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "ingresosRegistrados" || e.key === "citasAgendadas") {
+        recalcularDatos();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [recalcularDatos]);
 
   const handleGenerarPDF = async () => {
     setGenerandoPDF(true);
@@ -206,17 +212,20 @@ export default function IngresosPage() {
 
       {/* === FILTROS DE VISTA === */}
       <div className="flex justify-center gap-3 mt-6">
-        {[
-          { label: "Todos", value: "todos" },
-          { label: "Online", value: "online" },
-          { label: "Consultorio", value: "consultorio" },
-        ].map((btn) => {
+        {(
+          [
+            { label: "Todos", value: "todos" },
+            { label: "Online", value: "online" },
+            { label: "Consultorio", value: "consultorio" },
+          ] as { label: string; value: Filtro }[]
+        ).map((btn) => {
           const activo = filtro === btn.value;
           return (
             <motion.button
               key={btn.value}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setFiltro(btn.value as any)}
+              // ✅ sin any
+              onClick={() => setFiltro(btn.value)}
               className={`px-5 py-2 rounded-lg font-semibold transition-all shadow-sm border ${
                 activo
                   ? "bg-[#B08968] text-white border-[#B08968] shadow-md"

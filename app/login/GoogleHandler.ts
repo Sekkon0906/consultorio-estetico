@@ -1,18 +1,34 @@
 import { jwtDecode } from "jwt-decode";
-import { getUsers, updateUserData } from "../utils/localDB";
+import { getUsers, updateUserData, User } from "../utils/localDB";
 import { setCurrentUser } from "../utils/auth";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
+interface GoogleCredentialResponse {
+  credential?: string;
+}
+
+interface GoogleDecodedToken {
+  email?: string;
+  name?: string;
+  picture?: string;
+  phone_number?: string;
+}
+
 export async function handleGoogleSuccess(
-  credentialResponse: any,
+  credentialResponse: GoogleCredentialResponse,
   router: AppRouterInstance,
   setErr: (msg: string | null) => void,
   recoverMode: boolean,
-  setRecoverUser: (u: any) => void,
+  setRecoverUser: (u: User | null) => void,
   setRecoverStep: (s: "verify" | "reset") => void
 ) {
   try {
-    const decoded: any = jwtDecode(credentialResponse.credential!);
+    if (!credentialResponse.credential) {
+      setErr("Error al recibir datos de Google.");
+      return;
+    }
+
+    const decoded = jwtDecode<GoogleDecodedToken>(credentialResponse.credential);
     const email = (decoded.email || "").toLowerCase();
 
     if (!email) {
@@ -47,8 +63,6 @@ export async function handleGoogleSuccess(
     }
 
     // ===== Usuario nuevo → Registro prellenado =====
-
-    // Divide el nombre completo
     const fullName = decoded.name || "";
     const [firstName, ...rest] = fullName.split(" ");
     const lastName = rest.join(" ");
@@ -59,7 +73,6 @@ export async function handleGoogleSuccess(
     const telefonoParam = encodeURIComponent(decoded.phone_number || "");
     const photoParam = encodeURIComponent(decoded.picture || "");
 
-    // Redirige con todos los datos prellenados
     router.push(
       `/register?email=${emailParam}&nombres=${nombresParam}&apellidos=${apellidosParam}&telefono=${telefonoParam}&photo=${photoParam}`
     );

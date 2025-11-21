@@ -5,8 +5,19 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCharlas } from "../utils/localDB";
 
+// Tipo para las charlas (según cómo las usas en el componente)
+interface Charla {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  detalle?: string;
+  imagen: string;
+  galeria?: string[];
+  fecha?: string;
+}
+
 export default function FormacionContinua() {
-  const [charlas, setCharlas] = useState<any[]>([]);
+  const [charlas, setCharlas] = useState<Charla[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [cooldown, setCooldown] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -19,7 +30,9 @@ export default function FormacionContinua() {
 
   // === Cargar charlas desde localDB ===
   useEffect(() => {
-    setCharlas(getCharlas());
+    // Si getCharlas ya devuelve el tipo correcto puedes quitar el "as Charla[]"
+    const data = getCharlas() as Charla[];
+    setCharlas(data);
   }, []);
 
   // === Scroll control entre charlas ===
@@ -46,6 +59,7 @@ export default function FormacionContinua() {
         setTimeout(() => setCooldown(false), 900);
       }
     };
+
     window.addEventListener("wheel", handleScroll, { passive: false });
     return () => window.removeEventListener("wheel", handleScroll);
   }, [cooldown, showModal, charlas]);
@@ -57,6 +71,7 @@ export default function FormacionContinua() {
     const duracion = 5000;
     const step = 50;
     const inc = (step / duracion) * 100;
+
     const timer = setInterval(() => {
       setProgress((p) => {
         if (p + inc >= 100) {
@@ -70,6 +85,7 @@ export default function FormacionContinua() {
         return p + inc;
       });
     }, step);
+
     return () => clearInterval(timer);
   }, [showModal, charlaSeleccionada, charlas]);
 

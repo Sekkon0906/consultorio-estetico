@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react"; 
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { motion } from "framer-motion";
 import { loginUser, setCurrentUser } from "../utils/auth";
 import { updateUserData } from "../utils/localDB";
@@ -21,11 +21,11 @@ export default function LoginForm({ setErr }: Props) {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(false);
 
-  // Este bloque centra la ventana emergente de Google
+  // === Centrar la ventana emergente de Google ===
   useEffect(() => {
     const originalOpen = window.open;
 
-    window.open = function (url, name, specs) {
+    window.open = (url: string | URL, name?: string, specs?: string) => {
       try {
         const width = 500;
         const height = 600;
@@ -33,12 +33,13 @@ export default function LoginForm({ setErr }: Props) {
         const top = window.screenY + (window.outerHeight - height) / 2.5;
 
         const newSpecs = specs
-          ? specs + `,left=${left},top=${top},width=${width},height=${height}`
+          ? `${specs},left=${left},top=${top},width=${width},height=${height}`
           : `left=${left},top=${top},width=${width},height=${height}`;
 
         return originalOpen.call(window, url, name, newSpecs);
       } catch {
-        return originalOpen.apply(window, arguments as any);
+        // fallback por si algo falla
+        return originalOpen(url, name, specs);
       }
     };
 
@@ -46,7 +47,7 @@ export default function LoginForm({ setErr }: Props) {
       window.open = originalOpen;
     };
   }, []);
-  // Fin del bloque de centrado
+  // === Fin centrado ventana ===
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -223,8 +224,15 @@ export default function LoginForm({ setErr }: Props) {
         >
           <div style={{ display: "flex", justifyContent: "center" }}>
             <GoogleLogin
-              onSuccess={(cred) =>
-                handleGoogleSuccess(cred, router, setErr, false, () => {}, () => {})
+              onSuccess={(cred: CredentialResponse) =>
+                handleGoogleSuccess(
+                  cred,
+                  router,
+                  setErr,
+                  false,
+                  () => null,
+                  () => undefined
+                )
               }
               onError={() => setErr("Error al autenticar con Google.")}
               shape="pill"

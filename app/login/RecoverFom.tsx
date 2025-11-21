@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { handleGoogleSuccess } from "./GoogleHandler";
-import { getUsers, updateUserData } from "../utils/localDB"; 
+import { getUsers, updateUserData, User } from "../utils/localDB"; 
 import { setCurrentUser } from "../utils/auth";
 import { PALETTE } from "./palette2";
 
@@ -15,7 +15,8 @@ export default function RecoverForm({
 }) {
   const router = useRouter();
   const [recoverStep, setRecoverStep] = useState<"verify" | "reset">("verify");
-  const [recoverUser, setRecoverUser] = useState<any>(null);
+  // ✅ Antes: useState<any>(null)
+  const [recoverUser, setRecoverUser] = useState<User | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -36,43 +37,43 @@ export default function RecoverForm({
   const isValid = Object.keys(errors).length === 0;
 
   // Guardar nueva contraseña
-const handleResetPassword = (e: React.FormEvent) => {
-  e.preventDefault();
-  setTouched(true);
-  if (!isValid) {
-    setErr("Revisa los campos marcados.");
-    return;
-  }
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched(true);
+    if (!isValid) {
+      setErr("Revisa los campos marcados.");
+      return;
+    }
 
-  if (!recoverUser) {
-    setErr("No se detectó un usuario válido para restablecer la contraseña.");
-    return;
-  }
+    if (!recoverUser) {
+      setErr("No se detectó un usuario válido para restablecer la contraseña.");
+      return;
+    }
 
-  const users = getUsers();
-  const found = users.find(
-    (u) => u.email.toLowerCase() === recoverUser.email.toLowerCase()
-  );
+    const users = getUsers();
+    const found = users.find(
+      (u) => u.email.toLowerCase() === recoverUser.email.toLowerCase()
+    );
 
-  if (!found) {
-    setErr("Usuario no encontrado.");
-    return;
-  }
+    if (!found) {
+      setErr("Usuario no encontrado.");
+      return;
+    }
 
-  // === Actualizamos usando la función global ===
-  updateUserData({ password }, found.email);
+    // Actualizamos usando la función global
+    updateUserData({ password }, found.email);
 
-  // === Sincronizamos sesión ===
-  const updatedUser = { ...found, password };
-  setCurrentUser(updatedUser);
+    // Sincronizamos sesión
+    const updatedUser: User = { ...found, password };
+    setCurrentUser(updatedUser);
 
-  // === Mensaje de éxito ===
-  setSuccessMsg(true);
-  setTimeout(() => {
-    setSuccessMsg(false);
-    router.push("/login");
-  }, 2000);
-};
+    // Mensaje de éxito
+    setSuccessMsg(true);
+    setTimeout(() => {
+      setSuccessMsg(false);
+      router.push("/login");
+    }, 2000);
+  };
 
   return (
     <div>

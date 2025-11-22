@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   getProcedimientos,
-  User,
-  Procedimiento,
-  Cita,
+  type User,
+  type Procedimiento,
+  type Cita,
 } from "../utils/localDB";
 import AgendarCalendar from "./agendarCalendar";
 import AgendarForm from "./agendarForm";
@@ -26,7 +26,9 @@ export const PALETTE = {
   textSoft: "#4B3726",
 };
 
-// Datos del formulario
+// ======================
+// TIPOS DEL FORMULARIO
+// ======================
 interface AgendarFormData {
   fecha?: string;
   hora?: string;
@@ -37,7 +39,7 @@ interface AgendarFormData {
   nota?: string;
 }
 
-// Datos de cita antes de guardar (sin id ni campos de pago/estado)
+// Cita antes de ser guardada (sin campos de pago / id / estado)
 type CitaData = Omit<
   Cita,
   | "id"
@@ -52,7 +54,10 @@ type CitaData = Omit<
   | "motivoCancelacion"
 >;
 
-export default function AgendarPage() {
+// ======================
+// CONTENIDO DE LA PÁGINA
+// ======================
+function AgendarPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const procParam = searchParams.get("proc") || "";
@@ -87,9 +92,12 @@ export default function AgendarPage() {
     nota: "",
   });
 
-  // === Cargar usuario ===
+  // === Cargar usuario actual desde localStorage ===
   useEffect(() => {
-    const stored = localStorage.getItem("currentUser");
+    const stored = typeof window !== "undefined"
+      ? localStorage.getItem("currentUser")
+      : null;
+
     if (stored) {
       try {
         const parsed: User = JSON.parse(stored);
@@ -106,7 +114,7 @@ export default function AgendarPage() {
     }
   }, []);
 
-  // === Cargar procedimientos ===
+  // === Cargar lista de procedimientos ===
   useEffect(() => {
     const list = getProcedimientos();
     setProcedimientos(list);
@@ -132,14 +140,14 @@ export default function AgendarPage() {
     setStep(2);
   };
 
-  // === Paso 2 → 3 ===
+  // === Paso 2 → 3: armar objeto de cita sin pagos ===
   const handleConfirmarDatos = () => {
     if (!fecha || !usuario) return;
 
     const nuevaCita: CitaData = {
-      userId: usuario.id, // ahora siempre es number, ya validamos usuario
+      userId: usuario.id,
       nombres: formData.nombre,
-      apellidos: usuario.apellidos || "",
+      apellidos: usuario.apellidos,
       telefono: formData.telefono,
       correo: formData.correo,
       procedimiento: formData.procedimiento,
@@ -156,13 +164,6 @@ export default function AgendarPage() {
     setStep(3);
   };
 
-  const steps = [
-    { id: 1, label: "Selecciona fecha y hora" },
-    { id: 2, label: "Completa tus datos" },
-    { id: 3, label: "Escoger método de pago" },
-    { id: 4, label: "Tarjeta de cita" },
-  ];
-
   return (
     <main
       className="min-h-screen w-full py-10 px-4 md:px-8 overflow-hidden"
@@ -170,9 +171,6 @@ export default function AgendarPage() {
         background: `linear-gradient(135deg, ${PALETTE.bgGradFrom}, ${PALETTE.bgGradTo})`,
       }}
     >
-      {/* === BARRA DE PROGRESO (puedes dejarla igual a tu versión anterior) === */}
-
-      {/* === CONTENIDO SEGÚN PASO === */}
       <div className="mx-auto w-full max-w-7xl grid gap-6 items-start">
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -190,6 +188,7 @@ export default function AgendarPage() {
                 onHoraSelect={setHora}
                 usuario={usuario}
               />
+
               <div className="text-center mt-8">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -250,7 +249,6 @@ export default function AgendarPage() {
                 mostrarQR={true}
               />
 
-              {/* BOTONES FINALES */}
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -278,5 +276,16 @@ export default function AgendarPage() {
         </AnimatePresence>
       </div>
     </main>
+  );
+}
+
+// ======================
+// WRAPPER CON SUSPENSE
+// ======================
+export default function AgendarPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Cargando agenda...</div>}>
+      <AgendarPageContent />
+    </Suspense>
   );
 }

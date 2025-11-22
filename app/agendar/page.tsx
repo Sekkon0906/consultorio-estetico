@@ -53,10 +53,8 @@ export default function AgendarPage() {
   const [hora, setHora] = useState("");
   const [usuario, setUsuario] = useState<User | null>(null);
 
-  // ❌ antes: useState<any[]>([])
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
 
-  // ❌ antes: useState<any>(null)
   // puede ser: borrador de cita (CitaData), cita guardada (Cita) o null
   const [citaConfirmada, setCitaConfirmada] = useState<CitaData | Cita | null>(
     null
@@ -72,7 +70,6 @@ export default function AgendarPage() {
     "PayU" | "PSE" | undefined
   >(undefined);
 
-  // ❌ antes: useState<any>({...})
   const [formData, setFormData] = useState<AgendarFormData>({
     nombre: "",
     telefono: "",
@@ -128,10 +125,13 @@ export default function AgendarPage() {
 
   // === Paso 2 → 3 ===
   const handleConfirmarDatos = () => {
-    if (!fecha) return;
+    // ✅ Aseguramos que haya fecha y usuario antes de construir la cita
+    if (!fecha || !usuario) {
+      return;
+    }
 
     const nuevaCita: CitaData = {
-      userId: usuario?.id ?? null,
+      userId: usuario.id, // 👈 siempre number, ya no hay null
       nombres: formData.nombre,
       telefono: formData.telefono,
       correo: formData.correo,
@@ -162,8 +162,8 @@ export default function AgendarPage() {
         background: `linear-gradient(135deg, ${PALETTE.bgGradFrom}, ${PALETTE.bgGradTo})`,
       }}
     >
-      {/* === BARRA DE PROGRESO ANIMADA === */}
-      {/* ... todo igual ... */}
+      {/* === BARRA DE PROGRESO ANIMADA (si la tienes, déjala aquí) === */}
+      {/* ... tu barra / pasos ... */}
 
       {/* === CONTENIDO SEGÚN PASO === */}
       <div className="mx-auto w-full max-w-7xl grid gap-6 items-start">

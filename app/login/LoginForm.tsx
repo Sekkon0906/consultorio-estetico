@@ -23,25 +23,34 @@ export default function LoginForm({ setErr }: Props) {
 
   // === Centrar la ventana emergente de Google ===
   useEffect(() => {
-    const originalOpen = window.open;
+    if (typeof window === "undefined") return;
 
-    window.open = (url: string | URL, name?: string, specs?: string) => {
+    // Guardamos la original con el tipo correcto
+    const originalOpen: typeof window.open = window.open.bind(window);
+
+    // Nueva función con la MISMA firma que window.open
+    const centeredOpen: typeof window.open = (
+      url?: string | URL,
+      target?: string,
+      features?: string
+    ) => {
       try {
         const width = 500;
         const height = 600;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2.5;
 
-        const newSpecs = specs
-          ? `${specs},left=${left},top=${top},width=${width},height=${height}`
-          : `left=${left},top=${top},width=${width},height=${height}`;
+        const extraSpecs = `left=${left},top=${top},width=${width},height=${height}`;
+        const finalFeatures = features ? `${features},${extraSpecs}` : extraSpecs;
 
-        return originalOpen.call(window, url, name, newSpecs);
+        return originalOpen(url, target, finalFeatures);
       } catch {
-        // fallback por si algo falla
-        return originalOpen(url, name, specs);
+        // Fallback por si algo falla
+        return originalOpen(url, target, features);
       }
     };
+
+    window.open = centeredOpen;
 
     return () => {
       window.open = originalOpen;

@@ -1,3 +1,4 @@
+// utils/auth.ts
 "use client";
 
 import {
@@ -29,6 +30,17 @@ export interface GoogleDecodedUser {
   name?: string;
   picture?: string;
 }
+
+/** Tipo ligero para la sesión en el cliente (来自 API/Google o DB) */
+export type SessionUser = {
+  id?: number;
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono?: string;
+  rol?: "user" | "admin" | "medico" | "paciente" | "recepcionista";
+  photo?: string | null;
+};
 
 /* ============================================================
    EVENTOS GLOBALES Y TOASTS
@@ -68,7 +80,7 @@ function showWelcomeToast(nombre?: string) {
     opacity: "0",
     transition: "opacity 0.5s ease, transform 0.5s ease",
     zIndex: "9999",
-  });
+  } as Partial<CSSStyleDeclaration>);
 
   document.body.appendChild(toast);
 
@@ -83,6 +95,7 @@ function showWelcomeToast(nombre?: string) {
     setTimeout(() => toast.remove(), 500);
   }, 3000);
 
+  // Permite que vuelva a mostrarse en una nueva sesión de pestaña
   setTimeout(() => {
     sessionStorage.removeItem("toastShown");
   }, 1500);
@@ -92,7 +105,11 @@ function showWelcomeToast(nombre?: string) {
    LOGIN MANUAL
    ============================================================ */
 
-export function loginUser(email: string, password: string, remember = false) {
+export function loginUser(
+  email: string,
+  password: string,
+  remember = false
+): { ok: boolean; error?: string; user?: User } {
   const user = validateUser(email, password);
   if (!user) return { ok: false, error: "Credenciales incorrectas." };
 
@@ -115,26 +132,26 @@ export function loginUser(email: string, password: string, remember = false) {
 }
 
 /* ============================================================
-   LOGIN CON GOOGLE
+   LOGIN CON GOOGLE (desde token decodificado en el cliente)
    ============================================================ */
 
 export function loginWithGoogle(
   decodedUser: GoogleDecodedUser,
   remember = false
-) {
+): SessionUser | User | null {
   const email = decodedUser.email?.toLowerCase();
   if (!email) return null;
 
   let user = findUserByEmail(email);
 
   if (!user) {
-    const nuevo = {
+    const nuevo: User = {
       nombres: decodedUser.given_name || decodedUser.name || "Usuario Google",
       apellidos: decodedUser.family_name || "",
       email,
       password: "",
       edad: 0,
-      genero: "Otro" as const,
+      genero: "Otro",
       telefono: "",
       antecedentes: "",
       antecedentesDescripcion: "",
@@ -187,7 +204,7 @@ export function registerUser(
   const exists = getUsers().some((u) => u.email === email);
   if (exists) return { ok: false, error: "El correo ya está registrado." };
 
-  const nuevo = {
+  const nuevo: User = {
     nombres,
     apellidos,
     email,
@@ -209,25 +226,28 @@ export function registerUser(
 }
 
 /* ============================================================
-   SESIÓN ACTUAL Y RECORDADA
+   SESIÓN ACTUAL Y RECORDADA (flexible para SessionUser | User)
    ============================================================ */
 
-export function setCurrentUser(user: User) {
+/** Guarda el usuario actual en localStorage (SessionUser o User) */
+export function setCurrentUser(user: SessionUser | User) {
   if (typeof window === "undefined") return;
   localStorage.setItem("currentUser", JSON.stringify(user));
   emitAuthChange();
 }
 
-export function getCurrentUser(): User | null {
+/** Devuelve el usuario actual desde localStorage */
+export function getCurrentUser(): (SessionUser | User) | null {
   if (typeof window === "undefined") return null;
   const data = localStorage.getItem("currentUser");
-  return data ? (JSON.parse(data) as User) : null;
+  return data ? (JSON.parse(data) as SessionUser | User) : null;
 }
 
-export function restoreRememberedSession(): User | null {
+/** Restaura una sesión recordada (si la usas para "recuérdame") */
+export function restoreRememberedSession(): (SessionUser | User) | null {
   if (typeof window === "undefined") return null;
   const remembered = localStorage.getItem("rememberUser");
-  return remembered ? (JSON.parse(remembered) as User) : null;
+  return remembered ? (JSON.parse(remembered) as SessionUser | User) : null;
 }
 
 export function clearCurrentUser() {
@@ -249,11 +269,26 @@ export function isLoggedIn(): boolean {
   return !!localStorage.getItem("currentUser");
 }
 
+/**
+ * Actualiza el usuario actual:
+ * - Si es un User completo (tiene `password`), también lo persiste en tu DB local con `updateUserData`.
+ * - Si es un SessionUser (ligero, p.ej. traído desde tu API/Google), solo actualiza el localStorage.
+ */
 export function updateCurrentUser(data: Partial<User>) {
   if (typeof window === "undefined") return;
   const current = getCurrentUser();
   if (!current) return;
-  const updated: User = { ...current, ...data };
+
+  // Usuario ligero (no tiene 'password'): solo actualiza la sesión en localStorage.
+  if (!("password" in current)) {
+    const updated = { ...current, ...data } as SessionUser;
+    localStorage.setItem("currentUser", JSON.stringify(updated));
+    emitAuthChange();
+    return;
+  }
+
+  // Usuario completo (flujo localDB)
+  const updated: User = { ...current, ...(data as Partial<User>) } as User;
   updateUserData(updated, current.email);
   localStorage.setItem("currentUser", JSON.stringify(updated));
   emitAuthChange();

@@ -145,7 +145,10 @@ export function loginWithGoogle(
   let user = findUserByEmail(email);
 
   if (!user) {
-    const nuevo: User = {
+    // ✅ Usamos el tipo de entrada que espera addUserToDB para evitar exigir id/rol
+    type RegisterInput = Parameters<typeof addUserToDB>[0];
+
+    const nuevo: RegisterInput = {
       nombres: decodedUser.given_name || decodedUser.name || "Usuario Google",
       apellidos: decodedUser.family_name || "",
       email,
@@ -160,7 +163,10 @@ export function loginWithGoogle(
       medicamentos: "",
       medicamentosDescripcion: "",
       photo: decodedUser.picture || null,
+      rol: "user", // ✅ asignamos un rol por defecto
     };
+
+    // addUserToDB ya devuelve un User con id y rol
     user = addUserToDB(nuevo);
   } else if (!user.photo) {
     user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(

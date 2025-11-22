@@ -11,6 +11,26 @@ import {
 } from "./localDB";
 
 /* ============================================================
+   TIPOS
+   ============================================================ */
+
+export type UserData = {
+  nombres: string;
+  apellidos: string;
+  email: string;
+  photo?: string;
+};
+
+/** Datos relevantes que vienen del token de Google */
+export interface GoogleDecodedUser {
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
+  picture?: string;
+}
+
+/* ============================================================
    EVENTOS GLOBALES Y TOASTS
    ============================================================ */
 
@@ -78,7 +98,7 @@ export function loginUser(email: string, password: string, remember = false) {
 
   if (!user.photo) {
     user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      user.nombres + " " + user.apellidos
+      `${user.nombres} ${user.apellidos}`
     )}&background=E6CCB2&color=7F5539`;
   }
 
@@ -98,7 +118,10 @@ export function loginUser(email: string, password: string, remember = false) {
    LOGIN CON GOOGLE
    ============================================================ */
 
-export function loginWithGoogle(decodedUser: any, remember = false) {
+export function loginWithGoogle(
+  decodedUser: GoogleDecodedUser,
+  remember = false
+) {
   const email = decodedUser.email?.toLowerCase();
   if (!email) return null;
 
@@ -124,7 +147,7 @@ export function loginWithGoogle(decodedUser: any, remember = false) {
     user = addUserToDB(nuevo);
   } else if (!user.photo) {
     user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      user.nombres + " " + user.apellidos
+      `${user.nombres} ${user.apellidos}`
     )}&background=E6CCB2&color=7F5539`;
     updateUserData({ photo: user.photo }, user.email);
   }
@@ -230,19 +253,8 @@ export function updateCurrentUser(data: Partial<User>) {
   if (typeof window === "undefined") return;
   const current = getCurrentUser();
   if (!current) return;
-  const updated = { ...current, ...data };
+  const updated: User = { ...current, ...data };
   updateUserData(updated, current.email);
   localStorage.setItem("currentUser", JSON.stringify(updated));
   emitAuthChange();
 }
-
-/* ============================================================
-   TIPO BASE
-   ============================================================ */
-
-export type UserData = {
-  nombres: string;
-  apellidos: string;
-  email: string;
-  photo?: string;
-};

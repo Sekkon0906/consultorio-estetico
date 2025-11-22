@@ -10,15 +10,26 @@ import {
   getCurrentUser,
   restoreRememberedSession,
   clearCurrentUser,
+  UserData, // si quieres usarlo más adelante
 } from "../../app/utils/auth";
+import type { User } from "../../app/utils/localDB";
+
+interface IndicatorState {
+  left: number;
+  width: number;
+}
 
 export default function Navbar() {
   const pathname = usePathname() || "/";
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const [indicator, setIndicator] = useState<IndicatorState>({
+    left: 0,
+    width: 0,
+  });
+
   const linkRefs = useRef<(HTMLLIElement | null)[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -51,19 +62,23 @@ export default function Navbar() {
   }, []);
 
   /* === MENÚ PRINCIPAL === */
-  const menuItems = useMemo(() => {
-    const base = [
-      { label: "Inicio", href: "/" },
-      { label: "Dra. Vanessa Medina", href: "/doctora" },
-      { label: "Consultorio", href: "/consultorio" },
-      { label: "Procedimientos", href: "/procedimientos" },
-      { label: "Testimonios", href: "/testimonios" },
-      { label: "Agendar cita", href: "/agendar" },
-    ];
-    if (currentUser?.rol === "admin")
-      base.push({ label: "Administrar", href: "/administrar" });
-    return base;
-  }, [currentUser?.rol]);
+  const menuItems = useMemo(
+    () => {
+      const base: { label: string; href: string }[] = [
+        { label: "Inicio", href: "/" },
+        { label: "Dra. Vanessa Medina", href: "/doctora" },
+        { label: "Consultorio", href: "/consultorio" },
+        { label: "Procedimientos", href: "/procedimientos" },
+        { label: "Testimonios", href: "/testimonios" },
+        { label: "Agendar cita", href: "/agendar" },
+      ];
+      if (currentUser?.rol === "admin") {
+        base.push({ label: "Administrar", href: "/administrar" });
+      }
+      return base;
+    },
+    [currentUser?.rol]
+  );
 
   /* === INDICADOR ACTIVO === */
   const updateIndicatorTo = (el: HTMLLIElement | null) => {
@@ -89,7 +104,7 @@ export default function Navbar() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
-  }, [pathname, menuItems.length]);
+  }, [pathname, menuItems]); // ← incluye menuItems para quitar el warning
 
   /* === LOGOUT === */
   const handleLogout = () => {
@@ -163,7 +178,7 @@ export default function Navbar() {
               const isActive = pathname === item.href;
               return (
                 <motion.li
-                  key={index}
+                  key={item.href}
                   ref={(el) => {
                     linkRefs.current[index] = el;
                   }}
@@ -226,7 +241,7 @@ export default function Navbar() {
           {/* === BOTÓN HAMBURGUESA (móvil) === */}
           <button
             className={`hamburger-btn d-md-none ${mobileOpen ? "active" : ""}`}
-            onClick={() => setMobileOpen(!mobileOpen)}
+            onClick={() => setMobileOpen((open) => !open)}
             aria-label="Abrir menú"
           >
             <motion.div
@@ -259,7 +274,7 @@ export default function Navbar() {
           ) : (
             <>
               <motion.button
-                onClick={() => setMenuOpen((p) => !p)}
+                onClick={() => setMenuOpen((open) => !open)}
                 className="user-button d-none d-md-flex align-items-center border-0 bg-white rounded-pill shadow-sm px-2 py-1"
                 animate={{ rotateY: menuOpen ? 90 : 0 }}
                 transition={{ duration: 0.3 }}
@@ -340,10 +355,10 @@ export default function Navbar() {
                           color: "#6B4E3D",
                         }}
                       >
-                        {currentUser?.nombres || "Usuario"}
+                        {currentUser.nombres || "Usuario"}
                       </div>
                       <div style={{ fontSize: "0.85rem", color: "#8d7a6a" }}>
-                        {currentUser?.email}
+                        {currentUser.email}
                       </div>
                     </div>
 
@@ -357,7 +372,9 @@ export default function Navbar() {
                           border: "none",
                           borderRadius: "10px",
                         }}
-                        onClick={() => (window.location.href = "/perfil/editar_info")}
+                        onClick={() =>
+                          (window.location.href = "/perfil/editar_info")
+                        }
                       >
                         Editar perfil
                       </button>
@@ -426,8 +443,8 @@ export default function Navbar() {
                 marginBottom: "0.8rem",
               }}
             />
-            <div className="user-name">{currentUser?.nombres || "Usuario"}</div>
-            <div className="user-email">{currentUser?.email}</div>
+            <div className="user-name">{currentUser.nombres || "Usuario"}</div>
+            <div className="user-email">{currentUser.email}</div>
             <div className="user-actions">
               <button
                 className="user-action-btn"
@@ -462,8 +479,8 @@ export default function Navbar() {
 
         <div className="mobile-sidebar-menu">
           <ul>
-            {menuItems.map((item, i) => (
-              <li key={i}>
+            {menuItems.map((item) => (
+              <li key={item.href}>
                 <Link href={item.href} onClick={() => setMobileOpen(false)}>
                   {item.label}
                 </Link>

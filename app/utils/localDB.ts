@@ -2,6 +2,7 @@
 // localDB.ts — Base de datos simulada con persistencia local
 // ============================================================
 import QRCode from "qrcode";
+
 // ==========================
 // MODELO USUARIO
 // ==========================
@@ -41,7 +42,7 @@ if (typeof window !== "undefined") {
   const stored = localStorage.getItem("usuariosRegistrados");
   if (stored) {
     try {
-      usuariosRegistrados = JSON.parse(stored);
+      usuariosRegistrados = JSON.parse(stored) as User[];
     } catch {
       usuariosRegistrados = [];
       localStorage.removeItem("usuariosRegistrados");
@@ -56,7 +57,10 @@ let nextUserId =
 
 function saveUsuarios() {
   if (typeof window !== "undefined") {
-    localStorage.setItem("usuariosRegistrados", JSON.stringify(usuariosRegistrados));
+    localStorage.setItem(
+      "usuariosRegistrados",
+      JSON.stringify(usuariosRegistrados)
+    );
   }
 }
 
@@ -67,7 +71,9 @@ function saveUsuarios() {
 export function registerUser(
   userData: Omit<User, "id" | "rol" | "creadoEn" | "citasAgendadas">
 ): User {
-  const rol: "user" | "admin" = correosAdmin.includes(userData.email) ? "admin" : "user";
+  const rol: "user" | "admin" = correosAdmin.includes(userData.email)
+    ? "admin"
+    : "user";
 
   const defaultPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     (userData.nombres + " " + userData.apellidos).trim() || "Usuario"
@@ -92,17 +98,24 @@ export function findUserByEmail(email: string): User | undefined {
 }
 
 export function validateUser(email: string, password: string): User | null {
-  const user = usuariosRegistrados.find((u) => u.email === email && u.password === password);
+  const user = usuariosRegistrados.find(
+    (u) => u.email === email && u.password === password
+  );
   return user || null;
 }
 
 export function createUser(
   nuevoUsuario: Omit<User, "id" | "rol" | "creadoEn" | "citasAgendadas">
-) {
-  const existe = usuariosRegistrados.find((u) => u.email === nuevoUsuario.email);
-  if (existe) throw new Error("Ya existe un usuario con este correo electrónico.");
+): User {
+  const existe = usuariosRegistrados.find(
+    (u) => u.email === nuevoUsuario.email
+  );
+  if (existe)
+    throw new Error("Ya existe un usuario con este correo electrónico.");
 
-  const rol: "user" | "admin" = correosAdmin.includes(nuevoUsuario.email) ? "admin" : "user";
+  const rol: "user" | "admin" = correosAdmin.includes(nuevoUsuario.email)
+    ? "admin"
+    : "user";
 
   const user: User = {
     id: nextUserId++,
@@ -123,13 +136,17 @@ export function getUsers(): User[] {
   return stored ? (JSON.parse(stored) as User[]) : [];
 }
 
-export function updateUserData(newData: Partial<User>, email: string) {
+export function updateUserData(newData: Partial<User>, email: string): void {
   if (typeof window === "undefined") return;
   const users = getUsers();
   const idx = users.findIndex((u) => u.email === email);
   if (idx !== -1) users[idx] = { ...users[idx], ...newData };
   localStorage.setItem("usuariosRegistrados", JSON.stringify(users));
 }
+
+// ==========================
+// MODELO CITA
+// ==========================
 export interface Cita {
   id: number;
   userId: number;
@@ -162,7 +179,7 @@ if (typeof window !== "undefined") {
   const stored = localStorage.getItem("citasAgendadas");
   if (stored) {
     try {
-      citasAgendadas = JSON.parse(stored);
+      citasAgendadas = JSON.parse(stored) as Cita[];
     } catch {
       citasAgendadas = [];
       localStorage.removeItem("citasAgendadas");
@@ -171,34 +188,59 @@ if (typeof window !== "undefined") {
 }
 
 let nextCitaId =
-  citasAgendadas.length > 0 ? Math.max(...citasAgendadas.map((c) => c.id)) + 1 : 1;
+  citasAgendadas.length > 0
+    ? Math.max(...citasAgendadas.map((c) => c.id)) + 1
+    : 1;
 
 function saveCitas() {
   localStorage.setItem("citasAgendadas", JSON.stringify(citasAgendadas));
   // 🔁 Sincroniza automáticamente con el resto del sistema
-  window.dispatchEvent(new CustomEvent("citasActualizadas", { detail: citasAgendadas }));
+  window.dispatchEvent(
+    new CustomEvent("citasActualizadas", { detail: citasAgendadas })
+  );
 }
 
 // ============================================================
 // FUNCIONES DE HORARIO (deben existir en el mismo archivo o importarse)
 // ============================================================
 
+export interface HoraDisponible {
+  hora: string; // ej: "08:30 AM"
+  disponible: boolean;
+  bloqueadoPor?: string | null;
+  idCita?: number | null;
+}
+
+export interface HorarioPorFecha {
+  fecha: string; // formato YYYY-MM-DD
+  horas: HoraDisponible[];
+}
+
+export interface HorarioGlobal {
+  dia: number; // 0=domingo ... 6=sábado
+  horas: string[];
+}
+
 export function estaDisponible(fechaISO: string, hora: string): boolean {
   const horarioDia = getHorarioPorFecha(fechaISO);
-  const bloqueada = horarioDia.find((h: any) => h.hora === hora && !h.disponible);
+  const bloqueada = horarioDia.find(
+    (h: HoraDisponible) => h.hora === hora && !h.disponible
+  );
   const cita = getCitasByDay(fechaISO).find((c) => c.hora === hora);
   return !bloqueada && !cita;
 }
 
-export function liberarHorario(fechaISO: string, hora: string) {
+export function liberarHorario(fechaISO: string, hora: string): void {
   const horarioDia = getHorarioPorFecha(fechaISO);
-  const actualizado = horarioDia.map((h: any) =>
+  const actualizado = horarioDia.map((h: HoraDisponible) =>
     h.hora === hora ? { ...h, disponible: true } : h
   );
   setHorarioPorFecha(fechaISO, actualizado);
 
   window.dispatchEvent(
-    new CustomEvent("horarioCambiado", { detail: { tipo: "liberacion", fechaISO, hora } })
+    new CustomEvent("horarioCambiado", {
+      detail: { tipo: "liberacion", fechaISO, hora },
+    })
   );
 }
 
@@ -209,13 +251,7 @@ export function liberarHorario(fechaISO: string, hora: string) {
 export async function crearCita(
   citaData: Omit<
     Cita,
-    | "id"
-    | "pagado"
-    | "fechaCreacion"
-    | "tipoCita"
-    | "creadaPor"
-    | "estado"
-    | "qrCita"
+    "id" | "pagado" | "fechaCreacion" | "tipoCita" | "creadaPor" | "estado" | "qrCita"
   >
 ): Promise<Cita> {
   const cita: Cita = {
@@ -239,35 +275,41 @@ export async function crearCita(
 
   // Bloquear hora seleccionada
   const horarioDia = getHorarioPorFecha(cita.fecha);
-  const actualizado = horarioDia.map((h: any) =>
+  const actualizado = horarioDia.map((h: HoraDisponible) =>
     h.hora === cita.hora ? { ...h, disponible: false } : h
   );
   setHorarioPorFecha(cita.fecha, actualizado);
 
-  window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "nuevaCita", cita } }));
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", {
+      detail: { tipo: "nuevaCita", cita },
+    })
+  );
 
   return cita;
 }
 
-export function cancelarCita(id: number) {
+export function cancelarCita(id: number): void {
   const cita = citasAgendadas.find((c) => c.id === id);
   if (!cita) return;
   liberarHorario(cita.fecha, cita.hora);
   cita.estado = "cancelada";
   saveCitas();
   window.dispatchEvent(
-    new CustomEvent("horarioCambiado", { detail: { tipo: "cancelacion", id, cita } })
+    new CustomEvent("horarioCambiado", {
+      detail: { tipo: "cancelacion", id, cita },
+    })
   );
 }
 
-export function confirmarCita(id: number) {
+export function confirmarCita(id: number): void {
   updateCita(id, { estado: "confirmada" });
   window.dispatchEvent(
     new CustomEvent("horarioCambiado", { detail: { tipo: "confirmacion", id } })
   );
 }
 
-export function marcarCitaAtendida(id: number) {
+export function marcarCitaAtendida(id: number): void {
   updateCita(id, { estado: "atendida" });
   window.dispatchEvent(
     new CustomEvent("horarioCambiado", { detail: { tipo: "atendida", id } })
@@ -280,7 +322,7 @@ export function marcarPagoCita(
   tipoPagoConsultorio: "Efectivo" | "Tarjeta" | null,
   monto: number,
   montoPagado: number
-) {
+): void {
   const restante = Math.max(monto - montoPagado, 0);
   const pagado = restante === 0;
 
@@ -294,7 +336,9 @@ export function marcarPagoCita(
   });
 
   window.dispatchEvent(
-    new CustomEvent("horarioCambiado", { detail: { tipo: "pago", id, restante } })
+    new CustomEvent("horarioCambiado", {
+      detail: { tipo: "pago", id, restante },
+    })
   );
 }
 
@@ -306,13 +350,15 @@ export function getCitaById(id: number): Cita | undefined {
   return citasAgendadas.find((c) => c.id === id);
 }
 
-export function updateCita(id: number, data: Partial<Cita>) {
+export function updateCita(id: number, data: Partial<Cita>): void {
   const index = citasAgendadas.findIndex((c) => c.id === id);
   if (index !== -1) {
     citasAgendadas[index] = { ...citasAgendadas[index], ...data };
     saveCitas();
     window.dispatchEvent(
-      new CustomEvent("horarioCambiado", { detail: { tipo: "update", id, data } })
+      new CustomEvent("horarioCambiado", {
+        detail: { tipo: "update", id, data },
+      })
     );
   }
 }
@@ -324,7 +370,9 @@ export function getCitasByUser(userId: number): Cita[] {
 export function getCitasByDay(fecha: string): Cita[] {
   const fechaBase = new Date(fecha).toISOString().slice(0, 10);
   return citasAgendadas
-    .filter((c) => new Date(c.fecha).toISOString().slice(0, 10) === fechaBase)
+    .filter(
+      (c) => new Date(c.fecha).toISOString().slice(0, 10) === fechaBase
+    )
     .sort((a, b) => a.hora.localeCompare(b.hora)); // ✅ ordenadas por hora
 }
 
@@ -335,53 +383,71 @@ export function getCitasByMonth(year: number, monthIdx: number): Cita[] {
   });
 }
 
-export function marcarCitaPagada(id: number) {
+export function marcarCitaPagada(id: number): void {
   const cita = citasAgendadas.find((c) => c.id === id);
   if (cita) {
     cita.pagado = true;
     saveCitas();
-    window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "pago", id } }));
+    window.dispatchEvent(
+      new CustomEvent("horarioCambiado", { detail: { tipo: "pago", id } })
+    );
   }
 }
 
-export function deleteCita(id: number) {
+export function deleteCita(id: number): void {
   const cita = citasAgendadas.find((c) => c.id === id);
   if (cita) liberarHorario(cita.fecha, cita.hora);
   citasAgendadas = citasAgendadas.filter((c) => c.id !== id);
   saveCitas();
-  window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "delete", id } }));
+  window.dispatchEvent(
+    new CustomEvent("horarioCambiado", { detail: { tipo: "delete", id } })
+  );
 }
-
 
 // ============================================================
 // EXTENSIONES ADICIONALES PARA PANEL ADMINISTRATIVO
 // ============================================================
 
 // =====================
-// INGRESOS Y PAGOS
-// =====================
-
-// =====================
 // INGRESOS Y PAGOS — ACTUALIZADO
 // =====================
 
-export function getCitasPagadasMes(year: number, monthIdx: number): Cita[] {
+export function getCitasPagadasMes(
+  year: number,
+  monthIdx: number
+): Cita[] {
   return getCitasByMonth(year, monthIdx).filter((c) => c.pagado);
 }
 
 export function getPagosOnline(): Cita[] {
-  return citasAgendadas.filter((c) => c.metodoPago === "Online" && c.pagado);
+  return citasAgendadas.filter(
+    (c) => c.metodoPago === "Online" && c.pagado
+  );
+}
+
+export interface IngresoRegistrado {
+  citaId: number;
+  paciente: string;
+  procedimiento: string;
+  monto: number;
+  metodoPago: "Consultorio" | "Online";
+  fecha: string;
 }
 
 /**
  * 🧾 Registra un ingreso único en localStorage cuando se paga una cita.
  * Evita duplicados y mantiene la estructura mensual.
  */
-export function registrarIngreso(cita: Cita) {
+export function registrarIngreso(cita: Cita): void {
+  if (typeof window === "undefined") return;
   if (!cita.pagado || !cita.monto) return;
 
-  const ingresos = JSON.parse(localStorage.getItem("ingresosRegistrados") || "[]");
-  const existe = ingresos.some((i: any) => i.citaId === cita.id);
+  const stored = localStorage.getItem("ingresosRegistrados");
+  const ingresos: IngresoRegistrado[] = stored
+    ? (JSON.parse(stored) as IngresoRegistrado[])
+    : [];
+
+  const existe = ingresos.some((i) => i.citaId === cita.id);
   if (existe) return;
 
   ingresos.push({
@@ -404,11 +470,17 @@ export function getTotalesMes(year: number, monthIdx: number) {
 
   const totalOnline = citas
     .filter((c) => c.pagado && c.metodoPago === "Online")
-    .reduce((acc, c) => acc + (c.montoPagado || c.monto || 0), 0);
+    .reduce(
+      (acc, c) => acc + (c.montoPagado || c.monto || 0),
+      0
+    );
 
   const totalConsultorio = citas
     .filter((c) => c.pagado && c.metodoPago === "Consultorio")
-    .reduce((acc, c) => acc + (c.montoPagado || c.monto || 0), 0);
+    .reduce(
+      (acc, c) => acc + (c.montoPagado || c.monto || 0),
+      0
+    );
 
   const totalEsperado = citas.reduce(
     (acc, c) => acc + (c.monto || 0),
@@ -421,9 +493,9 @@ export function getTotalesMes(year: number, monthIdx: number) {
 /**
  * Marca una cita como pagada y registra el ingreso.
  */
-export function updateCitaPago(id: number, pagado: boolean) {
+export function updateCitaPago(id: number, pagado: boolean): void {
   const stored = localStorage.getItem("citasAgendadas");
-  const citas: Cita[] = stored ? JSON.parse(stored) : [];
+  const citas: Cita[] = stored ? (JSON.parse(stored) as Cita[]) : [];
   const index = citas.findIndex((c) => c.id === id);
   if (index !== -1) {
     citas[index].pagado = pagado;
@@ -434,13 +506,13 @@ export function updateCitaPago(id: number, pagado: boolean) {
 
 export function getAllCitas(): Cita[] {
   const stored = localStorage.getItem("citasAgendadas");
-  return stored ? JSON.parse(stored) : [];
+  return stored ? (JSON.parse(stored) as Cita[]) : [];
 }
 
 // =====================
 // CONFIGURACIÓN DE VALOR CONSULTA GENERAL
 // =====================
-export function setValorConsultaGeneral(valor: number) {
+export function setValorConsultaGeneral(valor: number): void {
   if (typeof window !== "undefined") {
     localStorage.setItem("valorConsultaGeneral", valor.toString());
   }
@@ -449,7 +521,7 @@ export function setValorConsultaGeneral(valor: number) {
 export function getValorConsultaGeneral(): number {
   if (typeof window === "undefined") return 0;
   const stored = localStorage.getItem("valorConsultaGeneral");
-  return stored ? parseInt(stored) || 0 : 0;
+  return stored ? parseInt(stored, 10) || 0 : 0;
 }
 
 // =====================
@@ -462,7 +534,6 @@ export function formatCurrency(valor: number): string {
     minimumFractionDigits: 0,
   });
 }
-
 
 // ============================================================
 // BLOQUEOS DE HORAS — Sistema persistente
@@ -480,7 +551,7 @@ if (typeof window !== "undefined") {
   const stored = localStorage.getItem("bloqueos");
   if (stored) {
     try {
-      bloqueos = JSON.parse(stored);
+      bloqueos = JSON.parse(stored) as BloqueoHora[];
     } catch {
       bloqueos = [];
       localStorage.removeItem("bloqueos");
@@ -494,13 +565,15 @@ function saveBloqueos() {
   }
 }
 
-export function addBloqueo(b: BloqueoHora) {
+export function addBloqueo(b: BloqueoHora): void {
   bloqueos.push(b);
   saveBloqueos();
 }
 
-export function removeBloqueo(fechaISO: string, hora: string) {
-  bloqueos = bloqueos.filter((b) => !(b.fechaISO === fechaISO && b.hora === hora));
+export function removeBloqueo(fechaISO: string, hora: string): void {
+  bloqueos = bloqueos.filter(
+    (b) => !(b.fechaISO === fechaISO && b.hora === hora)
+  );
   saveBloqueos();
 }
 
@@ -545,37 +618,52 @@ if (typeof window !== "undefined") {
   const stored = localStorage.getItem("procedimientos");
   const version = localStorage.getItem("procedimientos_version");
   if (stored && version === String(DB_VERSION)) {
-    procedimientos = JSON.parse(stored);
+    procedimientos = JSON.parse(stored) as Procedimiento[];
   } else {
     localStorage.setItem("procedimientos", JSON.stringify(procedimientos));
-    localStorage.setItem("procedimientos_version", String(DB_VERSION));
+    localStorage.setItem(
+      "procedimientos_version",
+      String(DB_VERSION)
+    );
   }
 }
 
 let nextProcId =
-  procedimientos.length > 0 ? Math.max(...procedimientos.map((p) => p.id)) + 1 : 1;
+  procedimientos.length > 0
+    ? Math.max(...procedimientos.map((p) => p.id)) + 1
+    : 1;
 
 function saveProcedimientos() {
   localStorage.setItem("procedimientos", JSON.stringify(procedimientos));
-  localStorage.setItem("procedimientos_version", String(DB_VERSION));
+  localStorage.setItem(
+    "procedimientos_version",
+    String(DB_VERSION)
+  );
 }
 
 export function getProcedimientos(): Procedimiento[] {
-  return JSON.parse(JSON.stringify(procedimientos));
+  return JSON.parse(JSON.stringify(procedimientos)) as Procedimiento[];
 }
 
-export function getProcedimientoById(id: number): Procedimiento | undefined {
+export function getProcedimientoById(
+  id: number
+): Procedimiento | undefined {
   return procedimientos.find((p) => p.id === id);
 }
 
-export function addProcedimiento(data: Omit<Procedimiento, "id">): Procedimiento {
+export function addProcedimiento(
+  data: Omit<Procedimiento, "id">
+): Procedimiento {
   const nuevo: Procedimiento = { id: nextProcId++, ...data };
   procedimientos.push(nuevo);
   saveProcedimientos();
   return nuevo;
 }
 
-export function updateProcedimiento(id: number, data: Partial<Procedimiento>): Procedimiento | null {
+export function updateProcedimiento(
+  id: number,
+  data: Partial<Procedimiento>
+): Procedimiento | null {
   const idx = procedimientos.findIndex((p) => p.id === id);
   if (idx === -1) return null;
   procedimientos[idx] = { ...procedimientos[idx], ...data };
@@ -591,7 +679,10 @@ export function deleteProcedimiento(id: number): boolean {
   return before !== after;
 }
 
-export function addMediaToProcedimiento(procId: number, media: MediaItem): Procedimiento | null {
+export function addMediaToProcedimiento(
+  procId: number,
+  media: MediaItem
+): Procedimiento | null {
   const proc = procedimientos.find((p) => p.id === procId);
   if (!proc) return null;
   proc.galeria = proc.galeria ? [...proc.galeria, media] : [media];
@@ -599,7 +690,10 @@ export function addMediaToProcedimiento(procId: number, media: MediaItem): Proce
   return proc;
 }
 
-export function removeMediaFromProcedimiento(procId: number, mediaId: string): Procedimiento | null {
+export function removeMediaFromProcedimiento(
+  procId: number,
+  mediaId: string
+): Procedimiento | null {
   const proc = procedimientos.find((p) => p.id === procId);
   if (!proc || !proc.galeria) return null;
   proc.galeria = proc.galeria.filter((m) => m.id !== mediaId);
@@ -625,29 +719,40 @@ export let testimonios: Testimonio[] = [];
 
 if (typeof window !== "undefined") {
   const stored = localStorage.getItem("testimonios");
-  if (stored) testimonios = JSON.parse(stored);
+  if (stored) testimonios = JSON.parse(stored) as Testimonio[];
   else localStorage.setItem("testimonios", JSON.stringify(testimonios));
 }
 
 let nextTestimonioId =
-  testimonios.length > 0 ? Math.max(...testimonios.map((t) => t.id)) + 1 : 1;
+  testimonios.length > 0
+    ? Math.max(...testimonios.map((t) => t.id)) + 1
+    : 1;
 
 function saveTestimonios() {
   localStorage.setItem("testimonios", JSON.stringify(testimonios));
 }
 
 export function getTestimonios(): Testimonio[] {
-  return JSON.parse(JSON.stringify(testimonios));
+  return JSON.parse(JSON.stringify(testimonios)) as Testimonio[];
 }
 
-export function addTestimonio(data: Omit<Testimonio, "id" | "creadoEn">): Testimonio {
-  const nuevo: Testimonio = { id: nextTestimonioId++, ...data, creadoEn: new Date().toISOString() };
+export function addTestimonio(
+  data: Omit<Testimonio, "id" | "creadoEn">
+): Testimonio {
+  const nuevo: Testimonio = {
+    id: nextTestimonioId++,
+    ...data,
+    creadoEn: new Date().toISOString(),
+  };
   testimonios.push(nuevo);
   saveTestimonios();
   return nuevo;
 }
 
-export function updateTestimonio(id: number, data: Partial<Testimonio>): Testimonio | null {
+export function updateTestimonio(
+  id: number,
+  data: Partial<Testimonio>
+): Testimonio | null {
   const idx = testimonios.findIndex((t) => t.id === id);
   if (idx === -1) return null;
   testimonios[idx] = { ...testimonios[idx], ...data };
@@ -662,6 +767,7 @@ export function deleteTestimonio(id: number): boolean {
   if (before !== after) saveTestimonios();
   return before !== after;
 }
+
 // ============================================================
 // CHARLAS / FORMACIÓN CONTINUA
 // ============================================================
@@ -680,7 +786,7 @@ export let charlas: Charla[] = [];
 if (typeof window !== "undefined") {
   const stored = localStorage.getItem("charlas");
   if (stored) {
-    charlas = JSON.parse(stored);
+    charlas = JSON.parse(stored) as Charla[];
   } else {
     charlas = [
       {
@@ -708,15 +814,16 @@ let nextCharlaId =
 function saveCharlas() {
   try {
     // Filtramos blobs muy grandes (base64) que saturen el localStorage
-    const filtradas = charlas.map((c) => ({
+    const filtradas: Charla[] = charlas.map((c: Charla) => ({
       ...c,
       imagen:
         c.imagen?.startsWith("data:") && c.imagen.length > 1000
           ? "blob://temporal-imagen"
           : c.imagen,
-      galeria: c.galeria?.map((g) =>
-        g.startsWith("data:") && g.length > 1000 ? "blob://temporal" : g
-      ),
+      galeria:
+        c.galeria?.map((g: string) =>
+          g.startsWith("data:") && g.length > 1000 ? "blob://temporal" : g
+        ) ?? [],
     }));
     localStorage.setItem("charlas", JSON.stringify(filtradas));
   } catch (err) {
@@ -724,9 +831,8 @@ function saveCharlas() {
   }
 }
 
-
 export function getCharlas(): Charla[] {
-  return JSON.parse(JSON.stringify(charlas));
+  return JSON.parse(JSON.stringify(charlas)) as Charla[];
 }
 
 export function addCharla(data: Omit<Charla, "id">): Charla {
@@ -736,7 +842,10 @@ export function addCharla(data: Omit<Charla, "id">): Charla {
   return nueva;
 }
 
-export function updateCharla(id: number, data: Partial<Charla>): Charla | null {
+export function updateCharla(
+  id: number,
+  data: Partial<Charla>
+): Charla | null {
   const idx = charlas.findIndex((c) => c.id === id);
   if (idx === -1) return null;
   charlas[idx] = { ...charlas[idx], ...data };
@@ -750,37 +859,32 @@ export function deleteCharla(id: number): boolean {
   saveCharlas();
   return charlas.length < before;
 }
+
 // ============================================================
 // HORARIOS Y DISPONIBILIDAD — SISTEMA DE CITAS
 // ============================================================
 
-export interface HoraDisponible {
-  hora: string; // ej: "08:30 AM"
-  disponible: boolean;
-  bloqueadoPor?: string | null;
-  idCita?: number | null;
-}
-
-export interface HorarioPorFecha {
-  fecha: string; // formato YYYY-MM-DD
-  horas: HoraDisponible[];
-}
-
-export interface HorarioGlobal {
-  dia: number; // 0=domingo ... 6=sábado
-  horas: string[];
-}
-
-// ============================================================
-// HORAS BASE DEL SISTEMA (08:00 AM a 06:00 PM)
-// ============================================================
-
 export const HORAS_BASE: string[] = [
-  "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM",
-  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
-  "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
-  "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
+  "08:00 AM",
+  "08:30 AM",
+  "09:00 AM",
+  "09:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "12:00 PM",
+  "12:30 PM",
+  "01:00 PM",
+  "01:30 PM",
+  "02:00 PM",
+  "02:30 PM",
+  "03:00 PM",
+  "03:30 PM",
+  "04:00 PM",
+  "04:30 PM",
+  "05:00 PM",
+  "05:30 PM",
   "06:00 PM",
 ];
 
@@ -800,16 +904,31 @@ let horariosGlobales: HorarioGlobal[] = [];
 let horariosPorFecha: HorarioPorFecha[] = [];
 
 if (typeof window !== "undefined") {
-  horarios = JSON.parse(localStorage.getItem("horarios") || "[]");
-  horariosGlobales = JSON.parse(localStorage.getItem("horarios_globales") || "[]");
-  horariosPorFecha = JSON.parse(localStorage.getItem("horarios_por_fecha") || "[]");
+  horarios = JSON.parse(localStorage.getItem("horarios") || "[]") as {
+    fecha: string;
+    hora: string;
+    disponible: boolean;
+    bloqueadoPor?: string;
+    idCita?: number | null;
+  }[];
+  horariosGlobales = JSON.parse(
+    localStorage.getItem("horarios_globales") || "[]"
+  ) as HorarioGlobal[];
+  horariosPorFecha = JSON.parse(
+    localStorage.getItem("horarios_por_fecha") || "[]"
+  ) as HorarioPorFecha[];
 }
 
 // ============================================================
 // FUNCIONES BASE DE DISPONIBILIDAD
 // ============================================================
 
-export function setHorarioDisponible(fecha: string, hora: string, disponible: boolean, bloqueadoPor?: string) {
+export function setHorarioDisponible(
+  fecha: string,
+  hora: string,
+  disponible: boolean,
+  bloqueadoPor?: string
+): void {
   const idx = horarios.findIndex((h) => h.fecha === fecha && h.hora === hora);
   if (idx !== -1) {
     horarios[idx].disponible = disponible;
@@ -820,7 +939,11 @@ export function setHorarioDisponible(fecha: string, hora: string, disponible: bo
   localStorage.setItem("horarios", JSON.stringify(horarios));
 }
 
-export function ocuparHorario(fecha: string, hora: string, idCita: number) {
+export function ocuparHorario(
+  fecha: string,
+  hora: string,
+  idCita: number
+): void {
   const idx = horarios.findIndex((h) => h.fecha === fecha && h.hora === hora);
   if (idx !== -1) {
     horarios[idx].disponible = false;
@@ -831,19 +954,21 @@ export function ocuparHorario(fecha: string, hora: string, idCita: number) {
   localStorage.setItem("horarios", JSON.stringify(horarios));
 }
 
-
 export function getHorariosDisponibles(fecha: string): HoraDisponible[] {
   const delDia = horarios.filter((h) => h.fecha === fecha);
-  if (delDia.length > 0) return delDia.map((h) => ({ hora: h.hora, disponible: h.disponible }));
+  if (delDia.length > 0)
+    return delDia.map((h) => ({ hora: h.hora, disponible: h.disponible }));
   const global = getHorarioGlobal();
   return global;
 }
 
-export function bloquearHorarioManual(fecha: string, hora: string, motivo = "doctora") {
+export function bloquearHorarioManual(
+  fecha: string,
+  hora: string,
+  motivo = "doctora"
+): void {
   setHorarioDisponible(fecha, hora, false, motivo);
 }
-
-
 
 // ============================================================
 // HORARIOS GLOBALES — CONFIGURADOS POR LA DOCTORA
@@ -851,11 +976,11 @@ export function bloquearHorarioManual(fecha: string, hora: string, motivo = "doc
 
 export function getHorarioGlobal(): HoraDisponible[] {
   const stored = localStorage.getItem("horario_global");
-  if (stored) return JSON.parse(stored);
+  if (stored) return JSON.parse(stored) as HoraDisponible[];
   return HORAS_BASE.map((h) => ({ hora: h, disponible: true }));
 }
 
-export function setHorarioGlobal(horas: HoraDisponible[]) {
+export function setHorarioGlobal(horas: HoraDisponible[]): void {
   localStorage.setItem("horario_global", JSON.stringify(horas));
 }
 
@@ -864,11 +989,14 @@ export function getHorariosDelDia(dia: number): string[] {
   return data ? data.horas : [];
 }
 
-export function setHorariosDelDia(dia: number, horas: string[]) {
+export function setHorariosDelDia(dia: number, horas: string[]): void {
   const existing = horariosGlobales.find((h) => h.dia === dia);
   if (existing) existing.horas = horas;
   else horariosGlobales.push({ dia, horas });
-  localStorage.setItem("horarios_globales", JSON.stringify(horariosGlobales));
+  localStorage.setItem(
+    "horarios_globales",
+    JSON.stringify(horariosGlobales)
+  );
 }
 
 // ============================================================
@@ -882,18 +1010,24 @@ export function getHorarioPorFecha(fecha: string): HoraDisponible[] {
   return global.map((h) => ({ ...h }));
 }
 
-export function setHorarioPorFecha(fecha: string, horas: HoraDisponible[]) {
+export function setHorarioPorFecha(
+  fecha: string,
+  horas: HoraDisponible[]
+): void {
   const idx = horariosPorFecha.findIndex((d) => d.fecha === fecha);
   if (idx !== -1) horariosPorFecha[idx].horas = horas;
   else horariosPorFecha.push({ fecha, horas });
-  localStorage.setItem("horarios_por_fecha", JSON.stringify(horariosPorFecha));
+  localStorage.setItem(
+    "horarios_por_fecha",
+    JSON.stringify(horariosPorFecha)
+  );
 }
 
 // ============================================================
 // SINCRONIZACIÓN ENTRE HORARIO GLOBAL Y DÍAS ESPECÍFICOS
 // ============================================================
 
-export function aplicarHorarioGlobalATodosLosDias() {
+export function aplicarHorarioGlobalATodosLosDias(): void {
   const global = getHorarioGlobal();
   const hoy = new Date();
   const nuevos: HorarioPorFecha[] = [];
@@ -909,18 +1043,21 @@ export function aplicarHorarioGlobalATodosLosDias() {
   }
 
   horariosPorFecha = nuevos;
-  localStorage.setItem("horarios_por_fecha", JSON.stringify(horariosPorFecha));
+  localStorage.setItem(
+    "horarios_por_fecha",
+    JSON.stringify(horariosPorFecha)
+  );
 }
 
 // ============================================================
 // LIMPIEZA GENERAL
 // ============================================================
-export function deleteUser(id: number) {
+export function deleteUser(id: number): void {
   usuariosRegistrados = usuariosRegistrados.filter((u) => u.id !== id);
   saveUsuarios();
 }
 
-export function clearLocalDB() {
+export function clearLocalDB(): void {
   usuariosRegistrados = [];
   citasAgendadas = [];
   procedimientos = [];

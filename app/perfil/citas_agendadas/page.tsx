@@ -7,22 +7,21 @@ import { getCitasByUser, Cita, User } from "../../utils/localDB";
 import Link from "next/link";
 import FondoAnim from "@/components/FondoAnim";
 
+type FiltroTipo = "todas" | "valoracion" | "implementacion";
+type FiltroAutor = "todas" | "usuario" | "doctora";
+
 export default function CitasAgendadasPage() {
   const [usuario, setUsuario] = useState<User | null>(null);
   const [citas, setCitas] = useState<Cita[]>([]);
-  const [filtroTipo, setFiltroTipo] = useState<
-    "todas" | "valoracion" | "implementacion"
-  >("todas");
-  const [filtroAutor, setFiltroAutor] = useState<
-    "todas" | "usuario" | "doctora"
-  >("todas");
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>("todas");
+  const [filtroAutor, setFiltroAutor] = useState<FiltroAutor>("todas");
 
   // ===== Cargar usuario y citas =====
   useEffect(() => {
     const stored = localStorage.getItem("currentUser");
     if (stored) {
       try {
-        const parsed = JSON.parse(stored);
+        const parsed: User = JSON.parse(stored);
         setUsuario(parsed);
         const misCitas = getCitasByUser(parsed.id);
         setCitas(misCitas);
@@ -35,15 +34,21 @@ export default function CitasAgendadasPage() {
   // ===== Filtrar y ordenar =====
   const citasFiltradas = useMemo(() => {
     let filtradas = [...citas];
-    if (filtroTipo !== "todas")
+
+    if (filtroTipo !== "todas") {
       filtradas = filtradas.filter((c) => c.tipoCita === filtroTipo);
-    if (filtroAutor !== "todas")
+    }
+
+    if (filtroAutor !== "todas") {
       filtradas = filtradas.filter((c) => c.creadaPor === filtroAutor);
+    }
 
     filtradas.sort(
       (a, b) =>
-        new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
+        new Date(b.fechaCreacion).getTime() -
+        new Date(a.fechaCreacion).getTime()
     );
+
     return filtradas;
   }, [citas, filtroTipo, filtroAutor]);
 
@@ -137,7 +142,8 @@ export default function CitasAgendadasPage() {
             className="text-lg"
             style={{ color: PALETTE.muted, maxWidth: 600, margin: "0 auto" }}
           >
-            Aquí puedes consultar tus citas, realizar pagos o revisar tu historial.
+            Aquí puedes consultar tus citas, realizar pagos o revisar tu
+            historial.
           </p>
         </motion.div>
 
@@ -153,7 +159,11 @@ export default function CitasAgendadasPage() {
               <label className="font-semibold">Filtrar por tipo:</label>
               <select
                 value={filtroTipo}
-                onChange={(e) => setFiltroTipo(e.target.value as any)}
+                onChange={(e) =>
+                  setFiltroTipo(
+                    e.target.value as FiltroTipo
+                  )
+                }
                 className="border border-[#E9DED2] rounded-full px-4 py-1.5 bg-[#FAF9F7] text-[#4E3B2B] shadow-sm hover:shadow transition-all"
               >
                 <option value="todas">Todas</option>
@@ -166,7 +176,11 @@ export default function CitasAgendadasPage() {
               <label className="font-semibold">Creada por:</label>
               <select
                 value={filtroAutor}
-                onChange={(e) => setFiltroAutor(e.target.value as any)}
+                onChange={(e) =>
+                  setFiltroAutor(
+                    e.target.value as FiltroAutor
+                  )
+                }
                 className="border border-[#E9DED2] rounded-full px-4 py-1.5 bg-[#FAF9F7] text-[#4E3B2B] shadow-sm hover:shadow transition-all"
               >
                 <option value="todas">Todas</option>
@@ -210,12 +224,12 @@ export default function CitasAgendadasPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
               >
-                {/* Viñeta decorativa detrás de cada tarjeta */}
                 <div className="relative">
                   <motion.div
                     className="absolute inset-0 -z-10 rounded-3xl"
                     style={{
-                      background: `radial-gradient(circle at 40% 40%, #E9DED255, transparent 70%)`,
+                      background:
+                        "radial-gradient(circle at 40% 40%, #E9DED255, transparent 70%)",
                     }}
                     animate={{
                       opacity: [0.8, 0.4, 0.8],

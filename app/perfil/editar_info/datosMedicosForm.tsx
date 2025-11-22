@@ -6,13 +6,18 @@ import { PALETTE } from "./palette";
 
 const opciones = (arr: string[]) => arr.map((x) => ({ value: x, label: x }));
 
+interface Opcion {
+  value: string;
+  label: string;
+}
+
 interface Props {
-  antecedentes: MultiValue<{ value: string; label: string }>;
-  alergias: MultiValue<{ value: string; label: string }>;
-  medicamentos: MultiValue<{ value: string; label: string }>;
-  setAntecedentes: (v: MultiValue<{ value: string; label: string }>) => void;
-  setAlergias: (v: MultiValue<{ value: string; label: string }>) => void;
-  setMedicamentos: (v: MultiValue<{ value: string; label: string }>) => void;
+  antecedentes: MultiValue<Opcion>;
+  alergias: MultiValue<Opcion>;
+  medicamentos: MultiValue<Opcion>;
+  setAntecedentes: (v: MultiValue<Opcion>) => void;
+  setAlergias: (v: MultiValue<Opcion>) => void;
+  setMedicamentos: (v: MultiValue<Opcion>) => void;
   antecedentesDescripcion: string;
   alergiasDescripcion: string;
   medicamentosDescripcion: string;
@@ -38,7 +43,7 @@ export default function DatosMedicosForm({
   canEdit,
 }: Props) {
   const selectStyles = {
-    control: (p: any) => ({
+    control: (p: Record<string, unknown>) => ({
       ...p,
       borderColor: PALETTE.border,
       boxShadow: "none",
@@ -60,13 +65,14 @@ export default function DatosMedicosForm({
 
   const renderCampo = (
     titulo: string,
-    valor: MultiValue<{ value: string; label: string }>,
-    setValor: (v: any) => void,
+    valor: MultiValue<Opcion>,
+    setValor: (v: MultiValue<Opcion>) => void,
     desc: string,
     setDesc: (v: string) => void,
     opcionesLista: string[]
   ) => {
     const tieneNoTengo = valor.some((x) => x.value === "No tengo");
+
     return (
       <div className="mb-3 text-start">
         <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
@@ -76,7 +82,7 @@ export default function DatosMedicosForm({
           isMulti
           options={opciones(opcionesLista)}
           value={valor}
-          onChange={(v) => setValor(v)}
+          onChange={(v) => setValor(v as MultiValue<Opcion>)}
           styles={selectStyles}
           classNamePrefix="react-select"
           placeholder={`Selecciona ${titulo.toLowerCase()}...`}
@@ -111,14 +117,11 @@ export default function DatosMedicosForm({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <h5 className="fw-semibold mb-3" style={{ color: PALETTE.main }}>
         Datos médicos
       </h5>
+
       {renderCampo(
         "Antecedentes médicos",
         antecedentes,
@@ -127,6 +130,7 @@ export default function DatosMedicosForm({
         setAntecedentesDescripcion,
         ANTECEDENTES
       )}
+
       {renderCampo(
         "Alergias",
         alergias,
@@ -135,6 +139,7 @@ export default function DatosMedicosForm({
         setAlergiasDescripcion,
         ALERGIAS
       )}
+
       {renderCampo(
         "Medicamentos actuales",
         medicamentos,

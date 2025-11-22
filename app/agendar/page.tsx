@@ -26,7 +26,7 @@ export const PALETTE = {
   textSoft: "#4B3726",
 };
 
-// 👇 Datos del formulario (mismo shape que usamos en AgendarForm)
+// Datos del formulario
 interface AgendarFormData {
   fecha?: string;
   hora?: string;
@@ -37,10 +37,19 @@ interface AgendarFormData {
   nota?: string;
 }
 
-// 👇 Datos de cita antes de guardar (sin id ni campos de pago/estado)
+// Datos de cita antes de guardar (sin id ni campos de pago/estado)
 type CitaData = Omit<
   Cita,
-  "id" | "metodoPago" | "tipoPagoConsultorio" | "tipoPagoOnline" | "estado"
+  | "id"
+  | "metodoPago"
+  | "tipoPagoConsultorio"
+  | "tipoPagoOnline"
+  | "estado"
+  | "monto"
+  | "montoPagado"
+  | "montoRestante"
+  | "qrCita"
+  | "motivoCancelacion"
 >;
 
 export default function AgendarPage() {
@@ -125,17 +134,16 @@ export default function AgendarPage() {
 
   // === Paso 2 → 3 ===
   const handleConfirmarDatos = () => {
-    // ✅ Aseguramos que haya fecha y usuario antes de construir la cita
-    if (!fecha || !usuario) {
-      return;
-    }
+    if (!fecha || !usuario) return;
 
     const nuevaCita: CitaData = {
-      userId: usuario.id, // 👈 siempre number, ya no hay null
+      userId: usuario.id, // ahora siempre es number, ya validamos usuario
       nombres: formData.nombre,
+      apellidos: usuario.apellidos || "",
       telefono: formData.telefono,
       correo: formData.correo,
       procedimiento: formData.procedimiento,
+      nota: formData.nota,
       tipoCita: "valoracion",
       fecha: fecha.toISOString(),
       hora,
@@ -162,8 +170,7 @@ export default function AgendarPage() {
         background: `linear-gradient(135deg, ${PALETTE.bgGradFrom}, ${PALETTE.bgGradTo})`,
       }}
     >
-      {/* === BARRA DE PROGRESO ANIMADA (si la tienes, déjala aquí) === */}
-      {/* ... tu barra / pasos ... */}
+      {/* === BARRA DE PROGRESO (puedes dejarla igual a tu versión anterior) === */}
 
       {/* === CONTENIDO SEGÚN PASO === */}
       <div className="mx-auto w-full max-w-7xl grid gap-6 items-start">

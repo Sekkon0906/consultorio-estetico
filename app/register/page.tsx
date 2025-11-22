@@ -7,9 +7,8 @@ import { PALETTE } from "./palette";
 import Step1DatosPersonales from "./step1DatosPersonales";
 import Step2DatosMedicos from "./step2DatosMedicos";
 import Step3Exito from "./step3exito";
-import type { User } from "../utils/localDB";
 
-// 👇 Tipo fuerte para los datos del registro, alineado con User de localDB
+// 👇 Tipo fuerte para los datos del registro (usado en todos los steps)
 export interface RegisterFormData {
   nombres: string;
   apellidos: string;
@@ -17,23 +16,28 @@ export interface RegisterFormData {
   telefono: string;
   password: string;
   confirm: string;
-  edad: string;                // se llena a partir de la fecha de nacimiento
+
+  // datos de edad / sexo / género
+  edad: string;                // guardamos como string, luego se convierte a number
   fechaNacimiento: Date | null;
   sexo: string;                // Masculino / Femenino / Intersex / Prefiero no decirlo
-  genero: string;              // identidad/orientación libre (texto)
+  genero: string;              // identidad/orientación (texto libre)
+
+  // datos médicos (coinciden con localDB pero como arrays de string)
   antecedentes: string[];
   alergias: string[];
   medicamentos: string[];
+
   antecedentesDescripcion: string;
   alergiasDescripcion: string;
   medicamentosDescripcion: string;
 }
 
-
 export default function RegisterPage() {
   const searchParams = useSearchParams();
 
-  // si el flujo de Google hace: router.push(`/register?email=...&nombres=...`)
+  // si tu flujo de login con Google hace:
+  // router.push(`/register?email=...&nombres=...&apellidos=...&telefono=...`)
   const pre_email = searchParams?.get("email") ?? "";
   const pre_nombres = searchParams?.get("nombres") ?? "";
   const pre_apellidos = searchParams?.get("apellidos") ?? "";
@@ -42,7 +46,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [err, setErr] = useState<string | null>(null);
 
-  // ✅ Estado tipado con RegisterFormData y alineado con User
+  // ✅ Estado tipado con RegisterFormData
   const [formData, setFormData] = useState<RegisterFormData>({
     nombres: pre_nombres || "",
     apellidos: pre_apellidos || "",
@@ -51,16 +55,18 @@ export default function RegisterPage() {
     password: "",
     confirm: "",
     edad: "",
+    fechaNacimiento: null,
+    sexo: "",
     genero: "",
-    antecedentes: "",
+    antecedentes: [],
+    alergias: [],
+    medicamentos: [],
     antecedentesDescripcion: "",
-    alergias: "",
     alergiasDescripcion: "",
-    medicamentos: "",
     medicamentosDescripcion: "",
   });
 
-  // Si llegan query params después de montar, se rellenan solo si está vacío
+  // Si llegas con query params *después* de la inicialización, solo rellenamos si los campos están vacíos
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,

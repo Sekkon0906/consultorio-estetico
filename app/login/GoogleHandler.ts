@@ -15,6 +15,12 @@ interface ApiUser {
   photo?: string | null;
 }
 
+interface ApiResponse {
+  ok: boolean;
+  user?: ApiUser;
+  error?: string;
+}
+
 interface GoogleHandlerOptions {
   router: AppRouterInstance;
   setErr: (msg: string | null) => void;
@@ -36,9 +42,7 @@ export async function handleGoogleLogin({
     // 3) Enviar al backend para crear / obtener usuario en MySQL
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     if (!baseUrl) {
-      throw new Error(
-        "Falta NEXT_PUBLIC_API_BASE_URL en variables de entorno."
-      );
+      throw new Error("Falta NEXT_PUBLIC_API_BASE_URL en variables de entorno.");
     }
 
     const resp = await fetch(`${baseUrl}/auth/google`, {
@@ -50,12 +54,19 @@ export async function handleGoogleLogin({
     // Manejo de respuestas no-2xx
     if (!resp.ok) {
       const errJson = await safeJson(resp);
-      console.error("Respuesta /auth/google (HTTP error):", errJson || resp.statusText);
-      setErr((errJson as any)?.error || "No se pudo iniciar sesión con Google.");
+      console.error(
+        "Respuesta /auth/google (HTTP error):",
+        errJson ?? resp.statusText
+      );
+      setErr(
+        hasErrorField(errJson) && errJson.error
+          ? errJson.error
+          : "No se pudo iniciar sesión con Google."
+      );
       return;
     }
 
-    const data = (await resp.json()) as { ok: boolean; user?: ApiUser; error?: string };
+    const data = (await resp.json()) as ApiResponse;
 
     if (!data.ok || !data.user) {
       console.error("Respuesta /auth/google:", data);
@@ -80,10 +91,10 @@ export async function handleGoogleLogin({
       photo: apiUser.photo ?? fallbackPhoto,
     };
 
-    // Guardar usuario en tu sistema local (session flexible)
+    // 5) Guardar usuario en tu sistema local (sesión flexible)
     setCurrentUser(sessionUser);
 
-    // Opcional: recordar usuario 30 días
+    // 6) Opcional: recordar usuario 30 días
     const session = {
       ...sessionUser,
       expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
@@ -92,7 +103,7 @@ export async function handleGoogleLogin({
       localStorage.setItem("rememberUser", JSON.stringify(session));
     }
 
-    // 5) Redirigir a inicio
+    // 7) Redirigir a inicio
     router.push("/");
   } catch (err: unknown) {
     console.error("Error en handleGoogleLogin:", err);
@@ -105,10 +116,17 @@ export async function handleGoogleLogin({
 }
 
 /** Intenta parsear JSON sin lanzar excepción si falla. */
-async function safeJson(resp: Response) {
+async function safeJson(resp: Response): Promise<unknown | null> {
   try {
     return await resp.json();
   } catch {
     return null;
   }
+}
+
+/** Type-guard para objetos con posible campo `error`. */
+function hasErrorField(
+  value: unknown
+): value is { error?: string } {
+  return typeof value === "object" && value !== null && "error" in value;
 }

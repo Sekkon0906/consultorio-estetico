@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { PALETTE } from "./palette";
 import Step1DatosPersonales from "./step1DatosPersonales";
 import Step2DatosMedicos from "./step2DatosMedicos";
 import Step3Exito from "./step3exito";
 
-// 👇 Tipo fuerte para los datos del registro (usado en todos los steps)
+// ===== Tipo central de TODO el formulario de registro =====
 export interface RegisterFormData {
+  // Paso 1
   nombres: string;
   apellidos: string;
   email: string;
@@ -17,44 +18,50 @@ export interface RegisterFormData {
   password: string;
   confirm: string;
 
-  // datos de edad / sexo / género
-  edad: string;                // guardamos como string, luego se convierte a number
-  fechaNacimiento: Date | null;
-  sexo: string;                // Masculino / Femenino / Intersex / Prefiero no decirlo
-  genero: string;              // identidad/orientación (texto libre)
+  // Información derivada de fecha
+  edad: string; // luego la convertimos a number
 
-  // datos médicos (coinciden con localDB pero como arrays de string)
+  // Paso 2
+  fechaNacimiento: Date | null;
+  sexo: string;
+  genero: string;
   antecedentes: string[];
   alergias: string[];
   medicamentos: string[];
-
   antecedentesDescripcion: string;
   alergiasDescripcion: string;
   medicamentosDescripcion: string;
 }
 
-export default function RegisterPage() {
+type Direction = 1 | -1;
+
+function RegisterPageContent() {
   const searchParams = useSearchParams();
 
-  // si tu flujo de login con Google hace:
-  // router.push(`/register?email=...&nombres=...&apellidos=...&telefono=...`)
-  const pre_email = searchParams?.get("email") ?? "";
-  const pre_nombres = searchParams?.get("nombres") ?? "";
-  const pre_apellidos = searchParams?.get("apellidos") ?? "";
-  const pre_telefono = searchParams?.get("telefono") ?? "";
+  // Datos prellenados desde login con Google
+  const pre_email = searchParams.get("email") ?? "";
+  const pre_nombres = searchParams.get("nombres") ?? "";
+  const pre_apellidos = searchParams.get("apellidos") ?? "";
+  const pre_telefono = searchParams.get("telefono") ?? "";
 
   const [step, setStep] = useState(1);
   const [err, setErr] = useState<string | null>(null);
+  const [direction, setDirection] = useState<Direction>(1);
 
-  // ✅ Estado tipado con RegisterFormData
+  // ===== Estado tipado con RegisterFormData =====
   const [formData, setFormData] = useState<RegisterFormData>({
+    // Paso 1
     nombres: pre_nombres || "",
     apellidos: pre_apellidos || "",
     email: pre_email || "",
     telefono: pre_telefono || "",
     password: "",
     confirm: "",
+
+    // Derivado de fecha
     edad: "",
+
+    // Paso 2
     fechaNacimiento: null,
     sexo: "",
     genero: "",
@@ -66,7 +73,7 @@ export default function RegisterPage() {
     medicamentosDescripcion: "",
   });
 
-  // Si llegas con query params *después* de la inicialización, solo rellenamos si los campos están vacíos
+  // Si los query params llegan después, solo rellenamos si está vacío
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -77,17 +84,24 @@ export default function RegisterPage() {
     }));
   }, [pre_email, pre_nombres, pre_apellidos, pre_telefono]);
 
-  const nextStep = () => setStep((s) => s + 1);
-  const prevStep = () => setStep((s) => Math.max(1, s - 1));
+  const nextStep = () => {
+    setDirection(1);
+    setStep((s) => Math.min(3, s + 1));
+  };
+
+  const prevStep = () => {
+    setDirection(-1);
+    setStep((s) => Math.max(1, s - 1));
+  };
 
   const slide = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 300 : -300,
+    enter: (dir: Direction) => ({
+      x: dir > 0 ? 200 : -200,
       opacity: 0,
     }),
     center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({
-      x: dir < 0 ? 300 : -300,
+    exit: (dir: Direction) => ({
+      x: dir < 0 ? 200 : -200,
       opacity: 0,
     }),
   };
@@ -109,7 +123,8 @@ export default function RegisterPage() {
               className="card border-0 shadow-lg rounded-4"
               style={{ backgroundColor: PALETTE.surface, overflow: "hidden" }}
             >
-              <div className="card-body p-4 p-md-8 text-center position-relative">
+              <div className="card-body p-4 p-md-5 text-center position-relative">
+                {/* Botón volver */}
                 {step > 1 && step < 3 && (
                   <p
                     onClick={prevStep}
@@ -128,6 +143,7 @@ export default function RegisterPage() {
                   </p>
                 )}
 
+                {/* Paso / indicador */}
                 {step < 3 && (
                   <div className="d-flex align-items-center justify-content-center mb-3 mt-1">
                     <div className="d-flex align-items-center">
@@ -179,11 +195,11 @@ export default function RegisterPage() {
                 )}
 
                 <div style={{ position: "relative", minHeight: 500 }}>
-                  <AnimatePresence initial={false} mode="wait">
+                  <AnimatePresence initial={false} mode="wait" custom={direction}>
                     {step === 1 && (
                       <motion.div
                         key="step1"
-                        custom={1}
+                        custom={direction}
                         variants={slide}
                         initial="enter"
                         animate="center"
@@ -202,7 +218,7 @@ export default function RegisterPage() {
                     {step === 2 && (
                       <motion.div
                         key="step2"
-                        custom={2}
+                        custom={direction}
                         variants={slide}
                         initial="enter"
                         animate="center"
@@ -222,7 +238,7 @@ export default function RegisterPage() {
                     {step === 3 && (
                       <motion.div
                         key="step3"
-                        custom={3}
+                        custom={direction}
                         variants={slide}
                         initial="enter"
                         animate="center"
@@ -269,5 +285,20 @@ export default function RegisterPage() {
         }
       `}</style>
     </section>
+  );
+}
+
+// Wrapper con Suspense para calmar el warning de useSearchParams
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="py-5 text-center">
+          <p>Cargando registro…</p>
+        </section>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }

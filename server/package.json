@@ -1,18 +1,22 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend para clínica estética con Express, Firebase y MySQL",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "firebase-admin": "^13.5.0",
     "mysql2": "^3.15.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
   }
 }

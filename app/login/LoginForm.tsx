@@ -2,11 +2,10 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { motion } from "framer-motion";
 import { loginUser, setCurrentUser } from "../utils/auth";
 import { updateUserData } from "../utils/localDB";
-import { handleGoogleSuccess } from "./GoogleHandler";
+import { handleGoogleLogin } from "./GoogleHandler"; // 👈 nuevo handler basado en Firebase
 import { PALETTE } from "./palette2";
 
 interface Props {
@@ -21,14 +20,12 @@ export default function LoginForm({ setErr }: Props) {
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(false);
 
-  // === Centrar la ventana emergente de Google ===
+  // === Centrar la ventana emergente (por si alguna lib usa window.open) ===
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Guardamos la original con el tipo correcto
     const originalOpen: typeof window.open = window.open.bind(window);
 
-    // Nueva función con la MISMA firma que window.open
     const centeredOpen: typeof window.open = (
       url?: string | URL,
       target?: string,
@@ -45,13 +42,11 @@ export default function LoginForm({ setErr }: Props) {
 
         return originalOpen(url, target, finalFeatures);
       } catch {
-        // Fallback por si algo falla
         return originalOpen(url, target, features);
       }
     };
 
     window.open = centeredOpen;
-
     return () => {
       window.open = originalOpen;
     };
@@ -222,34 +217,28 @@ export default function LoginForm({ setErr }: Props) {
         Entrar
       </motion.button>
 
-      {/* === Login con Google === */}
+      {/* === Login con Google (Firebase) === */}
       <div className="mt-3 d-flex flex-column align-items-center gap-2">
         <p style={{ color: PALETTE.text, fontSize: "0.9rem" }}>O entra con:</p>
-        <motion.div
-          className="google-container"
+        <motion.button
+          type="button"
+          className="btn d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm"
+          style={{
+            backgroundColor: "#ffffff",
+            border: `1px solid ${PALETTE.border}`,
+            color: PALETTE.text,
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
-          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          onClick={() => handleGoogleLogin({ router, setErr })}
         >
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <GoogleLogin
-              onSuccess={(cred: CredentialResponse) =>
-                handleGoogleSuccess(
-                  cred,
-                  router,
-                  setErr,
-                  false,
-                  () => null,
-                  () => undefined
-                )
-              }
-              onError={() => setErr("Error al autenticar con Google.")}
-              shape="pill"
-              text="signin_with"
-              width="250"
-            />
-          </div>
-        </motion.div>
+          <img
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+            alt="Google logo"
+            style={{ width: 20, height: 20 }}
+          />
+          <span>Iniciar sesión con Google</span>
+        </motion.button>
       </div>
 
       {/* === Enlaces de acción === */}

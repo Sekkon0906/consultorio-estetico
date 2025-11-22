@@ -1,83 +1,76 @@
-import { jwtDecode } from "jwt-decode";
-import { getUsers, updateUserData, User } from "../utils/localDB";
-import { setCurrentUser } from "../utils/auth";
+// app/login/GoogleHandler.ts
+"use client";
+
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { signInWithGooglePopup, auth } from "../utils/firebaseClient";
+import { setCurrentUser } from "../utils/auth";
 
-interface GoogleCredentialResponse {
-  credential?: string;
+interface ApiUser {
+  id: number;
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono?: string;
+  rol: "user" | "admin" | "medico" | "paciente" | "recepcionista";
+  photo?: string | null;
 }
 
-interface GoogleDecodedToken {
-  email?: string;
-  name?: string;
-  picture?: string;
-  phone_number?: string;
+interface GoogleHandlerOptions {
+  router: AppRouterInstance;
+  setErr: (msg: string | null) => void;
 }
 
-export async function handleGoogleSuccess(
-  credentialResponse: GoogleCredentialResponse,
-  router: AppRouterInstance,
-  setErr: (msg: string | null) => void,
-  recoverMode: boolean,
-  setRecoverUser: (u: User | null) => void,
-  setRecoverStep: (s: "verify" | "reset") => void
-) {
+export async function handleGoogleLogin({
+  router,
+  setErr,
+}: GoogleHandlerOptions): Promise<void> {
   try {
-    if (!credentialResponse.credential) {
-      setErr("Error al recibir datos de Google.");
-      return;
-    }
+    setErr(null);
 
-    const decoded = jwtDecode<GoogleDecodedToken>(credentialResponse.credential);
-    const email = (decoded.email || "").toLowerCase();
+    // 1) Login en Firebase con popup
+    const firebaseUser = await signInWithGooglePopup();
 
-    if (!email) {
-      setErr("No se recibió correo desde Google.");
-      return;
-    }
+    // 2) Obtener ID token de Firebase
+    const idToken = await firebaseUser.getIdToken();
 
-    const users = getUsers();
-    const found = users.find((u) => u.email.toLowerCase() === email);
-
-    // ===== Flujo de recuperación =====
-    if (recoverMode) {
-      if (found) {
-        setRecoverUser(found);
-        setRecoverStep("reset");
-        setErr(null);
-      } else {
-        setErr("No encontramos una cuenta asociada a este correo.");
+    // 3) Enviar al backend para crear / obtener usuario en MySQL
+    const resp = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idToken }),
       }
-      return;
-    }
-
-    // ===== Flujo normal (inicio de sesión existente) =====
-    if (found) {
-      if (decoded.picture && decoded.picture !== found.photo) {
-        updateUserData({ photo: decoded.picture }, found.email);
-      }
-
-      setCurrentUser(found);
-      router.push("/");
-      return;
-    }
-
-    // ===== Usuario nuevo → Registro prellenado =====
-    const fullName = decoded.name || "";
-    const [firstName, ...rest] = fullName.split(" ");
-    const lastName = rest.join(" ");
-
-    const emailParam = encodeURIComponent(email);
-    const nombresParam = encodeURIComponent(firstName || "");
-    const apellidosParam = encodeURIComponent(lastName || "");
-    const telefonoParam = encodeURIComponent(decoded.phone_number || "");
-    const photoParam = encodeURIComponent(decoded.picture || "");
-
-    router.push(
-      `/register?email=${emailParam}&nombres=${nombresParam}&apellidos=${apellidosParam}&telefono=${telefonoParam}&photo=${photoParam}`
     );
-  } catch (error) {
-    console.error("Error durante la autenticación con Google:", error);
-    setErr("Error al autenticar con Google.");
+
+    const data = await resp.json();
+
+    if (!resp.ok || !data.ok) {
+      console.error("Respuesta /auth/google:", data);
+      setErr(data.error || "No se pudo iniciar sesión con Google.");
+      return;
+    }
+
+    const user: ApiUser = data.user;
+
+    // 4) Guardar usuario en tu sistema local
+    setCurrentUser(user); // tu utilidad actual
+
+    // Opcional: recordar usuario 30 días
+    const session = {
+      ...user,
+      expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("rememberUser", JSON.stringify(session));
+    }
+
+    // Redirigir a inicio
+    router.push("/");
+  } catch (err: unknown) {
+    console.error("Error en handleGoogleLogin:", err);
+    setErr("Error al autenticar con Google. Intenta nuevamente.");
   }
 }

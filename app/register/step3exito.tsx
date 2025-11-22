@@ -4,30 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./palette";
-import { createUser } from "../utils/localDB";
-
-// Opción seleccionable en los Select múltiples
-interface SelectOption {
-  value: string;
-  label: string;
-}
-
-// Estructura de los datos del formulario de registro
-interface RegisterFormData {
-  nombres: string;
-  apellidos: string;
-  email: string;
-  password: string;
-  telefono?: string;
-  edad?: number | string;
-  genero?: string;
-  antecedentes?: SelectOption[];
-  antecedentesDescripcion?: string;
-  alergias?: SelectOption[];
-  alergiasDescripcion?: string;
-  medicamentos?: SelectOption[];
-  medicamentosDescripcion?: string;
-}
+import { createUser, findUserByEmail } from "../utils/localDB";
+import type { RegisterFormData } from "./page";
 
 interface Props {
   formData: RegisterFormData;
@@ -36,44 +14,34 @@ interface Props {
 export default function Step3Exito({ formData }: Props) {
   const router = useRouter();
 
-  // Guardar el usuario en localDB al montar el componente
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!formData?.email) return;
 
     try {
-      const antecedentesTxt =
-        formData.antecedentes?.map((a: SelectOption) => a.value).join(", ") ||
-        "";
-
-      const alergiasTxt =
-        formData.alergias?.map((a: SelectOption) => a.value).join(", ") || "";
-
-      const medicamentosTxt =
-        formData.medicamentos?.map((a: SelectOption) => a.value).join(", ") ||
-        "";
+      // Evita crear usuario duplicado si recarga la pantalla
+      const existe = findUserByEmail(formData.email.trim());
+      if (existe) return;
 
       createUser({
         nombres: formData.nombres.trim(),
         apellidos: formData.apellidos.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        telefono: formData.telefono?.trim() || "",
+        telefono: formData.telefono || "",
         edad: Number(formData.edad) || 0,
         genero: formData.genero || "Otro",
-        antecedentes: antecedentesTxt,
+        antecedentes: formData.antecedentes || "",
         antecedentesDescripcion: formData.antecedentesDescripcion || "",
-        alergias: alergiasTxt,
+        alergias: formData.alergias || "",
         alergiasDescripcion: formData.alergiasDescripcion || "",
-        medicamentos: medicamentosTxt,
+        medicamentos: formData.medicamentos || "",
         medicamentosDescripcion: formData.medicamentosDescripcion || "",
       });
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.warn("Error creando usuario:", e);
     }
-    // solo al montar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [formData]);
 
   return (
     <motion.div
@@ -113,8 +81,8 @@ export default function Step3Exito({ formData }: Props) {
       </h2>
 
       <p style={{ color: PALETTE.muted, maxWidth: 400, margin: "0 auto" }}>
-        Puedes iniciar sesión para agendar tus citas o modificar tu información
-        médica desde tu perfil.
+        Ya puedes iniciar sesión para agendar tus citas o administrar tu
+        información médica desde tu perfil.
       </p>
 
       <div className="mt-4">

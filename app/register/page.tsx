@@ -7,29 +7,38 @@ import { PALETTE } from "./palette";
 import Step1DatosPersonales from "./step1DatosPersonales";
 import Step2DatosMedicos from "./step2DatosMedicos";
 import Step3Exito from "./step3exito";
+import type { User } from "../utils/localDB";
 
-// 👇 Tipo fuerte para los datos del registro
+// 👇 Tipo fuerte para los datos del registro, alineado con User de localDB
 export interface RegisterFormData {
-  nombres: string;
-  apellidos: string;
-  email: string;
-  telefono: string;
-  password: string;
+  // datos básicos
+  nombres: User["nombres"];
+  apellidos: User["apellidos"];
+  email: User["email"];
+  telefono: User["telefono"] | ""; // en el form siempre manejamos string
+
+  // auth
+  password: User["password"];
   confirm: string;
-  edad: string;
-  genero: string;
-  antecedentes: string[];
-  alergias: string[];
-  medicamentos: string[];
-  antecedentesDescripcion: string;
-  alergiasDescripcion: string;
-  medicamentosDescripcion: string;
+
+  // datos médicos
+  edad: string; // en el form es string, luego se convierte a number
+  genero: "" | User["genero"]; // "", "Masculino" | "Femenino" | "Otro"
+
+  antecedentes: User["antecedentes"]; // string
+  antecedentesDescripcion: User["antecedentesDescripcion"];
+
+  alergias: User["alergias"];
+  alergiasDescripcion: User["alergiasDescripcion"];
+
+  medicamentos: User["medicamentos"];
+  medicamentosDescripcion: User["medicamentosDescripcion"];
 }
 
 export default function RegisterPage() {
   const searchParams = useSearchParams();
 
-  // si tu flujo de login con Google hace: router.push(`/register?email=...&nombres=...&apellidos=...&telefono=...`)
+  // si el flujo de Google hace: router.push(`/register?email=...&nombres=...`)
   const pre_email = searchParams?.get("email") ?? "";
   const pre_nombres = searchParams?.get("nombres") ?? "";
   const pre_apellidos = searchParams?.get("apellidos") ?? "";
@@ -38,7 +47,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [err, setErr] = useState<string | null>(null);
 
-  // ✅ Estado tipado con RegisterFormData (adiós any)
+  // ✅ Estado tipado con RegisterFormData y alineado con User
   const [formData, setFormData] = useState<RegisterFormData>({
     nombres: pre_nombres || "",
     apellidos: pre_apellidos || "",
@@ -48,15 +57,15 @@ export default function RegisterPage() {
     confirm: "",
     edad: "",
     genero: "",
-    antecedentes: [],
-    alergias: [],
-    medicamentos: [],
+    antecedentes: "",
     antecedentesDescripcion: "",
+    alergias: "",
     alergiasDescripcion: "",
+    medicamentos: "",
     medicamentosDescripcion: "",
   });
 
-  // Si llegas con query params *después* de la inicialización, solo rellenamos si los campos están vacíos
+  // Si llegan query params después de montar, se rellenan solo si está vacío
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,

@@ -10,24 +10,7 @@ import React, {
 import Input from "./input";
 import InputPassword from "./inputPassword";
 import { PALETTE } from "./palette";
-
-// Debe coincidir con la estructura que usas en RegisterPage
-export interface RegisterFormData {
-  nombres: string;
-  apellidos: string;
-  email: string;
-  telefono: string;
-  password: string;
-  confirm: string;
-  edad: string;
-  genero: string;
-  antecedentes: string[];
-  alergias: string[];
-  medicamentos: string[];
-  antecedentesDescripcion: string;
-  alergiasDescripcion: string;
-  medicamentosDescripcion: string;
-}
+import type { RegisterFormData } from "./page";
 
 interface Props {
   formData: RegisterFormData;
@@ -62,7 +45,7 @@ export default function Step1DatosPersonales({
       e.email = "El correo electrónico no tiene un formato válido.";
     }
 
-    // Teléfono colombiano o formato internacional (+57 3XXXXXXXXX)
+    // Teléfono colombiano o similar
     if (!/^(\+?\d{1,3})?\s?3\d{9}$/.test(formData.telefono || "")) {
       e.telefono = "El número de teléfono debe tener 10 dígitos válidos.";
     }
@@ -131,10 +114,10 @@ export default function Step1DatosPersonales({
           error={touched && errors.email}
           palette={PALETTE}
         />
-        {touched && errors.email && (
-          <small className="text-danger">{errors.email}</small>
-        )}
       </div>
+      {touched && errors.email && (
+        <small className="text-danger">{errors.email}</small>
+      )}
 
       {/* Teléfono */}
       <div className="mb-3 text-start">

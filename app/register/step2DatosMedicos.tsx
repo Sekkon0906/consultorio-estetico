@@ -1,30 +1,23 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, {
+  useState,
+  useMemo,
+  Dispatch,
+  SetStateAction,
+} from "react";
 import Select, { MultiValue, StylesConfig } from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { PALETTE } from "./palette";
+import type { RegisterFormData } from "./page";
 
 // ---- Tipos auxiliares ----
 type MedicalOption = { value: string; label: string };
 
-export interface RegisterMedicalData {
-  fechaNacimiento: Date | null;
-  sexo: string;
-  genero: string;
-  antecedentes: MedicalOption[];
-  alergias: MedicalOption[];
-  medicamentos: MedicalOption[];
-  antecedentesDescripcion: string;
-  alergiasDescripcion: string;
-  medicamentosDescripcion: string;
-  // puedes agregar aquí otros campos del form si quieres que tenga TODO junto
-}
-
 interface Props {
-  formData: RegisterMedicalData;
-  setFormData: React.Dispatch<React.SetStateAction<RegisterMedicalData>>;
+  formData: RegisterFormData;
+  setFormData: Dispatch<SetStateAction<RegisterFormData>>;
   prevStep: () => void;
   nextStep: () => void;
   setErr: (e: string | null) => void;
@@ -82,7 +75,7 @@ const MEDICAMENTOS = [
 const toOptions = (arr: string[]): MedicalOption[] =>
   arr.map((a) => ({ value: a, label: a }));
 
-export default function Step2InfoMedica({
+export default function Step2DatosMedicos({
   formData,
   setFormData,
   prevStep,
@@ -91,6 +84,30 @@ export default function Step2InfoMedica({
 }: Props) {
   const [touched, setTouched] = useState(false);
   const [fechaError, setFechaError] = useState<string | null>(null);
+
+  // Estado local para la fecha (edad se guarda en formData.edad)
+  const [fechaNacimiento, setFechaNacimiento] = useState<Date | null>(null);
+
+  // Estado local para los multi-selects (en formData se guarda string)
+  const [selectedAntecedentes, setSelectedAntecedentes] = useState<
+    MedicalOption[]
+  >(
+    formData.antecedentes
+      ? toOptions(formData.antecedentes.split(";").map((s) => s.trim()))
+      : []
+  );
+  const [selectedAlergias, setSelectedAlergias] = useState<MedicalOption[]>(
+    formData.alergias
+      ? toOptions(formData.alergias.split(";").map((s) => s.trim()))
+      : []
+  );
+  const [selectedMedicamentos, setSelectedMedicamentos] = useState<
+    MedicalOption[]
+  >(
+    formData.medicamentos
+      ? toOptions(formData.medicamentos.split(";").map((s) => s.trim()))
+      : []
+  );
 
   const antecedentsOptions = toOptions(ANTECEDENTES);
   const alergiasOptions = toOptions(ALERGIAS);
@@ -126,34 +143,50 @@ export default function Step2InfoMedica({
   };
 
   const handleDateChange = (date: Date | null) => {
-    if (!date) return;
+    setFechaNacimiento(date);
 
-    const age = today.getFullYear() - date.getFullYear();
+    if (!date) {
+      setFechaError("Selecciona tu fecha de nacimiento.");
+      setFormData((prev) => ({ ...prev, edad: "" }));
+      return;
+    }
 
-    if (age < 16) {
+    const age =
+      today.getFullYear() -
+      date.getFullYear() -
+      (today < new Date(date.getFullYear() + age, date.getMonth(), date.getDate())
+        ? 1
+        : 0);
+
+    const ageSimple = today.getFullYear() - date.getFullYear();
+
+    if (ageSimple < 16) {
       setFechaError("Debes tener al menos 16 años.");
-      setFormData((prev) => ({ ...prev, fechaNacimiento: null }));
-    } else if (age > 80) {
+      setFormData((prev) => ({ ...prev, edad: "" }));
+    } else if (ageSimple > 80) {
       setFechaError("La edad máxima permitida es 80 años.");
-      setFormData((prev) => ({ ...prev, fechaNacimiento: null }));
+      setFormData((prev) => ({ ...prev, edad: "" }));
     } else {
       setFechaError(null);
-      setFormData((prev) => ({ ...prev, fechaNacimiento: date }));
+      setFormData((prev) => ({ ...prev, edad: String(ageSimple) }));
     }
   };
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (!formData.fechaNacimiento) e.fechaNacimiento = "Selecciona tu fecha";
-    if (!formData.sexo) e.sexo = "Selecciona tu sexo";
-    if (!formData.genero) e.genero = "Selecciona tu género";
-    if (!formData.antecedentes?.length)
-      e.antecedentes = "Campo obligatorio";
-    if (!formData.alergias?.length) e.alergias = "Campo obligatorio";
-    if (!formData.medicamentos?.length)
-      e.medicamentos = "Campo obligatorio";
+    if (!formData.edad) e.edad = "Selecciona tu fecha de nacimiento.";
+    if (!formData.genero) e.genero = "Selecciona tu sexo biológico.";
+    if (!selectedAntecedentes.length) e.antecedentes = "Campo obligatorio.";
+    if (!selectedAlergias.length) e.alergias = "Campo obligatorio.";
+    if (!selectedMedicamentos.length) e.medicamentos = "Campo obligatorio.";
     return e;
-  }, [formData]);
+  }, [
+    formData.edad,
+    formData.genero,
+    selectedAntecedentes,
+    selectedAlergias,
+    selectedMedicamentos,
+  ]);
 
   const valid = Object.keys(errors).length === 0 && !fechaError;
 
@@ -226,15 +259,13 @@ export default function Step2InfoMedica({
           Fecha de nacimiento
         </label>
         <DatePicker
-          selected={formData.fechaNacimiento}
+          selected={fechaNacimiento}
           onChange={(date) => handleDateChange(date as Date | null)}
           maxDate={maxDate}
           minDate={minDate}
           placeholderText="Selecciona tu fecha"
           className={`form-control rounded-3 shadow-sm ${
-            touched && (errors.fechaNacimiento || fechaError)
-              ? "is-invalid"
-              : ""
+            touched && (errors.edad || fechaError) ? "is-invalid" : ""
           }`}
           dateFormat="dd/MM/yyyy"
           showMonthDropdown
@@ -243,14 +274,14 @@ export default function Step2InfoMedica({
           popperPlacement="bottom-start"
           calendarClassName="custom-calendar"
         />
-        {(touched && errors.fechaNacimiento) || fechaError ? (
+        {(touched && errors.edad) || fechaError ? (
           <div className="invalid-feedback d-block">
-            {errors.fechaNacimiento || fechaError}
+            {errors.edad || fechaError}
           </div>
         ) : null}
       </div>
 
-      {/* Sexo */}
+      {/* Sexo biológico -> genero en BD */}
       <div className="mb-3 text-start">
         <label
           className="form-label fw-semibold"
@@ -260,11 +291,14 @@ export default function Step2InfoMedica({
         </label>
         <select
           className={`form-select rounded-3 shadow-sm ${
-            touched && errors.sexo ? "is-invalid" : ""
+            touched && errors.genero ? "is-invalid" : ""
           }`}
-          value={formData.sexo || ""}
+          value={formData.genero || ""}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, sexo: e.target.value }))
+            setFormData((prev) => ({
+              ...prev,
+              genero: e.target.value as RegisterFormData["genero"],
+            }))
           }
           style={{
             borderColor: PALETTE.border,
@@ -275,46 +309,11 @@ export default function Step2InfoMedica({
           <option value="">Selecciona</option>
           <option value="Masculino">Masculino</option>
           <option value="Femenino">Femenino</option>
-          <option value="Intersex">Intersex</option>
-          <option value="Prefiero no decirlo">Prefiero no decirlo</option>
+          <option value="Otro">Otro</option>
         </select>
-        {touched && errors.sexo && (
-          <div className="invalid-feedback d-block">{errors.sexo}</div>
+        {touched && errors.genero && (
+          <div className="invalid-feedback d-block">{errors.genero}</div>
         )}
-      </div>
-
-      {/* Género */}
-      <div className="mb-3 text-start">
-        <label
-          className="form-label fw-semibold"
-          style={{ color: PALETTE.text }}
-        >
-          Género
-        </label>
-        <Select<MedicalOption, false>
-          options={[
-            { value: "Heterosexual", label: "Heterosexual" },
-            { value: "Homosexual", label: "Homosexual" },
-            { value: "Bisexual", label: "Bisexual" },
-            { value: "Pansexual", label: "Pansexual" },
-            { value: "Asexual", label: "Asexual" },
-            { value: "Otro", label: "Otro / Prefiero no decirlo" },
-          ]}
-          placeholder="Selecciona o escribe tu género..."
-          value={
-            formData.genero
-              ? { value: formData.genero, label: formData.genero }
-              : null
-          }
-          onChange={(opt) =>
-            setFormData((prev) => ({
-              ...prev,
-              genero: opt ? opt.value : "",
-            }))
-          }
-          styles={selectStyles}
-          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-        />
       </div>
 
       {/* Antecedentes */}
@@ -328,25 +327,32 @@ export default function Step2InfoMedica({
         <Select<MedicalOption, true>
           isMulti
           options={antecedentsOptions}
-          value={formData.antecedentes}
-          onChange={(v) =>
+          value={selectedAntecedentes}
+          onChange={(v) => {
+            const norm = normalizeSelection(v);
+            setSelectedAntecedentes(norm);
             setFormData((prev) => ({
               ...prev,
-              antecedentes: normalizeSelection(v),
-            }))
-          }
+              antecedentes: norm.map((o) => o.value).join("; "),
+            }));
+          }}
           styles={selectStyles}
           menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona antecedentes..."
         />
+        {touched && errors.antecedentes && (
+          <div className="invalid-feedback d-block">
+            {errors.antecedentes}
+          </div>
+        )}
 
-        {formData.antecedentes.length > 0 &&
-          !formData.antecedentes.some((a) =>
+        {selectedAntecedentes.length > 0 &&
+          !selectedAntecedentes.some((a) =>
             a.value.includes("No tengo")
           ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
-              placeholder="Explica tu antecedente médico (Opcional)"
+              placeholder="Explica tu antecedente médico (opcional)"
               value={formData.antecedentesDescripcion || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -375,25 +381,30 @@ export default function Step2InfoMedica({
         <Select<MedicalOption, true>
           isMulti
           options={alergiasOptions}
-          value={formData.alergias}
-          onChange={(v) =>
+          value={selectedAlergias}
+          onChange={(v) => {
+            const norm = normalizeSelection(v);
+            setSelectedAlergias(norm);
             setFormData((prev) => ({
               ...prev,
-              alergias: normalizeSelection(v),
-            }))
-          }
+              alergias: norm.map((o) => o.value).join("; "),
+            }));
+          }}
           styles={selectStyles}
           menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona alergias..."
         />
+        {touched && errors.alergias && (
+          <div className="invalid-feedback d-block">{errors.alergias}</div>
+        )}
 
-        {formData.alergias.length > 0 &&
-          !formData.alergias.some((a) =>
+        {selectedAlergias.length > 0 &&
+          !selectedAlergias.some((a) =>
             a.value.includes("No tengo")
           ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
-              placeholder="Explica tu alergia (Opcional)"
+              placeholder="Explica tu alergia (opcional)"
               value={formData.alergiasDescripcion || ""}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -422,25 +433,32 @@ export default function Step2InfoMedica({
         <Select<MedicalOption, true>
           isMulti
           options={medicamentosOptions}
-          value={formData.medicamentos}
-          onChange={(v) =>
+          value={selectedMedicamentos}
+          onChange={(v) => {
+            const norm = normalizeSelection(v);
+            setSelectedMedicamentos(norm);
             setFormData((prev) => ({
               ...prev,
-              medicamentos: normalizeSelection(v),
-            }))
-          }
+              medicamentos: norm.map((o) => o.value).join("; "),
+            }));
+          }}
           styles={selectStyles}
           menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona medicamentos..."
         />
+        {touched && errors.medicamentos && (
+          <div className="invalid-feedback d-block">
+            {errors.medicamentos}
+          </div>
+        )}
 
-        {formData.medicamentos.length > 0 &&
-          !formData.medicamentos.some((a) =>
+        {selectedMedicamentos.length > 0 &&
+          !selectedMedicamentos.some((a) =>
             a.value.includes("No tomo")
           ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
-              placeholder="Explica tu medicamento actual (Opcional)"
+              placeholder="Explica tu medicamento actual (opcional)"
               value={formData.medicamentosDescripcion || ""}
               onChange={(e) =>
                 setFormData((prev) => ({

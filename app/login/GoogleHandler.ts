@@ -4,6 +4,7 @@
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { signInWithGooglePopup } from "../utils/firebaseClient";
 import { setCurrentUser, type SessionUser } from "../utils/auth";
+import type { CredentialResponse } from "@react-oauth/google";
 
 interface ApiUser {
   id: number;
@@ -21,11 +22,81 @@ interface ApiResponse {
   error?: string;
 }
 
-interface GoogleHandlerOptions {
+export interface GoogleHandlerOptions {
   router: AppRouterInstance;
   setErr: (msg: string | null) => void;
 }
 
+/* ============================
+   Util compartida
+   ============================ */
+
+function toSessionUser(apiUser: ApiUser): SessionUser {
+  const fallbackPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    `${apiUser.nombres} ${apiUser.apellidos}`
+  )}&background=E6CCB2&color=7F5539`;
+
+  return {
+    id: apiUser.id,
+    nombres: apiUser.nombres,
+    apellidos: apiUser.apellidos,
+    email: apiUser.email,
+    telefono: apiUser.telefono,
+    rol: apiUser.rol,
+    photo: apiUser.photo ?? fallbackPhoto,
+  };
+}
+
+async function postGoogleToken(idToken: string): Promise<ApiResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!baseUrl) {
+    throw new Error("Falta NEXT_PUBLIC_API_BASE_URL en variables de entorno.");
+  }
+
+  const resp = await fetch(`${baseUrl}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+
+  if (!resp.ok) {
+    const errJson = await safeJson(resp);
+    return {
+      ok: false,
+      error:
+        (hasErrorField(errJson) && errJson.error) ||
+        `HTTP ${resp.status} ${resp.statusText}`,
+    };
+  }
+
+  return (await resp.json()) as ApiResponse;
+}
+
+function persistSession(user: SessionUser) {
+  setCurrentUser(user);
+  if (typeof window !== "undefined") {
+    const session = {
+      ...user,
+      expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
+    };
+    localStorage.setItem("rememberUser", JSON.stringify(session));
+  }
+}
+
+async function safeJson(resp: Response): Promise<unknown | null> {
+  try {
+    return await resp.json();
+  } catch {
+    return null;
+  }
+}
+function hasErrorField(value: unknown): value is { error?: string } {
+  return typeof value === "object" && value !== null && "error" in value;
+}
+
+/* ============================
+   1) Firebase Popup
+   ============================ */
 export async function handleGoogleLogin({
   router,
   setErr,
@@ -33,79 +104,19 @@ export async function handleGoogleLogin({
   try {
     setErr(null);
 
-    // 1) Login en Firebase con popup
     const firebaseUser = await signInWithGooglePopup();
-
-    // 2) Obtener ID token de Firebase
     const idToken = await firebaseUser.getIdToken();
 
-    // 3) Enviar al backend para crear / obtener usuario en MySQL
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!baseUrl) {
-      throw new Error("Falta NEXT_PUBLIC_API_BASE_URL en variables de entorno.");
-    }
-
-    const resp = await fetch(`${baseUrl}/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    });
-
-    // Manejo de respuestas no-2xx
-    if (!resp.ok) {
-      const errJson = await safeJson(resp);
-      console.error(
-        "Respuesta /auth/google (HTTP error):",
-        errJson ?? resp.statusText
-      );
-      setErr(
-        hasErrorField(errJson) && errJson.error
-          ? errJson.error
-          : "No se pudo iniciar sesión con Google."
-      );
-      return;
-    }
-
-    const data = (await resp.json()) as ApiResponse;
-
+    const data = await postGoogleToken(idToken);
     if (!data.ok || !data.user) {
-      console.error("Respuesta /auth/google:", data);
       setErr(data.error || "No se pudo iniciar sesión con Google.");
       return;
     }
 
-    const apiUser = data.user;
-
-    // 4) Mapear ApiUser -> SessionUser y asegurar foto
-    const fallbackPhoto = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      `${apiUser.nombres} ${apiUser.apellidos}`
-    )}&background=E6CCB2&color=7F5539`;
-
-    const sessionUser: SessionUser = {
-      id: apiUser.id,
-      nombres: apiUser.nombres,
-      apellidos: apiUser.apellidos,
-      email: apiUser.email,
-      telefono: apiUser.telefono,
-      rol: apiUser.rol,
-      photo: apiUser.photo ?? fallbackPhoto,
-    };
-
-    // 5) Guardar usuario en tu sistema local (sesión flexible)
-    setCurrentUser(sessionUser);
-
-    // 6) Opcional: recordar usuario 30 días
-    const session = {
-      ...sessionUser,
-      expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30,
-    };
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rememberUser", JSON.stringify(session));
-    }
-
-    // 7) Redirigir a inicio
+    const sessionUser = toSessionUser(data.user);
+    persistSession(sessionUser);
     router.push("/");
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("Error en handleGoogleLogin:", err);
     setErr(
       err instanceof Error
@@ -115,18 +126,40 @@ export async function handleGoogleLogin({
   }
 }
 
-/** Intenta parsear JSON sin lanzar excepción si falla. */
-async function safeJson(resp: Response): Promise<unknown | null> {
+/* ============================
+   2) Google One Tap / <GoogleLogin />
+   ============================ */
+/**
+ * Úsalo con el componente <GoogleLogin onSuccess={(cr)=>handleGoogleSuccess(cr,{router,setErr})} />
+ */
+export async function handleGoogleSuccess(
+  credentialResponse: CredentialResponse,
+  { router, setErr }: GoogleHandlerOptions
+): Promise<void> {
   try {
-    return await resp.json();
-  } catch {
-    return null;
-  }
-}
+    setErr(null);
 
-/** Type-guard para objetos con posible campo `error`. */
-function hasErrorField(
-  value: unknown
-): value is { error?: string } {
-  return typeof value === "object" && value !== null && "error" in value;
+    const idToken = credentialResponse.credential;
+    if (!idToken) {
+      setErr("No se recibió el token de Google.");
+      return;
+    }
+
+    const data = await postGoogleToken(idToken);
+    if (!data.ok || !data.user) {
+      setErr(data.error || "No se pudo iniciar sesión con Google.");
+      return;
+    }
+
+    const sessionUser = toSessionUser(data.user);
+    persistSession(sessionUser);
+    router.push("/");
+  } catch (err) {
+    console.error("Error en handleGoogleSuccess:", err);
+    setErr(
+      err instanceof Error
+        ? err.message
+        : "Error al autenticar con Google. Intenta nuevamente."
+    );
+  }
 }

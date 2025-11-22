@@ -1,12 +1,15 @@
+// app/login/RecoverFom.tsx
 "use client";
 
 import { useState, useMemo } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { handleGoogleSuccess } from "./GoogleHandler";
-import { getUsers, updateUserData, User } from "../utils/localDB"; 
-import { setCurrentUser } from "../utils/auth";
+import { getUsers, updateUserData, User } from "../utils/localDB";
+import { getCurrentUser, setCurrentUser, type SessionUser } from "../utils/auth";
 import { PALETTE } from "./palette2";
+
+type RecoverUser = User | SessionUser | null;
 
 export default function RecoverForm({
   setErr,
@@ -15,8 +18,7 @@ export default function RecoverForm({
 }) {
   const router = useRouter();
   const [recoverStep, setRecoverStep] = useState<"verify" | "reset">("verify");
-  // ✅ Antes: useState<any>(null)
-  const [recoverUser, setRecoverUser] = useState<User | null>(null);
+  const [recoverUser, setRecoverUser] = useState<RecoverUser>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -60,14 +62,12 @@ export default function RecoverForm({
       return;
     }
 
-    // Actualizamos usando la función global
+    // Actualizamos en tu “DB” local y sincronizamos sesión
     updateUserData({ password }, found.email);
-
-    // Sincronizamos sesión
     const updatedUser: User = { ...found, password };
     setCurrentUser(updatedUser);
 
-    // Mensaje de éxito
+    // Mensaje de éxito y redirección
     setSuccessMsg(true);
     setTimeout(() => {
       setSuccessMsg(false);
@@ -88,16 +88,17 @@ export default function RecoverForm({
           </p>
 
           <GoogleLogin
-            onSuccess={(cred) =>
-              handleGoogleSuccess(
-                cred,
-                router,
-                setErr,
-                true, // recoverMode
-                setRecoverUser,
-                setRecoverStep
-              )
-            }
+            onSuccess={async (cred) => {
+              await handleGoogleSuccess(cred, { router, setErr });
+              // Si el login fue OK, el handler ya guardó la sesión en localStorage:
+              const current = getCurrentUser();
+              if (!current) {
+                setErr("No se pudo obtener la sesión después del login.");
+                return;
+              }
+              setRecoverUser(current); // SessionUser o User
+              setRecoverStep("reset");
+            }}
             onError={() =>
               setErr("Error al autenticar con Google. Intenta nuevamente.")
             }

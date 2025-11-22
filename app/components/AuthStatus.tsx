@@ -3,12 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { getCurrentUser, clearCurrentUser } from "../utils/auth";
+import { getCurrentUser, clearCurrentUser, type SessionUser } from "../utils/auth";
 import { FaUserCircle } from "react-icons/fa";
-import type { User } from "../utils/localDB"; // ✅ el tipo correcto
+import type { User } from "../utils/localDB";
+
+type AuthUser = User | SessionUser | null; // ✅ acepta ambos tipos
 
 export default function AuthStatus() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser>(null);
 
   useEffect(() => {
     // Cargar usuario inicial
@@ -17,7 +19,7 @@ export default function AuthStatus() {
     // Actualizar en tiempo real si cambia el almacenamiento
     const updateUser = () => setUser(getCurrentUser());
     window.addEventListener("storage", updateUser);
-    window.addEventListener("authChange", updateUser); // ✅ sincroniza con logout/login
+    window.addEventListener("authChange", updateUser);
 
     return () => {
       window.removeEventListener("storage", updateUser);
@@ -50,7 +52,7 @@ export default function AuthStatus() {
     );
   }
 
-  // Si hay sesión → mostrar avatar
+  // Si hay sesión → mostrar avatar o ícono
   return (
     <div className="d-flex align-items-center">
       {user.photo ? (

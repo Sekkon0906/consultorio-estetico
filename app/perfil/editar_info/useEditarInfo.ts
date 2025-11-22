@@ -11,12 +11,16 @@ import { updateUserData, type User } from "../../utils/localDB";
    ============================ */
 type AuthUser = User | SessionUser;
 
+type WithPhoto = { photo?: string | null | undefined };
+
 function isFullUser(u: AuthUser): u is User {
-  // Heurística: los usuarios "completos" (localDB) tienen 'password'
+  // Heurística: en tu modelo localDB, los User tienen 'password'
   return typeof (u as User).password !== "undefined";
 }
 
-function toMulti(s: string | undefined | null): MultiValue<{ value: string; label: string }> {
+function toMulti(
+  s: string | undefined | null
+): MultiValue<{ value: string; label: string }> {
   if (!s) return [];
   if (s === "No tengo") return [{ value: "No tengo", label: "No tengo" }];
   return s.split(",").map((p) => {
@@ -48,9 +52,15 @@ export function useEditarInfo() {
   const [genero, setGenero] = useState<"Masculino" | "Femenino" | "Otro">("Otro");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
 
-  const [antecedentes, setAntecedentes] = useState<MultiValue<{ value: string; label: string }>>([]);
-  const [alergias, setAlergias] = useState<MultiValue<{ value: string; label: string }>>([]);
-  const [medicamentos, setMedicamentos] = useState<MultiValue<{ value: string; label: string }>>([]);
+  const [antecedentes, setAntecedentes] = useState<
+    MultiValue<{ value: string; label: string }>
+  >([]);
+  const [alergias, setAlergias] = useState<
+    MultiValue<{ value: string; label: string }>
+  >([]);
+  const [medicamentos, setMedicamentos] = useState<
+    MultiValue<{ value: string; label: string }>
+  >([]);
 
   const [antecedentesDescripcion, setAntecedentesDescripcion] = useState("");
   const [alergiasDescripcion, setAlergiasDescripcion] = useState("");
@@ -69,25 +79,42 @@ export function useEditarInfo() {
     setNombres(u.nombres ?? "");
     setApellidos(u.apellidos ?? "");
     setTelefono(u.telefono ?? "");
-    setPhoto((u as any).photo ?? undefined);
 
-    // Campos solo existentes en User completo → usa defaults si no existen
-    const maybeUser = u as Partial<User>;
-    setEdad(maybeUser.edad ?? 0);
-    setGenero((maybeUser.genero as any) ?? "Otro");
+    // photo existe en ambos modelos; la normalizamos a string | undefined
+    const p = (u as WithPhoto).photo ?? undefined;
+    setPhoto(p ?? undefined);
 
-    setAntecedentes(toMulti(maybeUser.antecedentes ?? ""));
-    setAlergias(toMulti(maybeUser.alergias ?? ""));
-    setMedicamentos(toMulti(maybeUser.medicamentos ?? ""));
-    setAntecedentesDescripcion(maybeUser.antecedentesDescripcion ?? "");
-    setAlergiasDescripcion(maybeUser.alergiasDescripcion ?? "");
-    setMedicamentosDescripcion(maybeUser.medicamentosDescripcion ?? "");
+    if (isFullUser(u)) {
+      // Campos completos cuando el usuario es de localDB
+      setEdad(u.edad ?? 0);
+      setGenero(u.genero ?? "Otro");
+
+      setAntecedentes(toMulti(u.antecedentes ?? ""));
+      setAlergias(toMulti(u.alergias ?? ""));
+      setMedicamentos(toMulti(u.medicamentos ?? ""));
+      setAntecedentesDescripcion(u.antecedentesDescripcion ?? "");
+      setAlergiasDescripcion(u.alergiasDescripcion ?? "");
+      setMedicamentosDescripcion(u.medicamentosDescripcion ?? "");
+    } else {
+      // Defaults seguros para SessionUser (viene de API/Google)
+      setEdad(0);
+      setGenero("Otro");
+
+      setAntecedentes([]);
+      setAlergias([]);
+      setMedicamentos([]);
+      setAntecedentesDescripcion("");
+      setAlergiasDescripcion("");
+      setMedicamentosDescripcion("");
+    }
 
     // Control de 30 días
     const lastEdit = localStorage.getItem(`lastEdit_${u.email}`);
     if (lastEdit) {
       const lastDate = new Date(lastEdit);
-      const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(
+        (Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       setCanEdit(diffDays >= 30);
       setDaysRemaining(Math.max(0, 30 - diffDays));
     }
@@ -114,12 +141,12 @@ export function useEditarInfo() {
       photo,
     };
 
-    // Si el usuario actual es un User completo (localDB) → persiste también en la "DB" local
+    // Si es un User completo (localDB) → persiste también en la "DB" local
     if (isFullUser(user)) {
       updateUserData(updated, user.email);
     }
 
-    // Siempre sincroniza la sesión (updateCurrentUser ya maneja ambos casos)
+    // Siempre sincroniza la sesión (maneja SessionUser | User)
     updateCurrentUser(updated);
 
     localStorage.setItem(`lastEdit_${user.email}`, new Date().toISOString());

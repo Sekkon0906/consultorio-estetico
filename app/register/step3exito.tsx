@@ -4,44 +4,73 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./palette";
-import { createUser, findUserByEmail } from "../utils/localDB";
+import { createUser, type User } from "../utils/localDB";
 import type { RegisterFormData } from "./page";
 
 interface Props {
   formData: RegisterFormData;
 }
 
+// helper para calcular edad a partir de la fecha
+const calcularEdad = (date: Date | null): number => {
+  if (!date) return 0;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - date.getFullYear();
+  const mes = hoy.getMonth() - date.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < date.getDate())) {
+    edad--;
+  }
+  return edad;
+};
+
 export default function Step3Exito({ formData }: Props) {
   const router = useRouter();
 
+  // Guardar el usuario en localDB al montar el componente
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!formData?.email) return;
 
     try {
-      // Evita crear usuario duplicado si recarga la pantalla
-      const existe = findUserByEmail(formData.email.trim());
-      if (existe) return;
+      const antecedentesTxt = (formData.antecedentes || []).join(", ");
+      const alergiasTxt = (formData.alergias || []).join(", ");
+      const medicamentosTxt = (formData.medicamentos || []).join(", ");
+
+      const edadNumber =
+        formData.fechaNacimiento != null
+          ? calcularEdad(formData.fechaNacimiento)
+          : Number(formData.edad) || 0;
+
+      // mapear sexo a tipo User["genero"]
+      const generoMapped: User["genero"] =
+        formData.sexo === "Masculino" || formData.sexo === "Femenino"
+          ? formData.sexo
+          : "Otro";
 
       createUser({
         nombres: formData.nombres.trim(),
         apellidos: formData.apellidos.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        telefono: formData.telefono || "",
-        edad: Number(formData.edad) || 0,
-        genero: formData.genero || "Otro",
-        antecedentes: formData.antecedentes || "",
-        antecedentesDescripcion: formData.antecedentesDescripcion || "",
-        alergias: formData.alergias || "",
+        telefono: formData.telefono?.trim() || "",
+        edad: edadNumber,
+        genero: generoMapped,
+        antecedentes: antecedentesTxt,
+        antecedentesDescripcion:
+          formData.antecedentesDescripcion || "",
+        alergias: alergiasTxt,
         alergiasDescripcion: formData.alergiasDescripcion || "",
-        medicamentos: formData.medicamentos || "",
-        medicamentosDescripcion: formData.medicamentosDescripcion || "",
+        medicamentos: medicamentosTxt,
+        medicamentosDescripcion:
+          formData.medicamentosDescripcion || "",
+        // photo se genera con avatar por defecto en localDB
       });
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.warn("Error creando usuario:", e);
     }
-  }, [formData]);
+    // solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.div
@@ -81,8 +110,8 @@ export default function Step3Exito({ formData }: Props) {
       </h2>
 
       <p style={{ color: PALETTE.muted, maxWidth: 400, margin: "0 auto" }}>
-        Ya puedes iniciar sesión para agendar tus citas o administrar tu
-        información médica desde tu perfil.
+        Puedes iniciar sesión para agendar tus citas o modificar tu información
+        médica desde tu perfil.
       </p>
 
       <div className="mt-4">

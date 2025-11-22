@@ -11,29 +11,24 @@ import type { User } from "../utils/localDB";
 
 // 👇 Tipo fuerte para los datos del registro, alineado con User de localDB
 export interface RegisterFormData {
-  // datos básicos
-  nombres: User["nombres"];
-  apellidos: User["apellidos"];
-  email: User["email"];
-  telefono: User["telefono"] | ""; // en el form siempre manejamos string
-
-  // auth
-  password: User["password"];
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono: string;
+  password: string;
   confirm: string;
-
-  // datos médicos
-  edad: string; // en el form es string, luego se convierte a number
-  genero: "" | User["genero"]; // "", "Masculino" | "Femenino" | "Otro"
-
-  antecedentes: User["antecedentes"]; // string
-  antecedentesDescripcion: User["antecedentesDescripcion"];
-
-  alergias: User["alergias"];
-  alergiasDescripcion: User["alergiasDescripcion"];
-
-  medicamentos: User["medicamentos"];
-  medicamentosDescripcion: User["medicamentosDescripcion"];
+  edad: string;                // se llena a partir de la fecha de nacimiento
+  fechaNacimiento: Date | null;
+  sexo: string;                // Masculino / Femenino / Intersex / Prefiero no decirlo
+  genero: string;              // identidad/orientación libre (texto)
+  antecedentes: string[];
+  alergias: string[];
+  medicamentos: string[];
+  antecedentesDescripcion: string;
+  alergiasDescripcion: string;
+  medicamentosDescripcion: string;
 }
+
 
 export default function RegisterPage() {
   const searchParams = useSearchParams();

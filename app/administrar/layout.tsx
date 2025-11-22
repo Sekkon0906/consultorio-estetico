@@ -14,20 +14,14 @@ interface Props {
   children: React.ReactNode;
 }
 
-// ✅ Tipo del usuario que devuelve getCurrentUser()
-interface Usuario {
-  id: number | string;
-  nombre: string;
-  rol: string;
-  email?: string;
-}
+import type { User } from "../utils/localDB";
+
 
 export default function AdminLayout({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🚫 antes: useState<any>(null)
-  // ✅ ahora con tipo seguro:
-  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
+
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const params = useSearchParams();
   const section = params.get("section") || "inicio";

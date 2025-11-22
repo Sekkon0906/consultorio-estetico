@@ -8,6 +8,24 @@ import Step1DatosPersonales from "./step1DatosPersonales";
 import Step2DatosMedicos from "./step2DatosMedicos";
 import Step3Exito from "./step3exito";
 
+// 👇 Tipo fuerte para los datos del registro
+export interface RegisterFormData {
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono: string;
+  password: string;
+  confirm: string;
+  edad: string;
+  genero: string;
+  antecedentes: string[];
+  alergias: string[];
+  medicamentos: string[];
+  antecedentesDescripcion: string;
+  alergiasDescripcion: string;
+  medicamentosDescripcion: string;
+}
+
 export default function RegisterPage() {
   const searchParams = useSearchParams();
 
@@ -20,8 +38,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [err, setErr] = useState<string | null>(null);
 
-  // Inicializa con los valores prellenados (si vienen). Son editables.
-  const [formData, setFormData] = useState<any>({
+  // ✅ Estado tipado con RegisterFormData (adiós any)
+  const [formData, setFormData] = useState<RegisterFormData>({
     nombres: pre_nombres || "",
     apellidos: pre_apellidos || "",
     email: pre_email || "",
@@ -38,17 +56,15 @@ export default function RegisterPage() {
     medicamentosDescripcion: "",
   });
 
-  // Si llegas con query params *después* de la inicialización (rare), no sobreescribas
-  // valores que el usuario ya haya tecleado. Solo escribe si están vacíos.
+  // Si llegas con query params *después* de la inicialización, solo rellenamos si los campos están vacíos
   useEffect(() => {
-    setFormData((prev: any) => ({
+    setFormData((prev) => ({
       ...prev,
       nombres: prev.nombres || pre_nombres || "",
       apellidos: prev.apellidos || pre_apellidos || "",
       email: prev.email || pre_email || "",
       telefono: prev.telefono || pre_telefono || "",
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pre_email, pre_nombres, pre_apellidos, pre_telefono]);
 
   const nextStep = () => setStep((s) => s + 1);

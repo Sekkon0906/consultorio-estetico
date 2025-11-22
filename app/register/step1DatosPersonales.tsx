@@ -1,13 +1,37 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, {
+  useMemo,
+  useState,
+  Dispatch,
+  SetStateAction,
+  FormEvent,
+} from "react";
 import Input from "./input";
 import InputPassword from "./inputPassword";
 import { PALETTE } from "./palette";
 
+// Debe coincidir con la estructura que usas en RegisterPage
+export interface RegisterFormData {
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono: string;
+  password: string;
+  confirm: string;
+  edad: string;
+  genero: string;
+  antecedentes: string[];
+  alergias: string[];
+  medicamentos: string[];
+  antecedentesDescripcion: string;
+  alergiasDescripcion: string;
+  medicamentosDescripcion: string;
+}
+
 interface Props {
-  formData: any;
-  setFormData: (data: any) => void;
+  formData: RegisterFormData;
+  setFormData: Dispatch<SetStateAction<RegisterFormData>>;
   nextStep: () => void;
   setErr: (err: string | null) => void;
 }
@@ -39,9 +63,7 @@ export default function Step1DatosPersonales({
     }
 
     // Teléfono colombiano o formato internacional (+57 3XXXXXXXXX)
-    if (
-      !/^(\+?\d{1,3})?\s?3\d{9}$/.test(formData.telefono || "")
-    ) {
+    if (!/^(\+?\d{1,3})?\s?3\d{9}$/.test(formData.telefono || "")) {
       e.telefono = "El número de teléfono debe tener 10 dígitos válidos.";
     }
 
@@ -58,7 +80,7 @@ export default function Step1DatosPersonales({
 
   const valid = Object.keys(errors).length === 0;
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = (e: FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (valid) {
@@ -76,7 +98,7 @@ export default function Step1DatosPersonales({
         <Input
           label="Nombres"
           value={formData.nombres || ""}
-          setValue={(v) => setFormData({ ...formData, nombres: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, nombres: v }))}
           error={touched && errors.nombres}
           palette={PALETTE}
         />
@@ -90,7 +112,7 @@ export default function Step1DatosPersonales({
         <Input
           label="Apellidos"
           value={formData.apellidos || ""}
-          setValue={(v) => setFormData({ ...formData, apellidos: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, apellidos: v }))}
           error={touched && errors.apellidos}
           palette={PALETTE}
         />
@@ -105,7 +127,7 @@ export default function Step1DatosPersonales({
           label="Correo electrónico"
           type="email"
           value={formData.email || ""}
-          setValue={(v) => setFormData({ ...formData, email: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, email: v }))}
           error={touched && errors.email}
           palette={PALETTE}
         />
@@ -119,7 +141,7 @@ export default function Step1DatosPersonales({
         <Input
           label="Teléfono"
           value={formData.telefono || ""}
-          setValue={(v) => setFormData({ ...formData, telefono: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, telefono: v }))}
           error={touched && errors.telefono}
           palette={PALETTE}
         />
@@ -133,7 +155,7 @@ export default function Step1DatosPersonales({
         <InputPassword
           label="Contraseña"
           value={formData.password || ""}
-          setValue={(v) => setFormData({ ...formData, password: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, password: v }))}
           show={showPass}
           setShow={setShowPass}
           error={touched && errors.password}
@@ -149,7 +171,7 @@ export default function Step1DatosPersonales({
         <InputPassword
           label="Confirmar contraseña"
           value={formData.confirm || ""}
-          setValue={(v) => setFormData({ ...formData, confirm: v })}
+          setValue={(v) => setFormData((prev) => ({ ...prev, confirm: v }))}
           show={showConfirm}
           setShow={setShowConfirm}
           error={touched && errors.confirm}

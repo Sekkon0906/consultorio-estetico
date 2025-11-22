@@ -1,20 +1,57 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./palette";
 import { createUser } from "../utils/localDB";
 
+// Opción seleccionable en los Select múltiples
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+// Estructura de los datos del formulario de registro
+interface RegisterFormData {
+  nombres: string;
+  apellidos: string;
+  email: string;
+  password: string;
+  telefono?: string;
+  edad?: number | string;
+  genero?: string;
+  antecedentes?: SelectOption[];
+  antecedentesDescripcion?: string;
+  alergias?: SelectOption[];
+  alergiasDescripcion?: string;
+  medicamentos?: SelectOption[];
+  medicamentosDescripcion?: string;
+}
+
 interface Props {
-  formData: any;
+  formData: RegisterFormData;
 }
 
 export default function Step3Exito({ formData }: Props) {
   const router = useRouter();
 
-  // Guardar el usuario en localDB al montar
-  if (typeof window !== "undefined") {
+  // Guardar el usuario en localDB al montar el componente
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     try {
+      const antecedentesTxt =
+        formData.antecedentes?.map((a: SelectOption) => a.value).join(", ") ||
+        "";
+
+      const alergiasTxt =
+        formData.alergias?.map((a: SelectOption) => a.value).join(", ") || "";
+
+      const medicamentosTxt =
+        formData.medicamentos?.map((a: SelectOption) => a.value).join(", ") ||
+        "";
+
       createUser({
         nombres: formData.nombres.trim(),
         apellidos: formData.apellidos.trim(),
@@ -23,20 +60,20 @@ export default function Step3Exito({ formData }: Props) {
         telefono: formData.telefono?.trim() || "",
         edad: Number(formData.edad) || 0,
         genero: formData.genero || "Otro",
-        antecedentes:
-          formData.antecedentes?.map((a: any) => a.value).join(", ") || "",
+        antecedentes: antecedentesTxt,
         antecedentesDescripcion: formData.antecedentesDescripcion || "",
-        alergias:
-          formData.alergias?.map((a: any) => a.value).join(", ") || "",
+        alergias: alergiasTxt,
         alergiasDescripcion: formData.alergiasDescripcion || "",
-        medicamentos:
-          formData.medicamentos?.map((a: any) => a.value).join(", ") || "",
+        medicamentos: medicamentosTxt,
         medicamentosDescripcion: formData.medicamentosDescripcion || "",
       });
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.warn("Error creando usuario:", e);
     }
-  }
+    // solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.div

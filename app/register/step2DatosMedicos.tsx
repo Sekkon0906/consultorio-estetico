@@ -1,11 +1,36 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Select, { MultiValue } from "react-select";
+import Select, { MultiValue, StylesConfig } from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { PALETTE } from "./palette";
 
+// ---- Tipos auxiliares ----
+type MedicalOption = { value: string; label: string };
+
+export interface RegisterMedicalData {
+  fechaNacimiento: Date | null;
+  sexo: string;
+  genero: string;
+  antecedentes: MedicalOption[];
+  alergias: MedicalOption[];
+  medicamentos: MedicalOption[];
+  antecedentesDescripcion: string;
+  alergiasDescripcion: string;
+  medicamentosDescripcion: string;
+  // puedes agregar aquí otros campos del form si quieres que tenga TODO junto
+}
+
+interface Props {
+  formData: RegisterMedicalData;
+  setFormData: React.Dispatch<React.SetStateAction<RegisterMedicalData>>;
+  prevStep: () => void;
+  nextStep: () => void;
+  setErr: (e: string | null) => void;
+}
+
+// ---- Listas de opciones ----
 const ANTECEDENTES = [
   "Hipertensión arterial",
   "Diabetes mellitus",
@@ -54,15 +79,8 @@ const MEDICAMENTOS = [
   "No tomo ninguno",
 ];
 
-const toOptions = (arr: string[]) => arr.map((a) => ({ value: a, label: a }));
-
-interface Props {
-  formData: any;
-  setFormData: (d: any) => void;
-  prevStep: () => void;
-  nextStep: () => void;
-  setErr: (e: string | null) => void;
-}
+const toOptions = (arr: string[]): MedicalOption[] =>
+  arr.map((a) => ({ value: a, label: a }));
 
 export default function Step2InfoMedica({
   formData,
@@ -79,28 +97,48 @@ export default function Step2InfoMedica({
   const medicamentosOptions = toOptions(MEDICAMENTOS);
 
   const today = new Date();
-  const maxDate = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
-  const minDate = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate());
+  const maxDate = new Date(
+    today.getFullYear() - 16,
+    today.getMonth(),
+    today.getDate()
+  );
+  const minDate = new Date(
+    today.getFullYear() - 80,
+    today.getMonth(),
+    today.getDate()
+  );
 
-  const normalizeSelection = (sel: MultiValue<{ value: string; label: string }>) => {
+  // Si el usuario marca "No tengo..." o "No tomo...", limpiamos las demás selecciones
+  const normalizeSelection = (
+    sel: MultiValue<MedicalOption>
+  ): MedicalOption[] => {
     const values = sel.map((s) => s.value);
-    return values.some((v) => v.includes("No tengo") || v.includes("No tomo"))
-      ? [{ value: values.find((v) => v.includes("No")) || "No tengo", label: "No tengo" }]
-      : sel;
+    const hasNoOption = values.some(
+      (v) => v.includes("No tengo") || v.includes("No tomo")
+    );
+
+    if (hasNoOption) {
+      const firstNo = values.find((v) => v.includes("No")) ?? "No tengo";
+      return [{ value: firstNo, label: firstNo }];
+    }
+
+    return sel as MedicalOption[];
   };
 
   const handleDateChange = (date: Date | null) => {
     if (!date) return;
+
     const age = today.getFullYear() - date.getFullYear();
+
     if (age < 16) {
       setFechaError("Debes tener al menos 16 años.");
-      setFormData({ ...formData, fechaNacimiento: null });
+      setFormData((prev) => ({ ...prev, fechaNacimiento: null }));
     } else if (age > 80) {
       setFechaError("La edad máxima permitida es 80 años.");
-      setFormData({ ...formData, fechaNacimiento: null });
+      setFormData((prev) => ({ ...prev, fechaNacimiento: null }));
     } else {
       setFechaError(null);
-      setFormData({ ...formData, fechaNacimiento: date });
+      setFormData((prev) => ({ ...prev, fechaNacimiento: date }));
     }
   };
 
@@ -109,9 +147,11 @@ export default function Step2InfoMedica({
     if (!formData.fechaNacimiento) e.fechaNacimiento = "Selecciona tu fecha";
     if (!formData.sexo) e.sexo = "Selecciona tu sexo";
     if (!formData.genero) e.genero = "Selecciona tu género";
-    if (!formData.antecedentes?.length) e.antecedentes = "Campo obligatorio";
+    if (!formData.antecedentes?.length)
+      e.antecedentes = "Campo obligatorio";
     if (!formData.alergias?.length) e.alergias = "Campo obligatorio";
-    if (!formData.medicamentos?.length) e.medicamentos = "Campo obligatorio";
+    if (!formData.medicamentos?.length)
+      e.medicamentos = "Campo obligatorio";
     return e;
   }, [formData]);
 
@@ -120,6 +160,7 @@ export default function Step2InfoMedica({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
+
     if (valid) {
       setErr(null);
       nextStep();
@@ -128,9 +169,10 @@ export default function Step2InfoMedica({
     }
   };
 
-  const selectStyles = {
-    control: (p: any) => ({
-      ...p,
+  // Estilos tipados para react-select
+  const selectStyles: StylesConfig<MedicalOption, boolean> = {
+    control: (provided) => ({
+      ...provided,
       background: PALETTE.surface,
       borderColor: PALETTE.border,
       boxShadow: "none",
@@ -138,21 +180,21 @@ export default function Step2InfoMedica({
       borderRadius: 12,
       color: PALETTE.text,
     }),
-    singleValue: (p: any) => ({
-      ...p,
+    singleValue: (provided) => ({
+      ...provided,
       color: PALETTE.text,
     }),
-    input: (p: any) => ({
-      ...p,
+    input: (provided) => ({
+      ...provided,
       color: PALETTE.text,
     }),
-    placeholder: (p: any) => ({
-      ...p,
+    placeholder: (provided) => ({
+      ...provided,
       color: PALETTE.text,
       opacity: 0.6,
     }),
-    option: (p: any, state: any) => ({
-      ...p,
+    option: (provided, state) => ({
+      ...provided,
       color: PALETTE.text,
       backgroundColor: state.isSelected
         ? "#e6d3c2"
@@ -160,9 +202,9 @@ export default function Step2InfoMedica({
         ? "#f5ebe3"
         : "white",
     }),
-    menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
-    multiValue: (p: any) => ({
-      ...p,
+    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+    multiValue: (provided) => ({
+      ...provided,
       background: "#E9DED2",
       borderRadius: 999,
       padding: "4px 8px",
@@ -171,20 +213,28 @@ export default function Step2InfoMedica({
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ overflow: "visible", color: PALETTE.text }}>
-      {/* Fecha */}
+    <form
+      onSubmit={handleSubmit}
+      style={{ overflow: "visible", color: PALETTE.text }}
+    >
+      {/* Fecha de nacimiento */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Fecha de nacimiento
         </label>
         <DatePicker
-          selected={formData.fechaNacimiento || null}
-          onChange={(date) => handleDateChange(date)}
+          selected={formData.fechaNacimiento}
+          onChange={(date) => handleDateChange(date as Date | null)}
           maxDate={maxDate}
           minDate={minDate}
           placeholderText="Selecciona tu fecha"
           className={`form-control rounded-3 shadow-sm ${
-            touched && (errors.fechaNacimiento || fechaError) ? "is-invalid" : ""
+            touched && (errors.fechaNacimiento || fechaError)
+              ? "is-invalid"
+              : ""
           }`}
           dateFormat="dd/MM/yyyy"
           showMonthDropdown
@@ -202,7 +252,10 @@ export default function Step2InfoMedica({
 
       {/* Sexo */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Sexo biológico
         </label>
         <select
@@ -210,7 +263,9 @@ export default function Step2InfoMedica({
             touched && errors.sexo ? "is-invalid" : ""
           }`}
           value={formData.sexo || ""}
-          onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, sexo: e.target.value }))
+          }
           style={{
             borderColor: PALETTE.border,
             backgroundColor: PALETTE.surface,
@@ -230,10 +285,13 @@ export default function Step2InfoMedica({
 
       {/* Género */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Género
         </label>
-        <Select
+        <Select<MedicalOption, false>
           options={[
             { value: "Heterosexual", label: "Heterosexual" },
             { value: "Homosexual", label: "Homosexual" },
@@ -243,37 +301,58 @@ export default function Step2InfoMedica({
             { value: "Otro", label: "Otro / Prefiero no decirlo" },
           ]}
           placeholder="Selecciona o escribe tu género..."
-          value={formData.genero ? { value: formData.genero, label: formData.genero } : null}
-          onChange={(opt) => setFormData({ ...formData, genero: opt?.value })}
+          value={
+            formData.genero
+              ? { value: formData.genero, label: formData.genero }
+              : null
+          }
+          onChange={(opt) =>
+            setFormData((prev) => ({
+              ...prev,
+              genero: opt ? opt.value : "",
+            }))
+          }
           styles={selectStyles}
-          menuPortalTarget={document.body}
+          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
         />
       </div>
 
       {/* Antecedentes */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Antecedentes médicos relevantes
         </label>
-        <Select
+        <Select<MedicalOption, true>
           isMulti
           options={antecedentsOptions}
-          value={formData.antecedentes || []}
-          onChange={(v) => setFormData({ ...formData, antecedentes: normalizeSelection(v) })}
+          value={formData.antecedentes}
+          onChange={(v) =>
+            setFormData((prev) => ({
+              ...prev,
+              antecedentes: normalizeSelection(v),
+            }))
+          }
           styles={selectStyles}
-          menuPortalTarget={document.body}
+          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona antecedentes..."
         />
 
-        {/* Descripción condicional */}
-        {formData.antecedentes?.length > 0 &&
-          !formData.antecedentes.some((a: any) => a.value.includes("No tengo")) && (
+        {formData.antecedentes.length > 0 &&
+          !formData.antecedentes.some((a) =>
+            a.value.includes("No tengo")
+          ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
               placeholder="Explica tu antecedente médico (Opcional)"
               value={formData.antecedentesDescripcion || ""}
               onChange={(e) =>
-                setFormData({ ...formData, antecedentesDescripcion: e.target.value })
+                setFormData((prev) => ({
+                  ...prev,
+                  antecedentesDescripcion: e.target.value,
+                }))
               }
               style={{
                 borderColor: PALETTE.border,
@@ -287,27 +366,40 @@ export default function Step2InfoMedica({
 
       {/* Alergias */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Alergias
         </label>
-        <Select
+        <Select<MedicalOption, true>
           isMulti
           options={alergiasOptions}
-          value={formData.alergias || []}
-          onChange={(v) => setFormData({ ...formData, alergias: normalizeSelection(v) })}
+          value={formData.alergias}
+          onChange={(v) =>
+            setFormData((prev) => ({
+              ...prev,
+              alergias: normalizeSelection(v),
+            }))
+          }
           styles={selectStyles}
-          menuPortalTarget={document.body}
+          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona alergias..."
         />
 
-        {formData.alergias?.length > 0 &&
-          !formData.alergias.some((a: any) => a.value.includes("No tengo")) && (
+        {formData.alergias.length > 0 &&
+          !formData.alergias.some((a) =>
+            a.value.includes("No tengo")
+          ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
               placeholder="Explica tu alergia (Opcional)"
               value={formData.alergiasDescripcion || ""}
               onChange={(e) =>
-                setFormData({ ...formData, alergiasDescripcion: e.target.value })
+                setFormData((prev) => ({
+                  ...prev,
+                  alergiasDescripcion: e.target.value,
+                }))
               }
               style={{
                 borderColor: PALETTE.border,
@@ -321,27 +413,40 @@ export default function Step2InfoMedica({
 
       {/* Medicamentos */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Medicamentos actuales
         </label>
-        <Select
+        <Select<MedicalOption, true>
           isMulti
           options={medicamentosOptions}
-          value={formData.medicamentos || []}
-          onChange={(v) => setFormData({ ...formData, medicamentos: normalizeSelection(v) })}
+          value={formData.medicamentos}
+          onChange={(v) =>
+            setFormData((prev) => ({
+              ...prev,
+              medicamentos: normalizeSelection(v),
+            }))
+          }
           styles={selectStyles}
-          menuPortalTarget={document.body}
+          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
           placeholder="Selecciona medicamentos..."
         />
 
-        {formData.medicamentos?.length > 0 &&
-          !formData.medicamentos.some((a: any) => a.value.includes("No tomo")) && (
+        {formData.medicamentos.length > 0 &&
+          !formData.medicamentos.some((a) =>
+            a.value.includes("No tomo")
+          ) && (
             <textarea
               className="form-control mt-2 rounded-3 shadow-sm"
               placeholder="Explica tu medicamento actual (Opcional)"
               value={formData.medicamentosDescripcion || ""}
               onChange={(e) =>
-                setFormData({ ...formData, medicamentosDescripcion: e.target.value })
+                setFormData((prev) => ({
+                  ...prev,
+                  medicamentosDescripcion: e.target.value,
+                }))
               }
               style={{
                 borderColor: PALETTE.border,

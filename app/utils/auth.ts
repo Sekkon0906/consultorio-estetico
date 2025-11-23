@@ -1,18 +1,20 @@
 // utils/auth.ts
 "use client";
 
+import { auth } from "./firebaseClient";
 import {
-  usuariosRegistrados,
-  registerUser as addUserToDB,
-  findUserByEmail,
-  validateUser,
-  updateUserData,
-  getUsers,
-  User,
-} from "./localDB";
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  User as FirebaseUser,
+} from "firebase/auth";
+
+// Importamos el tipo de dominio y lo re-exportamos para no romper imports antiguos
+import type { SessionUser as DomainSessionUser } from "../types/domain";
+export type SessionUser = DomainSessionUser;
 
 /* ============================================================
-   TIPOS
+   TIPOS AUXILIARES (por si hay componentes que los usan aún)
    ============================================================ */
 
 export type UserData = {
@@ -22,7 +24,7 @@ export type UserData = {
   photo?: string;
 };
 
-/** Datos relevantes que vienen del token de Google */
+/** Datos relevantes que podrían venir de Google (legacy) */
 export interface GoogleDecodedUser {
   email?: string;
   given_name?: string;
@@ -31,29 +33,24 @@ export interface GoogleDecodedUser {
   picture?: string;
 }
 
-/** Tipo ligero para la sesión en el cliente (来自 API/Google o DB) */
-export type SessionUser = {
-  id?: number;
-  nombres: string;
-  apellidos: string;
-  email: string;
-  telefono?: string;
-  rol?: "user" | "admin" | "medico" | "paciente" | "recepcionista";
-  photo?: string | null;
-};
+/* ============================================================
+   CONFIG
+   ============================================================ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
+const REMEMBER_KEY = "rememberUser";
+const CURRENT_KEY = "currentUser";
 
 /* ============================================================
    EVENTOS GLOBALES Y TOASTS
    ============================================================ */
 
-/** Emite un evento global para actualizar Navbar u otros componentes */
 export function emitAuthChange() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("authChange"));
   }
 }
 
-/** Mensaje animado de bienvenida */
 function showWelcomeToast(nombre?: string) {
   if (typeof window === "undefined") return;
 
@@ -95,207 +92,187 @@ function showWelcomeToast(nombre?: string) {
     setTimeout(() => toast.remove(), 500);
   }, 3000);
 
-  // Permite que vuelva a mostrarse en una nueva sesión de pestaña
   setTimeout(() => {
     sessionStorage.removeItem("toastShown");
   }, 1500);
 }
 
 /* ============================================================
-   LOGIN MANUAL
+   SESIÓN LOCAL (SessionUser)
    ============================================================ */
 
-export function loginUser(
-  email: string,
-  password: string,
-  remember = false
-): { ok: boolean; error?: string; user?: User } {
-  const user = validateUser(email, password);
-  if (!user) return { ok: false, error: "Credenciales incorrectas." };
-
-  if (!user.photo) {
-    user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      `${user.nombres} ${user.apellidos}`
-    )}&background=E6CCB2&color=7F5539`;
-  }
-
-  setCurrentUser(user);
-
-  if (remember) {
-    localStorage.setItem("rememberUser", JSON.stringify(user));
-  } else {
-    localStorage.removeItem("rememberUser");
-  }
-
-  showWelcomeToast(user.nombres);
-  return { ok: true, user };
-}
-
-/* ============================================================
-   LOGIN CON GOOGLE (desde token decodificado en el cliente)
-   ============================================================ */
-
-export function loginWithGoogle(
-  decodedUser: GoogleDecodedUser,
-  remember = false
-): SessionUser | User | null {
-  const email = decodedUser.email?.toLowerCase();
-  if (!email) return null;
-
-  let user = findUserByEmail(email);
-
-  if (!user) {
-    // ✅ Usamos el tipo de entrada que espera addUserToDB para evitar exigir id/rol
-    type RegisterInput = Parameters<typeof addUserToDB>[0];
-
-    const nuevo: RegisterInput = {
-      nombres: decodedUser.given_name || decodedUser.name || "Usuario Google",
-      apellidos: decodedUser.family_name || "",
-      email,
-      password: "",
-      edad: 0,
-      genero: "Otro",
-      telefono: "",
-      antecedentes: "",
-      antecedentesDescripcion: "",
-      alergias: "",
-      alergiasDescripcion: "",
-      medicamentos: "",
-      medicamentosDescripcion: "",
-      photo: decodedUser.picture || null,
-      rol: "user", // ✅ asignamos un rol por defecto
-    };
-
-    // addUserToDB ya devuelve un User con id y rol
-    user = addUserToDB(nuevo);
-  } else if (!user.photo) {
-    user.photo = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      `${user.nombres} ${user.apellidos}`
-    )}&background=E6CCB2&color=7F5539`;
-    updateUserData({ photo: user.photo }, user.email);
-  }
-
-  setCurrentUser(user);
-
-  if (remember) {
-    localStorage.setItem("rememberUser", JSON.stringify(user));
-  } else {
-    localStorage.removeItem("rememberUser");
-  }
-
-  showWelcomeToast(user.nombres);
-  return user;
-}
-
-/* ============================================================
-   REGISTRO DE NUEVO USUARIO
-   ============================================================ */
-
-export function registerUser(
-  nombres: string,
-  apellidos: string,
-  email: string,
-  password: string,
-  telefono: string,
-  edad: number,
-  genero: "Masculino" | "Femenino" | "Otro",
-  antecedentes: string,
-  antecedentesDescripcion: string,
-  alergias: string,
-  alergiasDescripcion: string,
-  medicamentos: string,
-  medicamentosDescripcion: string,
-  photo?: string
-): { ok: boolean; error?: string } {
-  const exists = getUsers().some((u) => u.email === email);
-  if (exists) return { ok: false, error: "El correo ya está registrado." };
-
-  const nuevo: User = {
-    nombres,
-    apellidos,
-    email,
-    password,
-    edad,
-    genero,
-    telefono,
-    antecedentes,
-    antecedentesDescripcion,
-    alergias,
-    alergiasDescripcion,
-    medicamentos,
-    medicamentosDescripcion,
-    photo,
-  };
-
-  addUserToDB(nuevo);
-  return { ok: true };
-}
-
-/* ============================================================
-   SESIÓN ACTUAL Y RECORDADA (flexible para SessionUser | User)
-   ============================================================ */
-
-/** Guarda el usuario actual en localStorage (SessionUser o User) */
-export function setCurrentUser(user: SessionUser | User) {
+export function setCurrentUser(user: SessionUser) {
   if (typeof window === "undefined") return;
-  localStorage.setItem("currentUser", JSON.stringify(user));
+  localStorage.setItem(CURRENT_KEY, JSON.stringify(user));
   emitAuthChange();
 }
 
-/** Devuelve el usuario actual desde localStorage */
-export function getCurrentUser(): (SessionUser | User) | null {
+export function getCurrentUser(): SessionUser | null {
   if (typeof window === "undefined") return null;
-  const data = localStorage.getItem("currentUser");
-  return data ? (JSON.parse(data) as SessionUser | User) : null;
+  const data = localStorage.getItem(CURRENT_KEY);
+  return data ? (JSON.parse(data) as SessionUser) : null;
 }
 
-/** Restaura una sesión recordada (si la usas para "recuérdame") */
-export function restoreRememberedSession(): (SessionUser | User) | null {
+/** Guarda el usuario recordado 30 días */
+export function saveRememberedUser(user: SessionUser) {
+  if (typeof window === "undefined") return;
+  const session = {
+    ...user,
+    expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30, // 30 días
+  };
+  localStorage.setItem(REMEMBER_KEY, JSON.stringify(session));
+}
+
+/** Carga el usuario recordado (si no ha expirado) */
+export function loadRememberedUser(): SessionUser | null {
   if (typeof window === "undefined") return null;
-  const remembered = localStorage.getItem("rememberUser");
-  return remembered ? (JSON.parse(remembered) as SessionUser | User) : null;
+  const raw = localStorage.getItem(REMEMBER_KEY);
+  if (!raw) return null;
+  try {
+    const data = JSON.parse(raw) as SessionUser & { expiresAt?: number };
+    if (data.expiresAt && data.expiresAt < Date.now()) {
+      localStorage.removeItem(REMEMBER_KEY);
+      return null;
+    }
+    return data;
+  } catch {
+    localStorage.removeItem(REMEMBER_KEY);
+    return null;
+  }
+}
+
+/** Alias para compatibilidad con código viejo */
+export function restoreRememberedSession(): SessionUser | null {
+  return loadRememberedUser();
 }
 
 export function clearCurrentUser() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem("currentUser");
-  localStorage.removeItem("rememberUser");
+  localStorage.removeItem(CURRENT_KEY);
+  localStorage.removeItem(REMEMBER_KEY);
   emitAuthChange();
 }
 
 export function logoutUser() {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("currentUser");
-    emitAuthChange();
-  }
+  clearCurrentUser();
 }
 
 export function isLoggedIn(): boolean {
   if (typeof window === "undefined") return false;
-  return !!localStorage.getItem("currentUser");
+  return !!localStorage.getItem(CURRENT_KEY);
 }
 
-/**
- * Actualiza el usuario actual:
- * - Si es un User completo (tiene `password`), también lo persiste en tu DB local con `updateUserData`.
- * - Si es un SessionUser (ligero, p.ej. traído desde tu API/Google), solo actualiza el localStorage.
- */
-export function updateCurrentUser(data: Partial<User>) {
+export function updateCurrentUser(data: Partial<SessionUser>) {
   if (typeof window === "undefined") return;
   const current = getCurrentUser();
   if (!current) return;
-
-  // Usuario ligero (no tiene 'password'): solo actualiza la sesión en localStorage.
-  if (!("password" in current)) {
-    const updated = { ...current, ...data } as SessionUser;
-    localStorage.setItem("currentUser", JSON.stringify(updated));
-    emitAuthChange();
-    return;
-  }
-
-  // Usuario completo (flujo localDB)
-  const updated: User = { ...current, ...(data as Partial<User>) } as User;
-  updateUserData(updated, current.email);
-  localStorage.setItem("currentUser", JSON.stringify(updated));
+  const updated: SessionUser = { ...current, ...data };
+  localStorage.setItem(CURRENT_KEY, JSON.stringify(updated));
   emitAuthChange();
 }
+
+/* ============================================================
+   HELPER: sincronizar Firebase ↔ backend MySQL
+   (usa /auth/google, que sirve para cualquier idToken)
+   ============================================================ */
+
+async function syncWithBackend(firebaseUser: FirebaseUser): Promise<SessionUser> {
+  const idToken = await firebaseUser.getIdToken();
+
+  const resp = await fetch(`${API_BASE}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+
+  const data = await resp.json();
+
+  if (!resp.ok || !data.ok) {
+    console.error("Respuesta /auth/google:", data);
+    throw new Error(data.error || "No se pudo sincronizar el usuario.");
+  }
+
+  return data.user as SessionUser;
+}
+
+/* ============================================================
+   LOGIN CON EMAIL Y CONTRASEÑA (Firebase + backend)
+   ============================================================ */
+
+export async function loginUser(
+  email: string,
+  password: string,
+  remember = false
+): Promise<{ ok: boolean; error?: string; user?: SessionUser }> {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    const sessionUser = await syncWithBackend(cred.user);
+
+    setCurrentUser(sessionUser);
+    if (remember) saveRememberedUser(sessionUser);
+    showWelcomeToast(sessionUser.nombres);
+
+    return { ok: true, user: sessionUser };
+  } catch (err: any) {
+    console.error("Error loginUser:", err);
+    return {
+      ok: false,
+      error: err?.message || "No se pudo iniciar sesión.",
+    };
+  }
+}
+
+/* ============================================================
+   REGISTRO CON EMAIL Y CONTRASEÑA (Firebase + backend)
+   ============================================================ */
+
+export async function registerUser(
+  nombres: string,
+  apellidos: string,
+  email: string,
+  password: string
+): Promise<{ ok: boolean; error?: string; user?: SessionUser }> {
+  try {
+    // 1) Crear cuenta en Firebase
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+    // 2) Guardar nombre completo en Firebase (para que llegue como displayName)
+    try {
+      await updateProfile(cred.user, {
+        displayName: `${nombres} ${apellidos}`.trim(),
+      });
+    } catch (e) {
+      console.warn("No se pudo actualizar displayName en Firebase:", e);
+    }
+
+    // 3) Sincronizar con backend (crea fila en 'usuarios' si no existe)
+    const sessionUser = await syncWithBackend(cred.user);
+
+    // 4) Guardar en sesión local
+    setCurrentUser(sessionUser);
+    saveRememberedUser(sessionUser);
+    showWelcomeToast(sessionUser.nombres);
+
+    return { ok: true, user: sessionUser };
+  } catch (err: any) {
+    console.error("Error registerUser:", err);
+    return {
+      ok: false,
+      error: err?.message || "No se pudo registrar el usuario.",
+    };
+  }
+}
+
+/* ============================================================
+   LOGIN CON GOOGLE (OPCIONAL DESDE AQUÍ)
+   ============================================================ */
+/**
+ * Para Google ya estás usando handleGoogleLogin.ts, que:
+ *  - hace signInWithGooglePopup
+ *  - llama a /auth/google
+ *  - y después usa setCurrentUser + saveRememberedUser.
+ *
+ * Si algún día quieres centralizarlo aquí, podríamos añadir
+ * una función loginWithGoogleFirebase() que use syncWithBackend.
+ */

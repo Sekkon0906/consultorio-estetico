@@ -6,19 +6,9 @@ import {
   addCharlaAPI,
   updateCharlaAPI,
   deleteCharlaAPI,
+  Charla, // ⬅️ usamos la interfaz desde apiCharlas
 } from "../../utils/apiCharlas";
 import { motion, AnimatePresence } from "framer-motion";
-
-// === INTERFAZ CHARLA ===
-export interface Charla {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  detalle: string;
-  imagen: string;
-  fecha: string | null; // ⬅️ permitir null
-}
-
 
 export default function CharlasList() {
   const [charlas, setCharlas] = useState<Charla[]>([]);
@@ -29,17 +19,17 @@ export default function CharlasList() {
     descripcion: "",
     detalle: "",
     imagen: "",
-    fecha: "",
+    fecha: null, // ⬅️ en el formulario permitimos null
   });
 
   // ==== CARGAR CHARLAS ====
   useEffect(() => {
-    cargarCharlas();
+    void cargarCharlas();
   }, []);
 
   const cargarCharlas = async () => {
     try {
-      const data = await getCharlasAPI();
+      const data = await getCharlasAPI(); // ya tipado como Charla[]
       setCharlas(data);
     } catch (err) {
       console.error("Error cargando charlas", err);
@@ -56,7 +46,7 @@ export default function CharlasList() {
       descripcion: "",
       detalle: "",
       imagen: "",
-      fecha: "",
+      fecha: null,
     });
   };
 
@@ -79,8 +69,12 @@ export default function CharlasList() {
   // ==== ELIMINAR ====
   const handleDelete = async (id: number) => {
     if (confirm("¿Seguro que deseas eliminar esta charla?")) {
-      await deleteCharlaAPI(id);
-      await cargarCharlas();
+      try {
+        await deleteCharlaAPI(id);
+        await cargarCharlas();
+      } catch (error) {
+        console.error("Error al eliminar charla", error);
+      }
     }
   };
 
@@ -89,7 +83,11 @@ export default function CharlasList() {
     setEditando(charla);
     setFormVisible(true);
     const { id, ...rest } = charla;
-    setFormData(rest);
+    setFormData({
+      ...rest,
+      // aseguramos que si viene null, el input use ""
+      fecha: rest.fecha,
+    });
   };
 
   // ==== SUBIR IMAGEN ====
@@ -124,11 +122,13 @@ export default function CharlasList() {
                   transition={{ duration: 0.3 }}
                   className="bg-[#FFFDF9] border border-[#E9DED2] rounded-3xl shadow-sm overflow-hidden flex flex-col"
                 >
-                  <img
-                    src={charla.imagen}
-                    alt={charla.titulo}
-                    className="h-40 w-full object-cover"
-                  />
+                  {charla.imagen && (
+                    <img
+                      src={charla.imagen}
+                      alt={charla.titulo}
+                      className="h-40 w-full object-cover"
+                    />
+                  )}
                   <div className="p-4 flex flex-col flex-grow">
                     <h4 className="text-lg font-semibold text-[#4E3B2B]">
                       {charla.titulo}
@@ -144,12 +144,14 @@ export default function CharlasList() {
                     )}
                     <div className="mt-auto flex justify-between pt-2">
                       <button
+                        type="button"
                         onClick={() => handleEdit(charla)}
                         className="text-sm text-[#8B6A4B] font-medium hover:underline"
                       >
                         Editar
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(charla.id)}
                         className="text-sm text-red-600 font-medium hover:underline"
                       >
@@ -164,6 +166,7 @@ export default function CharlasList() {
 
           <div className="text-center mt-10">
             <button
+              type="button"
               onClick={() => setFormVisible(true)}
               className="bg-[#8B6A4B] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#75573F]"
             >
@@ -188,7 +191,9 @@ export default function CharlasList() {
             type="text"
             placeholder="Título"
             value={formData.titulo}
-            onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, titulo: e.target.value })
+            }
             className="w-full border border-[#D8C4AA] rounded-lg px-4 py-2"
             required
           />
@@ -207,15 +212,22 @@ export default function CharlasList() {
           <textarea
             placeholder="Detalle"
             value={formData.detalle}
-            onChange={(e) => setFormData({ ...formData, detalle: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, detalle: e.target.value })
+            }
             className="w-full border border-[#D8C4AA] rounded-lg px-4 py-2"
             rows={3}
           />
 
           <input
             type="date"
-            value={formData.fecha}
-            onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+            value={formData.fecha ?? ""} // ⬅️ nunca null para el input
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                fecha: e.target.value || null,
+              })
+            }
             className="w-full border border-[#D8C4AA] rounded-lg px-4 py-2"
           />
 

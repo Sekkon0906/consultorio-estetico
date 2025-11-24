@@ -20,23 +20,13 @@ import { createCitaApi } from "../services/citasApi";
 // Tipos auxiliares
 // -----------------------------
 
-// Payload que usa el backend para crear una cita
-// (ajusta los campos omitidos si en tu createCitaApi usas otro tipo)
-export type CrearCitaPayload = Omit<
-  Cita,
-  | "id"
-  | "fechaCreacion"
-  | "estado"
-  | "qrCita"
-  | "motivoCancelacion"
-  | "montoPagado"
-  | "montoRestante"
->;
+// ➜ Tipo que espera createCitaApi (coincide con Omit<Cita, "id" | "fechaCreacion">)
+export type CrearCitaPayload = Omit<Cita, "id" | "fechaCreacion">;
 
-// En este paso todavía NO tenemos los datos de pago:
+// ➜ En pasos anteriores todavía NO tenemos pagos ni estado
 export type CitaSinPagos = Omit<
   CrearCitaPayload,
-  "metodoPago" | "tipoPagoConsultorio" | "tipoPagoOnline"
+  "metodoPago" | "tipoPagoConsultorio" | "tipoPagoOnline" | "estado"
 >;
 
 interface AgendarPagoProps {
@@ -72,15 +62,20 @@ export default function AgendarPago({
   const [brilloActivo, setBrilloActivo] = useState(false);
   const [error, setError] = useState(false);
 
-  const opciones = [
+  const opciones: Array<{
+    tipo: MetodoPago;
+    icono: JSX.Element;
+    titulo: string;
+    descripcion: string;
+  }> = [
     {
-      tipo: "Consultorio" as const,
+      tipo: "Consultorio",
       icono: <Wallet size={26} />,
       titulo: "Pagar en consultorio",
       descripcion: "Podrás pagar tu cita en efectivo o tarjeta al asistir.",
     },
     {
-      tipo: "Online" as const,
+      tipo: "Online",
       icono: <Globe size={26} />,
       titulo: "Pago en línea",
       descripcion: "Realiza tu pago seguro vía PayU o PSE antes de asistir.",
@@ -114,6 +109,8 @@ export default function AgendarPago({
             metodoPago === "Consultorio" ? tipoPagoConsultorio ?? "Efectivo" : null,
           tipoPagoOnline:
             metodoPago === "Online" ? tipoPagoOnline ?? "PayU" : null,
+          // 🟤 estado requerido por el tipo Cita
+          estado: "pendiente",
         };
 
         const nuevaCita = await createCitaApi(payload);

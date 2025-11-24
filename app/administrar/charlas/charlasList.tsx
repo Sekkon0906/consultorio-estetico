@@ -16,8 +16,9 @@ export interface Charla {
   descripcion: string;
   detalle: string;
   imagen: string;
-  fecha: string;
+  fecha: string | null; // ⬅️ permitir null
 }
+
 
 export default function CharlasList() {
   const [charlas, setCharlas] = useState<Charla[]>([]);

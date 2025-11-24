@@ -20,6 +20,7 @@
     "@react-oauth/google": "^0.12.2",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
+    "axios": "^1.13.2",
     "bootstrap": "^5.3.8",
     "clsx": "^2.1.1",
     "dom-to-image": "^2.6.0",

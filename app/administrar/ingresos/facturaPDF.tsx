@@ -2,7 +2,9 @@
 
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
-import { Cita, formatCurrency } from "../../utils/localDB";
+// 👇 Usamos la MISMA Cita y formatCurrency que en el módulo de citas
+import type { Cita } from "../citas/helpers";
+import { formatCurrency } from "../citas/helpers";
 
 /**
  * Genera y descarga una factura PDF con los datos de una cita.
@@ -15,9 +17,11 @@ export async function generarFacturaPDF(cita: Cita) {
     format: "a4",
   });
 
-  // === Encabezado visual ===
+  // === Fondo general ===
   doc.setFillColor(255, 252, 247);
   doc.rect(0, 0, 210, 297, "F");
+
+  // === Encabezado ===
   doc.setTextColor(59, 42, 29);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
@@ -34,7 +38,7 @@ export async function generarFacturaPDF(cita: Cita) {
     const imgData = await blobToBase64(img);
     doc.addImage(imgData, "PNG", 15, 12, 25, 25);
   } catch {
-    // si no hay logo, ignora
+    // si no hay logo, lo ignoramos
   }
 
   // === Datos de la cita ===
@@ -49,21 +53,27 @@ export async function generarFacturaPDF(cita: Cita) {
   doc.text(`Teléfono: ${cita.telefono}`, 15, 65);
 
   doc.text("DETALLES DE LA CITA", 15, 78);
-  doc.text(`Fecha: ${cita.fecha}`, 15, 86);
+  doc.text(`Fecha: ${cita.fecha.toString().slice(0, 10)}`, 15, 86);
   doc.text(`Hora: ${cita.hora}`, 15, 92);
   doc.text(`Procedimiento: ${cita.procedimiento}`, 15, 98);
   doc.text(`Tipo de cita: ${cita.tipoCita}`, 15, 104);
 
   // === Pago ===
-  const metodo =
-    cita.metodoPago === "Consultorio"
-      ? `Pago en consultorio (${cita.tipoPagoConsultorio})`
-      : `Pago en línea (${cita.tipoPagoOnline})`;
+  let metodo = "Sin método registrado";
+
+  if (cita.metodoPago === "Consultorio") {
+    metodo = `Pago en consultorio (${cita.tipoPagoConsultorio ?? "-"})`;
+  } else if (cita.metodoPago === "Online") {
+    metodo = `Pago en línea (${cita.tipoPagoOnline ?? "-"})`;
+  }
+
+  const montoTotal = cita.monto ?? 0;
+  const estadoPago = Boolean(cita.pagado) ? "Pagado ✅" : "Pendiente";
 
   doc.text("DETALLES DEL PAGO", 15, 118);
   doc.text(`Método de pago: ${metodo}`, 15, 126);
-  doc.text(`Monto: ${formatCurrency(Number(cita.monto) || 0)}`, 15, 132);
-  doc.text(`Estado: ${cita.pagado ? "Pagado ✅" : "Pendiente"}`, 15, 138);
+  doc.text(`Monto: ${formatCurrency(montoTotal)}`, 15, 132);
+  doc.text(`Estado: ${estadoPago}`, 15, 138);
 
   // === QR con información ===
   const qrData = `Cita #${cita.id} - ${cita.nombres} ${cita.apellidos}\n${cita.procedimiento}\n${cita.fecha} ${cita.hora}`;

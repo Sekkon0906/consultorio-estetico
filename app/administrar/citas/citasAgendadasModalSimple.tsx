@@ -3,8 +3,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { confirmarCita, cancelarCita, Cita } from "../../utils/localDB";
+import { Cita, confirmarCitaAPI, cancelarCitaAPI } from "./helpers"; // 🔹 ahora desde helpers
 import { PALETTE } from "../../agendar/page";
+
+type PromptTipo = "confirmar" | "cancelar" | "reagendar" | null;
 
 interface Props {
   cita: Cita;
@@ -12,47 +14,65 @@ interface Props {
   onUpdated: () => void;
 }
 
-export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: Props) {
-  const [confirmPrompt, setConfirmPrompt] = useState<null | string>(null);
+export default function CitasAgendadasModalSimple({
+  cita,
+  onClose,
+  onUpdated,
+}: Props) {
+  const [confirmPrompt, setConfirmPrompt] = useState<PromptTipo>(null);
 
   // === ESTADOS DE CITA ===
-  const estados = [
-    { label: "Pendiente", value: "pendiente", color: "#E6C676" },
-    { label: "Confirmada", value: "confirmada", color: "#6FB2E3" },
-    { label: "Atendida", value: "atendida", color: "#78B66D" },
-  ];
+  const estados: Array<{ label: string; value: Cita["estado"]; color: string }> =
+    [
+      { label: "Pendiente", value: "pendiente", color: "#E6C676" },
+      { label: "Confirmada", value: "confirmada", color: "#6FB2E3" },
+      { label: "Atendida", value: "atendida", color: "#78B66D" },
+    ];
 
   const idxEstado = estados.findIndex((e) => e.value === cita.estado);
 
   // === ACCIONES ===
-  const handleConfirmar = () => {
-    confirmarCita(cita.id);
-    onUpdated();
-    onClose();
+  const handleConfirmar = async (): Promise<void> => {
+    try {
+      await confirmarCitaAPI(cita.id);
+      onUpdated();
+      onClose();
+    } catch (error) {
+      console.error("Error al confirmar cita:", error);
+    }
   };
 
-  const handleCancelar = () => {
-    cancelarCita(cita.id);
-    onUpdated();
-    onClose();
+  const handleCancelar = async (): Promise<void> => {
+    try {
+      await cancelarCitaAPI(cita.id, "Cancelada desde panel simple");
+      onUpdated();
+      onClose();
+    } catch (error) {
+      console.error("Error al cancelar cita:", error);
+    }
   };
 
-  const handleReagendar = () => {
+  const handleReagendar = (): void => {
     window.location.href = `/administrar/citasAgendadasEditar?id=${cita.id}`;
   };
 
   // === MENSAJES ===
-  const mensajes = {
+  const mensajes: Record<Exclude<PromptTipo, null>, string> = {
     confirmar: "¿Deseas confirmar esta cita?",
     cancelar: "¿Seguro que deseas cancelarla?",
     reagendar: "¿Deseas reagendar esta cita?",
   };
 
-  const colorAccion = {
+  const colorAccionMap: Record<Exclude<PromptTipo, null>, string> = {
     confirmar: "#6FB2E3",
     cancelar: "#E57373",
     reagendar: "#E5D8C8",
-  }[confirmPrompt || "confirmar"];
+  };
+
+  const colorAccion =
+    confirmPrompt && confirmPrompt !== null
+      ? colorAccionMap[confirmPrompt]
+      : colorAccionMap.confirmar;
 
   // === COMPONENTE ===
   return (
@@ -71,6 +91,7 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
         {/* HEADER */}
         <div className="flex items-center gap-3 mb-5">
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-full hover:bg-[#F1E6DA] transition"
           >
@@ -87,19 +108,23 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
           <motion.div
             initial={{ width: 0 }}
             animate={{
-              width: `${(idxEstado / (estados.length - 1)) * 100}%`,
+              width: `${
+                idxEstado >= 0 && estados.length > 1
+                  ? (idxEstado / (estados.length - 1)) * 100
+                  : 0
+              }%`,
             }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="h-[5px] bg-gradient-to-r from-[#C7A27A] to-[#B08968] rounded-full absolute top-1/2 -translate-y-1/2 left-0"
           />
- <div className="flex justify-between relative z-10 px-1">
-    {estados.map((e, i) => (
-      <div key={e.value} className="flex flex-col items-center">
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md -translate-y-3"
-          style={{
-            backgroundColor: i <= idxEstado ? e.color : "#D9CBB6",
-          }}
+          <div className="flex justify-between relative z-10 px-1">
+            {estados.map((e, i) => (
+              <div key={e.value} className="flex flex-col items-center">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md -translate-y-3"
+                  style={{
+                    backgroundColor: i <= idxEstado ? e.color : "#D9CBB6",
+                  }}
                 >
                   {i + 1}
                 </div>
@@ -141,18 +166,21 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
         {cita.estado !== "atendida" ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
             <button
+              type="button"
               onClick={() => setConfirmPrompt("confirmar")}
               className="px-4 py-2 bg-[#8B6A4B] text-white rounded-md hover:bg-[#A58360] transition font-medium shadow-sm"
             >
               Confirmar
             </button>
             <button
+              type="button"
               onClick={() => setConfirmPrompt("reagendar")}
               className="px-4 py-2 bg-[#E9E0D1] text-[#4E3B2B] rounded-md hover:bg-[#E0D2BA] transition font-medium shadow-sm"
             >
               Reagendar
             </button>
             <button
+              type="button"
               onClick={() => setConfirmPrompt("cancelar")}
               className="px-4 py-2 bg-[#C27C6A] text-white rounded-md hover:bg-[#B36555] transition font-medium shadow-sm"
             >
@@ -166,6 +194,7 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
               Cita concluida, fue correctamente registrada en ingresos.
             </p>
             <button
+              type="button"
               onClick={onClose}
               className="px-6 py-2 bg-[#B08968] text-white rounded-md hover:bg-[#9C7A54] transition font-semibold shadow-sm"
             >
@@ -190,13 +219,14 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
                 className="bg-white p-6 rounded-xl shadow-2xl text-center max-w-sm w-[90%] border border-[#E5D8C8]"
               >
                 <p className="text-[#4E3B2B] mb-4 font-medium">
-                  {mensajes[confirmPrompt as keyof typeof mensajes]}
+                  {confirmPrompt ? mensajes[confirmPrompt] : ""}
                 </p>
                 <div className="flex justify-center gap-3">
                   <button
+                    type="button"
                     onClick={() => {
-                      if (confirmPrompt === "confirmar") handleConfirmar();
-                      if (confirmPrompt === "cancelar") handleCancelar();
+                      if (confirmPrompt === "confirmar") void handleConfirmar();
+                      if (confirmPrompt === "cancelar") void handleCancelar();
                       if (confirmPrompt === "reagendar") handleReagendar();
                     }}
                     className="px-4 py-2 text-white rounded-md shadow-md hover:opacity-90 transition"
@@ -205,6 +235,7 @@ export default function CitasAgendadasModalSimple({ cita, onClose, onUpdated }: 
                     Sí
                   </button>
                   <button
+                    type="button"
                     onClick={() => setConfirmPrompt(null)}
                     className="px-4 py-2 bg-gray-200 text-[#4E3B2B] rounded-md hover:bg-gray-300"
                   >

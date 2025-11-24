@@ -4,6 +4,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import domtoimage from "dom-to-image";
 
+// === URL BASE DEL BACKEND ===
+const API =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+
 interface PuntoSemanal {
   semana: string;
   total: number;
@@ -17,15 +21,14 @@ interface GenerarReporteMensualPDFProps {
     totalConsultorio: number;
     totalEsperado: number;
   };
-  dataSemanal: PuntoSemanal[]; // ✅ sin any
+  dataSemanal: PuntoSemanal[];
   chartId: string;
 }
 
-// ✅ tipo para jsPDF extendido por autotable
+// ✅ tipo extendido para usar lastAutoTable de jspdf-autotable
 type JsPDFWithAutoTable = jsPDF & {
   lastAutoTable?: {
     finalY: number;
-    // (si quisieras, aquí puedes añadir más campos)
   };
 };
 
@@ -46,10 +49,12 @@ export async function generarReporteMensualPDF({
   // === Encabezado ===
   doc.setFillColor(252, 249, 245);
   doc.rect(0, 0, 210, 297, "F");
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.setTextColor(80, 55, 35);
   doc.text("Reporte de Ingresos Mensuales", 105, 25, { align: "center" });
+
   doc.setFontSize(14);
   doc.text(`${nombresMes[mes]} ${anio}`, 105, 35, { align: "center" });
 
@@ -70,7 +75,7 @@ export async function generarReporteMensualPDF({
   );
 
   // === Tabla de ingresos semanales ===
-  autoTable(doc, {
+  autoTable(doc as JsPDFWithAutoTable, {
     startY: 90,
     head: [["Semana", "Total Ingresos"]],
     body: dataSemanal.map((d) => [d.semana, `$${d.total.toLocaleString()}`]),
@@ -87,12 +92,11 @@ export async function generarReporteMensualPDF({
     },
   });
 
-  // === Agregar gráfica ===
+  // === Agregar gráfica desde el DOM ===
   const chartElement = document.getElementById(chartId);
   if (chartElement) {
     const imgData = await domtoimage.toPng(chartElement);
 
-    // ✅ usamos el tipo extendido en vez de any
     const docWithTable = doc as JsPDFWithAutoTable;
     const finalY = docWithTable.lastAutoTable?.finalY ?? 120;
 
@@ -101,36 +105,41 @@ export async function generarReporteMensualPDF({
 
   // === Pie de página ===
   const fecha = new Date();
-  const mesNombre = nombresMes[fecha.getMonth()];
+  const mesNombreActual = nombresMes[fecha.getMonth()];
+
   doc.setDrawColor(176, 137, 104);
   doc.line(15, 270, 195, 270);
+
   doc.setFontSize(10);
   doc.setTextColor(90, 70, 50);
   doc.text(
-    `Generado automáticamente el ${fecha.getDate()} de ${mesNombre} ${fecha.getFullYear()} – Consultorio Estético JM`,
+    `Generado automáticamente el ${fecha.getDate()} de ${mesNombreActual} ${fecha.getFullYear()} – Consultorio Estético JM`,
     105,
     278,
     { align: "center" }
   );
 
-  // === Guardar y generar enlace base64 ===
+  // === Generar PDF en Base64 (data:application/pdf;...) ===
   const pdfBase64 = doc.output("datauristring");
 
-  const reporte = {
-    id: `${anio}-${mes}-${Date.now()}`,
-    mes: nombresMes[mes],
-    anio,
-    fechaGeneracion: fecha.toISOString(),
-    totalOnline: ingresos.totalOnline,
-    totalConsultorio: ingresos.totalConsultorio,
-    totalEsperado: ingresos.totalEsperado,
-    archivoURL: pdfBase64,
-  };
+  // === Enviar al backend para guardar en reportes_mensuales ===
+  try {
+    await fetch(`${API}/reportes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mes: nombresMes[mes],                  // ⚠️ tu tabla usa mes en texto
+        anio,
+        totalOnline: ingresos.totalOnline,
+        totalConsultorio: ingresos.totalConsultorio,
+        totalEsperado: ingresos.totalEsperado,
+        archivoURL: pdfBase64,                 // lo que luego lees en HistorialReportes
+      }),
+    });
+  } catch (error) {
+    console.error("Error al guardar reporte mensual en backend:", error);
+  }
 
-  const stored = localStorage.getItem("reportesMensuales");
-  const lista: typeof reporte[] = stored ? JSON.parse(stored) : [];
-  lista.push(reporte);
-  localStorage.setItem("reportesMensuales", JSON.stringify(lista));
-
+  // === Descargar localmente en el navegador ===
   doc.save(`Reporte-${nombresMes[mes]}-${anio}.pdf`);
 }

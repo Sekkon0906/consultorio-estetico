@@ -4,24 +4,27 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PALETTE } from "../../agendar/page";
 import {
-  getCitasByDay,
-  confirmarCita,
-  updateCita,
   Cita,
-} from "../../utils/localDB";
+  getCitasByDayAPI,
+  confirmarCitaAPI,
+  cancelarCitaAPI,
+} from "./helpers";
 import CitasAgendadasCard from "./citasAgendadasCard";
 import CitasAgendadasModal from "./citasAgendadasModal";
 import { ChevronUp, ChevronDown, CalendarDays } from "lucide-react";
 
 export default function CitasAgendadas() {
-  const [isClient, setIsClient] = useState(false);
-  const [mes, setMes] = useState(0);
-  const [anio, setAnio] = useState(0);
+  const [isClient, setIsClient] = useState<boolean>(false);
+  const [mes, setMes] = useState<number>(0);
+  const [anio, setAnio] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<Cita | null>(null);
-  const [ascendente, setAscendente] = useState(false); // 🔹 default descendente
+  const [ascendente, setAscendente] = useState<boolean>(false); // 🔹 default descendente
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
-  const [recargar, setRecargar] = useState(false);
+  const [recargar, setRecargar] = useState<boolean>(false);
+
+  const [citas, setCitas] = useState<Cita[]>([]);
+  const [loadingCitas, setLoadingCitas] = useState<boolean>(false);
 
   // === Montaje inicial ===
   useEffect(() => {
@@ -31,74 +34,118 @@ export default function CitasAgendadas() {
     setIsClient(true);
   }, []);
 
-  // === Citas del día ===
-  const citas = useMemo(() => {
-    if (!selectedDate) return [];
-    let citasDia = getCitasByDay(selectedDate);
+  // === Cargar citas desde la API cuando cambia fecha/filtro/orden ===
+  useEffect(() => {
+    const cargar = async () => {
+      if (!selectedDate) {
+        setCitas([]);
+        return;
+      }
 
-    if (filtroEstado !== "todos") {
-      citasDia = citasDia.filter((c) => c.estado === filtroEstado);
-    }
+      try {
+        setLoadingCitas(true);
+        let data = await getCitasByDayAPI(selectedDate, filtroEstado);
 
-    return citasDia.sort((a, b) =>
-      ascendente ? a.hora.localeCompare(b.hora) : b.hora.localeCompare(a.hora)
-    );
-  }, [selectedDate, ascendente, filtroEstado, recargar]);
+        data = data.sort((a, b) =>
+          ascendente ? a.hora.localeCompare(b.hora) : b.hora.localeCompare(a.hora)
+        );
+
+        setCitas(data);
+      } catch (error) {
+        console.error("Error cargando citas:", error);
+      } finally {
+        setLoadingCitas(false);
+      }
+    };
+
+    void cargar();
+  }, [selectedDate, filtroEstado, ascendente, recargar]);
 
   // === Resumen ===
   const resumen = useMemo(() => {
-    if (!selectedDate)
-      return { pendiente: 0, confirmada: 0, atendida: 0, cancelada: 0 };
-    const lista = getCitasByDay(selectedDate);
-    return {
-      pendiente: lista.filter((c) => c.estado === "pendiente").length,
-      confirmada: lista.filter((c) => c.estado === "confirmada").length,
-      atendida: lista.filter((c) => c.estado === "atendida").length,
-      cancelada: lista.filter((c) => c.estado === "cancelada").length,
-    };
-  }, [selectedDate, recargar]);
+    const base = { pendiente: 0, confirmada: 0, atendida: 0, cancelada: 0 };
+
+    citas.forEach((cita) => {
+      if (cita.estado === "pendiente") base.pendiente += 1;
+      if (cita.estado === "confirmada") base.confirmada += 1;
+      if (cita.estado === "atendida") base.atendida += 1;
+      if (cita.estado === "cancelada") base.cancelada += 1;
+    });
+
+    return base;
+  }, [citas]);
 
   // === Calendario ===
-  const diasEnMes = useMemo(() => new Date(anio, mes + 1, 0).getDate(), [anio, mes]);
-  const primerDiaSemana = useMemo(() => new Date(anio, mes, 1).getDay(), [anio, mes]);
+  const diasEnMes = useMemo(
+    () => new Date(anio, mes + 1, 0).getDate(),
+    [anio, mes]
+  );
+
+  const primerDiaSemana = useMemo(
+    () => new Date(anio, mes, 1).getDay(),
+    [anio, mes]
+  );
+
   const nombresMes = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
   ];
 
   const generarDias = useMemo(() => {
     const dias: (number | null)[] = [];
     const offset = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
-    for (let i = 0; i < offset; i++) dias.push(null);
-    for (let i = 1; i <= diasEnMes; i++) dias.push(i);
+    for (let i = 0; i < offset; i += 1) dias.push(null);
+    for (let i = 1; i <= diasEnMes; i += 1) dias.push(i);
     return dias;
   }, [diasEnMes, primerDiaSemana]);
 
-  const handleDateClick = (dia: number | null) => {
+  const handleDateClick = (dia: number | null): void => {
     if (!dia) return;
     const fecha = new Date(anio, mes, dia).toISOString().slice(0, 10);
     setSelectedDate(fecha);
   };
 
   // === Acciones ===
-  const handleConfirmar = (cita: Cita) => {
-    confirmarCita(cita.id);
-    setRecargar((v) => !v);
+  const handleConfirmar = async (cita: Cita): Promise<void> => {
+    try {
+      await confirmarCitaAPI(cita.id);
+      setRecargar((v) => !v);
+    } catch (error) {
+      console.error("Error confirmando cita:", error);
+    }
   };
 
-  const handleCancelar = (cita: Cita) => {
-    const motivo = prompt("Motivo de la cancelación:");
+  const handleCancelar = async (cita: Cita): Promise<void> => {
+    const motivo = window.prompt("Motivo de la cancelación:");
     if (!motivo) return;
-    updateCita(cita.id, { ...cita, estado: "cancelada", motivoCancelacion: motivo });
-    setRecargar((v) => !v);
+    try {
+      await cancelarCitaAPI(cita.id, motivo);
+      setRecargar((v) => !v);
+    } catch (error) {
+      console.error("Error cancelando cita:", error);
+    }
   };
 
-  const handleReagendar = (cita: Cita) => {
+  const handleReagendar = (cita: Cita): void => {
     setDetalle(cita);
   };
 
   if (!isClient)
-    return <div className="text-center py-20 text-[#6E5A49]">Cargando citas...</div>;
+    return (
+      <div className="text-center py-20 text-[#6E5A49]">
+        Cargando citas...
+      </div>
+    );
 
   return (
     <div className="p-6 space-y-6 relative">
@@ -117,6 +164,7 @@ export default function CitasAgendadas() {
         >
           <div className="flex justify-between items-center mb-4 w-full">
             <button
+              type="button"
               onClick={() => setMes((m) => (m === 0 ? 11 : m - 1))}
               className="text-[#8B6A4B] hover:text-[#C7A27A] text-lg font-semibold"
             >
@@ -126,6 +174,7 @@ export default function CitasAgendadas() {
               {nombresMes[mes]} {anio}
             </span>
             <button
+              type="button"
               onClick={() => setMes((m) => (m === 11 ? 0 : m + 1))}
               className="text-[#8B6A4B] hover:text-[#C7A27A] text-lg font-semibold"
             >
@@ -147,17 +196,23 @@ export default function CitasAgendadas() {
 
           <div className="grid grid-cols-7 gap-1 w-full mb-4">
             {generarDias.map((d, i) => {
-              const fechaISO = d ? new Date(anio, mes, d).toISOString().slice(0, 10) : "";
+              const fechaISO =
+                d != null
+                  ? new Date(anio, mes, d).toISOString().slice(0, 10)
+                  : "";
               const isSelected = selectedDate === fechaISO;
-              const tieneCitas = d && getCitasByDay(fechaISO).length > 0;
+              // Por ahora solo mostramos el punto para el día seleccionado si tiene citas cargadas
+              const tieneCitas = isSelected && citas.length > 0;
+
               return (
                 <motion.button
                   key={i}
+                  type="button"
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleDateClick(d)}
-                  disabled={!d}
+                  disabled={d == null}
                   className={`h-10 w-full rounded-md text-sm font-medium transition-all relative ${
-                    !d
+                    d == null
                       ? "bg-transparent cursor-default"
                       : isSelected
                       ? "bg-[#B08968] text-white shadow-inner"
@@ -166,7 +221,7 @@ export default function CitasAgendadas() {
                 >
                   {d ?? ""}
                   {tieneCitas && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#B08968] rounded-full"></span>
+                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#B08968] rounded-full" />
                   )}
                 </motion.button>
               );
@@ -202,7 +257,8 @@ export default function CitasAgendadas() {
                   </select>
 
                   <button
-                    onClick={() => setAscendente(!ascendente)}
+                    type="button"
+                    onClick={() => setAscendente((prev) => !prev)}
                     className="flex items-center gap-1 text-sm text-[#6E5A49] hover:text-[#8B6A4B]"
                   >
                     {ascendente ? (
@@ -236,7 +292,11 @@ export default function CitasAgendadas() {
 
               {/* === TARJETAS O MENSAJE === */}
               <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2">
-                {citas.length > 0 ? (
+                {loadingCitas ? (
+                  <p className="text-[#6E5A49] text-center mt-20 italic">
+                    Cargando citas...
+                  </p>
+                ) : citas.length > 0 ? (
                   citas.map((cita) => (
                     <CitasAgendadasCard
                       key={cita.id}

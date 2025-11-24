@@ -11,11 +11,21 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
-import { getTotalesMes, getCitasPagadasMes } from "../../utils/localDB";
 import { generarReporteMensualPDF } from "./reportePDF";
 import HistorialReportes from "./historialReportes";
 
+// === API BASE DEL BACKEND ===
+const API =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+
+// === Tipos del backend ===
 type Filtro = "todos" | "online" | "consultorio";
+
+interface ResumenMes {
+  totalOnline: number;
+  totalConsultorio: number;
+  totalEsperado: number;
+}
 
 interface PuntoSemanal {
   semana: string;
@@ -26,7 +36,7 @@ export default function IngresosPage() {
   const fechaActual = new Date();
   const [anio, setAnio] = useState(fechaActual.getFullYear());
   const [mes, setMes] = useState(fechaActual.getMonth());
-  const [ingresos, setIngresos] = useState({
+  const [ingresos, setIngresos] = useState<ResumenMes>({
     totalOnline: 0,
     totalConsultorio: 0,
     totalEsperado: 0,
@@ -37,54 +47,39 @@ export default function IngresosPage() {
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [actualizarHistorial, setActualizarHistorial] = useState(0);
 
-  const recalcularDatos = useCallback(() => {
-    const resumen = getTotalesMes(anio, mes);
-    setIngresos(resumen);
+  // === CONSULTAR TOTALES DEL MES ===
+  const fetchTotalesMes = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/ingresos?mes=${mes}&anio=${anio}`);
+      if (!res.ok) throw new Error("Error consultando ingresos");
+      const data = await res.json();
+      if (data.ok) setIngresos(data.totales);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [anio, mes]);
 
-    const citasMes = getCitasPagadasMes(anio, mes);
-    const semanas = [1, 2, 3, 4];
-
-    const datos: PuntoSemanal[] = semanas.map((semana) => {
-      const inicio = (semana - 1) * 7 + 1;
-      const fin = semana * 7;
-
-      const citasSemana = citasMes.filter((cita) => {
-        const dia = new Date(cita.fecha).getDate();
-        return dia >= inicio && dia <= fin;
-      });
-
-      const filtradas =
-        filtro === "online"
-          ? citasSemana.filter((c) => c.metodoPago === "Online")
-          : filtro === "consultorio"
-          ? citasSemana.filter((c) => c.metodoPago === "Consultorio")
-          : citasSemana;
-
-      const total = filtradas.reduce(
-        (acc, c) => acc + (c.montoPagado || c.monto || 0),
-        0
+  // === CONSULTAR INGRESOS SEMANALES ===
+  const fetchIngresoSemanal = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${API}/ingresos/semanal?mes=${mes}&anio=${anio}&filtro=${filtro}`
       );
-
-      return { semana: `Semana ${semana}`, total };
-    });
-
-    setDataSemanal(datos);
+      if (!res.ok) throw new Error("Error consultando ingresos semanales");
+      const data = await res.json();
+      if (data.ok) setDataSemanal(data.semanal);
+    } catch (err) {
+      console.error(err);
+    }
   }, [anio, mes, filtro]);
 
+  // === EFECTOS ===
   useEffect(() => {
-    recalcularDatos();
-  }, [recalcularDatos]);
+    fetchTotalesMes();
+    fetchIngresoSemanal();
+  }, [fetchTotalesMes, fetchIngresoSemanal]);
 
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "ingresosRegistrados" || e.key === "citasAgendadas") {
-        recalcularDatos();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [recalcularDatos]);
-
+  // === PDF ===
   const handleGenerarPDF = async () => {
     setGenerandoPDF(true);
     try {
@@ -103,6 +98,7 @@ export default function IngresosPage() {
     }
   };
 
+  // === UI ===
   const nombresMes = [
     "Enero",
     "Febrero",
@@ -117,7 +113,6 @@ export default function IngresosPage() {
     "Noviembre",
     "Diciembre",
   ];
-
   const aniosDisponibles = [2024, 2025, 2026];
 
   return (
@@ -131,24 +126,20 @@ export default function IngresosPage() {
         <select
           value={mes}
           onChange={(e) => setMes(Number(e.target.value))}
-          className="w-full md:w-auto border border-[#E5D8C8] rounded-lg px-3 py-2 bg-white text-[#4E3B2B] shadow-sm hover:border-[#B08968] focus:outline-none"
+          className="w-full md:w-auto border border-[#E5D8C8] rounded-lg px-3 py-2 bg-white text-[#4E3B2B]"
         >
           {nombresMes.map((m, i) => (
-            <option key={i} value={i}>
-              {m}
-            </option>
+            <option key={i} value={i}>{m}</option>
           ))}
         </select>
 
         <select
           value={anio}
           onChange={(e) => setAnio(Number(e.target.value))}
-          className="w-full md:w-auto border border-[#E5D8C8] rounded-lg px-3 py-2 bg-white text-[#4E3B2B] shadow-sm hover:border-[#B08968] focus:outline-none"
+          className="w-full md:w-auto border border-[#E5D8C8] rounded-lg px-3 py-2 bg-white text-[#4E3B2B]"
         >
           {aniosDisponibles.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
+            <option key={a} value={a}>{a}</option>
           ))}
         </select>
 
@@ -156,7 +147,7 @@ export default function IngresosPage() {
           whileTap={{ scale: 0.96 }}
           onClick={handleGenerarPDF}
           disabled={generandoPDF}
-          className={`w-full md:w-auto px-5 py-2 rounded-lg text-white font-semibold shadow-md transition-all ${
+          className={`w-full md:w-auto px-5 py-2 rounded-lg text-white font-semibold shadow-md ${
             generandoPDF
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-[#B08968] hover:bg-[#9C7A54]"
@@ -168,7 +159,7 @@ export default function IngresosPage() {
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={() => setMostrarHistorial((v) => !v)}
-          className={`w-full md:w-auto px-5 py-2 rounded-lg font-semibold shadow-md border transition-all ${
+          className={`w-full md:w-auto px-5 py-2 rounded-lg font-semibold shadow-md border ${
             mostrarHistorial
               ? "bg-[#E9DED2] text-[#4E3B2B] border-[#B08968]"
               : "bg-white text-[#4E3B2B] border-[#E5D8C8] hover:bg-[#E9DED2]"
@@ -181,69 +172,48 @@ export default function IngresosPage() {
       {/* === TOTALES === */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div className="p-4 bg-[#F8EFE8] rounded-xl shadow">
-          <h3 className="font-semibold text-[#8B6A4B] text-sm sm:text-base">
-            Pagos Online
-          </h3>
+          <h3 className="font-semibold text-[#8B6A4B]">Pagos Online</h3>
           <p className="text-xl sm:text-2xl font-bold text-[#B08968] mt-1">
             ${ingresos.totalOnline.toLocaleString()}
           </p>
         </div>
-
         <div className="p-4 bg-yellow-50 rounded-xl shadow">
-          <h3 className="font-semibold text-yellow-700 text-sm sm:text-base">
-            Pagos en Consultorio
-          </h3>
+          <h3 className="font-semibold text-yellow-700">Pagos en Consultorio</h3>
           <p className="text-xl sm:text-2xl font-bold text-yellow-800 mt-1">
             ${ingresos.totalConsultorio.toLocaleString()}
           </p>
         </div>
-
         <div className="p-4 bg-[#E9DED2] rounded-xl shadow">
-          <h3 className="font-semibold text-[#4E3B2B] text-sm sm:text-base">
-            Total Esperado
-          </h3>
+          <h3 className="font-semibold text-[#4E3B2B]">Total Esperado</h3>
           <p className="text-xl sm:text-2xl font-bold text-[#8B6A4B] mt-1">
             ${ingresos.totalEsperado.toLocaleString()}
           </p>
         </div>
       </div>
 
-      {/* === FILTROS DE VISTA === */}
+      {/* === FILTRO GRÁFICO === */}
       <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4">
-        {(
-          [
-            { label: "Todos", value: "todos" },
-            { label: "Online", value: "online" },
-            { label: "Consultorio", value: "consultorio" },
-          ] as { label: string; value: Filtro }[]
-        ).map((btn) => {
-          const activo = filtro === btn.value;
-          return (
-            <motion.button
-              key={btn.value}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => setFiltro(btn.value)}
-              className={`min-w-[120px] px-4 py-2 rounded-lg font-semibold text-sm sm:text-base transition-all shadow-sm border ${
-                activo
-                  ? "bg-[#B08968] text-white border-[#B08968] shadow-md"
-                  : "bg-white text-[#4E3B2B] border-[#E5D8C8] hover:bg-[#E9DED2]"
-              }`}
-            >
-              {btn.label}
-            </motion.button>
-          );
-        })}
+        {(["todos", "online", "consultorio"] as Filtro[]).map((btn) => (
+          <motion.button
+            key={btn}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => setFiltro(btn)}
+            className={`px-4 py-2 rounded-lg font-semibold text-sm border ${
+              filtro === btn
+                ? "bg-[#B08968] text-white border-[#B08968]"
+                : "bg-white text-[#4E3B2B] border-[#E5D8C8] hover:bg-[#E9DED2]"
+            }`}
+          >
+            {btn.toUpperCase()}
+          </motion.button>
+        ))}
       </div>
 
       {/* === GRÁFICA === */}
-      <div
-        id="grafica-ingresos"
-        className="bg-white p-4 sm:p-6 rounded-xl shadow-md mt-4 border border-[#E5D8C8]"
-      >
-        <h3 className="text-base sm:text-lg font-semibold text-center mb-3 text-[#8B6A4B]">
+      <div id="grafica-ingresos" className="bg-white p-6 rounded-xl shadow-md mt-4 border border-[#E5D8C8]">
+        <h3 className="text-lg font-semibold text-center mb-3 text-[#8B6A4B]">
           Ingresos semanales ({nombresMes[mes]} {anio})
         </h3>
-
         <div className="w-full h-[260px] sm:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dataSemanal}>
@@ -278,8 +248,7 @@ export default function IngresosPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-[#FBF7F2] border border-[#E5D8C8] rounded-xl shadow-md mt-6 overflow-hidden"
+            className="bg-[#FBF7F2] border border-[#E5D8C8] rounded-xl mt-6 overflow-hidden"
           >
             <HistorialReportes />
           </motion.div>

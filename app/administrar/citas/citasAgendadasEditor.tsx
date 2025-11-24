@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Cita, updateCita } from "../../utils/localDB";
+import { Cita, updateCitaAPI } from "./helpers"; // 🔹 ahora desde helpers (BD real)
 import { PALETTE } from "../../agendar/page";
 
 interface Props {
@@ -10,24 +10,47 @@ interface Props {
   onClose: () => void;
 }
 
-export default function CitasAgendadasEditor({ cita: citaInicial, onClose }: Props) {
+export default function CitasAgendadasEditor({
+  cita: citaInicial,
+  onClose,
+}: Props) {
   const [cita, setCita] = useState<Cita>({ ...citaInicial });
-  const [guardado, setGuardado] = useState(false);
+  const [guardado, setGuardado] = useState<boolean>(false);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ): void => {
     const { name, value } = e.target;
-    setCita({ ...cita, [name]: value });
+    setCita((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSave = () => {
-    updateCita(cita.id, cita);
-    setGuardado(true);
-    setTimeout(() => {
-      setGuardado(false);
-      onClose();
-    }, 1800);
+  const handleSave = async (): Promise<void> => {
+    try {
+      // 🔹 Solo mandamos los campos que realmente se editan aquí
+      const payload: Partial<Cita> = {
+        procedimiento: cita.procedimiento,
+        fecha: cita.fecha.slice(0, 10),
+        hora: cita.hora,
+        nota: cita.nota ?? null,
+        metodoPago: cita.metodoPago ?? null,
+        estado: cita.estado,
+      };
+
+      await updateCitaAPI(cita.id, payload);
+      setGuardado(true);
+
+      setTimeout(() => {
+        setGuardado(false);
+        onClose();
+      }, 1800);
+    } catch (error) {
+      console.error("Error actualizando cita:", error);
+    }
   };
 
   return (
@@ -45,7 +68,7 @@ export default function CitasAgendadasEditor({ cita: citaInicial, onClose }: Pro
       </h2>
 
       {/* === FORM === */}
-      <form className="flex flex-col gap-5">
+      <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
         <div>
           <label className="block text-sm font-medium text-[#6E5A49] mb-1">
             Procedimiento
@@ -91,7 +114,7 @@ export default function CitasAgendadasEditor({ cita: citaInicial, onClose }: Pro
           </label>
           <textarea
             name="nota"
-            value={cita.nota || ""}
+            value={cita.nota ?? ""}
             onChange={handleChange}
             rows={4}
             className="w-full p-3 border border-[#E5D8C8] rounded-lg bg-[#FFFDF9] focus:ring-2 focus:ring-[#B08968]"
@@ -105,7 +128,7 @@ export default function CitasAgendadasEditor({ cita: citaInicial, onClose }: Pro
             </label>
             <select
               name="metodoPago"
-              value={cita.metodoPago || ""}
+              value={cita.metodoPago ?? ""}
               onChange={handleChange}
               className="w-full p-3 border border-[#E5D8C8] rounded-lg bg-[#FFFDF9] focus:ring-2 focus:ring-[#B08968]"
             >

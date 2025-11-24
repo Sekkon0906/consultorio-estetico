@@ -2,26 +2,24 @@
 
 import { useState, useEffect } from "react";
 import {
-  getCharlas,
-  addCharla,
-  updateCharla,
-  deleteCharla,
-} from "../../utils/localDB";
+  getCharlasAPI,
+  addCharlaAPI,
+  updateCharlaAPI,
+  deleteCharlaAPI,
+} from "../../utils/apiCharlas";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ✅ Definimos el tipo de una charla
+// === INTERFAZ CHARLA ===
 export interface Charla {
   id: number;
   titulo: string;
   descripcion: string;
   detalle: string;
   imagen: string;
-  galeria: string[];
-  fecha: string; // podrías usar Date si en localDB lo guardas como tal
+  fecha: string;
 }
 
 export default function CharlasList() {
-  // ✅ Nada de any: usamos Charla[]
   const [charlas, setCharlas] = useState<Charla[]>([]);
   const [editando, setEditando] = useState<Charla | null>(null);
   const [formVisible, setFormVisible] = useState(false);
@@ -30,16 +28,25 @@ export default function CharlasList() {
     descripcion: "",
     detalle: "",
     imagen: "",
-    galeria: [] as string[],
     fecha: "",
   });
 
+  // ==== CARGAR CHARLAS ====
   useEffect(() => {
-    // 👀 Asegúrate de que getCharlas devuelve Charla[]
-    const data = getCharlas() as Charla[];
-    setCharlas(data);
+    cargarCharlas();
   }, []);
 
+  const cargarCharlas = async () => {
+    try {
+      const data = await getCharlasAPI();
+      setCharlas(data);
+    } catch (err) {
+      console.error("Error cargando charlas", err);
+      setCharlas([]);
+    }
+  };
+
+  // ==== RESET FORM ====
   const resetForm = () => {
     setFormVisible(false);
     setEditando(null);
@@ -48,78 +55,48 @@ export default function CharlasList() {
       descripcion: "",
       detalle: "",
       imagen: "",
-      galeria: [],
       fecha: "",
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ==== CREAR / EDITAR ====
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (editando) {
-      // editando tiene id, formData no
-      updateCharla(editando.id, formData);
-    } else {
-      // addCharla debe crear el id internamente
-      addCharla(formData);
+    try {
+      if (editando) {
+        await updateCharlaAPI(editando.id, formData);
+      } else {
+        await addCharlaAPI(formData);
+      }
+      await cargarCharlas();
+      resetForm();
+    } catch (error) {
+      console.error("Error al guardar charla", error);
     }
-
-    setCharlas(getCharlas() as Charla[]);
-    resetForm();
   };
 
-  const handleDelete = (id: number) => {
+  // ==== ELIMINAR ====
+  const handleDelete = async (id: number) => {
     if (confirm("¿Seguro que deseas eliminar esta charla?")) {
-      deleteCharla(id);
-      setCharlas(getCharlas() as Charla[]);
+      await deleteCharlaAPI(id);
+      await cargarCharlas();
     }
   };
 
-  // ✅ sin any
+  // ==== EDITAR ====
   const handleEdit = (charla: Charla) => {
     setEditando(charla);
     setFormVisible(true);
-
     const { id, ...rest } = charla;
     setFormData(rest);
   };
 
-  // === Subida de imagen principal ===
+  // ==== SUBIR IMAGEN ====
   const handleImagenUpload = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () =>
       setFormData((prev) => ({ ...prev, imagen: reader.result as string }));
     reader.readAsDataURL(file);
-  };
-
-  // === Subida de galería ===
-  const handleGaleriaUpload = (files: FileList | null) => {
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () =>
-        setFormData((prev) => ({
-          ...prev,
-          galeria: [...prev.galeria, reader.result as string],
-        }));
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleAddVideo = () => {
-    const url = prompt("Pega aquí el enlace de YouTube o MP4:");
-    if (url)
-      setFormData((prev) => ({
-        ...prev,
-        galeria: [...prev.galeria, url],
-      }));
-  };
-
-  const removeGaleriaItem = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      galeria: prev.galeria.filter((_, i) => i !== index),
-    }));
   };
 
   return (
@@ -131,6 +108,7 @@ export default function CharlasList() {
         Formación Continua
       </h2>
 
+      {/* === LISTADO DE CHARLAS === */}
       {!formVisible && (
         <>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -159,7 +137,8 @@ export default function CharlasList() {
                     </p>
                     {charla.fecha && (
                       <p className="text-xs text-[#8B6A4B] mb-2">
-                        📅 {new Date(charla.fecha).toLocaleDateString()}
+                        📅{" "}
+                        {new Date(charla.fecha).toLocaleDateString("es-CO")}
                       </p>
                     )}
                     <div className="mt-auto flex justify-between pt-2">
@@ -193,6 +172,7 @@ export default function CharlasList() {
         </>
       )}
 
+      {/* === FORMULARIO DE CREACIÓN / EDICIÓN === */}
       {formVisible && (
         <motion.form
           onSubmit={handleSubmit}
@@ -238,100 +218,29 @@ export default function CharlasList() {
             className="w-full border border-[#D8C4AA] rounded-lg px-4 py-2"
           />
 
-          {/* === Imagen y galería === */}
-          <div className="pt-4 border-t border-[#E5D8C8] space-y-6">
-            <div>
-              <h4 className="text-lg font-medium text-[#8B6A4B] mb-2">
-                Imagen principal
-              </h4>
-              {formData.imagen && (
-                <img
-                  src={formData.imagen}
-                  alt="preview"
-                  className="w-56 h-36 object-cover rounded-lg mb-3 border border-[#E5D8C8]"
-                />
-              )}
-              <label className="cursor-pointer inline-block bg-[#C7A27A] hover:bg-[#B08968] text-white px-5 py-2 rounded-full font-medium">
-                Subir imagen
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    e.target.files?.[0] && handleImagenUpload(e.target.files[0])
-                  }
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            <div>
-              <h4 className="text-lg font-medium text-[#8B6A4B] mb-2">
-                Galería multimedia
-              </h4>
-
-              <div className="flex flex-wrap gap-3 mb-3">
-                {formData.galeria.map((item, i) => {
-                  const isVideo =
-                    item.includes("youtube") || item.endsWith(".mp4");
-                  return (
-                    <div
-                      key={i}
-                      className="relative w-28 h-24 rounded-lg overflow-hidden border border-[#E5D8C8]"
-                    >
-                      {isVideo ? (
-                        item.includes("youtube") ? (
-                          <iframe
-                            src={item.replace("watch?v=", "embed/")}
-                            className="w-full h-full object-cover"
-                            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                          ></iframe>
-                        ) : (
-                          <video
-                            src={item}
-                            controls
-                            className="w-full h-full object-cover"
-                          />
-                        )
-                      ) : (
-                        <img
-                          src={item}
-                          alt={`media-${i}`}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeGaleriaItem(i)}
-                        className="absolute top-1 right-1 bg-[#B08968] text-white rounded-full w-5 h-5 flex items-center justify-center"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-3">
-                <label className="cursor-pointer inline-block bg-[#C7A27A] hover:bg-[#B08968] text-white px-5 py-2 rounded-full font-medium">
-                  Añadir imágenes
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleGaleriaUpload(e.target.files)}
-                    className="hidden"
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  onClick={handleAddVideo}
-                  className="bg-[#C7A27A] hover:bg-[#B08968] text-white px-5 py-2 rounded-full font-medium"
-                >
-                  Añadir video
-                </button>
-              </div>
-            </div>
+          {/* === SUBIR IMAGEN === */}
+          <div className="pt-4 border-t border-[#E5D8C8]">
+            <h4 className="text-lg font-medium text-[#8B6A4B] mb-2">
+              Imagen principal
+            </h4>
+            {formData.imagen && (
+              <img
+                src={formData.imagen}
+                alt="preview"
+                className="w-56 h-36 object-cover rounded-lg mb-3 border border-[#E5D8C8]"
+              />
+            )}
+            <label className="cursor-pointer inline-block bg-[#C7A27A] hover:bg-[#B08968] text-white px-5 py-2 rounded-full font-medium">
+              Subir imagen
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  e.target.files?.[0] && handleImagenUpload(e.target.files[0])
+                }
+                className="hidden"
+              />
+            </label>
           </div>
 
           <div className="flex gap-4 mt-6">

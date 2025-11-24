@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Cita } from "../../utils/localDB";
+import { Cita } from "./helpers"; // 🔹 ahora viene de helpers (BD real)
 import { PALETTE } from "../../agendar/page";
 import { CalendarCheck, Edit3, XCircle, Eye } from "lucide-react";
 
@@ -14,6 +14,16 @@ interface Props {
   onReagendar?: (cita: Cita) => void;
 }
 
+const coloresEstado: Record<
+  Cita["estado"],
+  { color: string; texto: string }
+> = {
+  pendiente: { color: "#F7D774", texto: "#7D6608" },
+  confirmada: { color: "#A7D4F5", texto: "#0B3C78" },
+  atendida: { color: "#A9E4C4", texto: "#145A32" },
+  cancelada: { color: "#F8B6B6", texto: "#7E1F1F" },
+};
+
 export default function CitasAgendadasCard({
   cita,
   onVerDetalles,
@@ -21,16 +31,7 @@ export default function CitasAgendadasCard({
   onCancelar,
   onReagendar,
 }: Props) {
-  const coloresEstado = {
-    pendiente: { color: "#F7D774", texto: "#7D6608" },
-    confirmada: { color: "#A7D4F5", texto: "#0B3C78" },
-    atendida: { color: "#A9E4C4", texto: "#145A32" },
-    cancelada: { color: "#F8B6B6", texto: "#7E1F1F" },
-  };
-
-  const estilo =
-    coloresEstado[cita.estado as keyof typeof coloresEstado] ||
-    coloresEstado.pendiente;
+  const estilo = coloresEstado[cita.estado];
 
   return (
     <motion.div
@@ -44,7 +45,7 @@ export default function CitasAgendadasCard({
         boxShadow: "0px 6px 22px rgba(176,137,104,0.2)",
       }}
     >
-      {/* === Oreja de estado más grande y centrada === */}
+      {/* === Oreja de estado === */}
       <motion.div
         className="absolute top-0 right-0 w-0 h-0 border-t-[100px] border-l-[100px] border-l-transparent rounded-tr-2xl origin-top-right overflow-hidden"
         style={{
@@ -54,7 +55,6 @@ export default function CitasAgendadasCard({
         whileHover={{ rotateZ: 2, scale: 1.02 }}
         transition={{ type: "spring", stiffness: 200, damping: 15 }}
       >
-        {/* Texto centrado dentro de la oreja */}
         <span
           className="absolute text-[13px] font-bold uppercase tracking-wide select-none"
           style={{
@@ -93,10 +93,11 @@ export default function CitasAgendadasCard({
         </p>
       </div>
 
-      {/* === Botones simétricos === */}
+      {/* === Botones === */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 place-items-center">
         {cita.estado === "pendiente" && (
           <motion.button
+            type="button"
             whileHover={{
               scale: 1.06,
               boxShadow: "0 0 12px rgba(33,118,214,0.35)",
@@ -114,6 +115,7 @@ export default function CitasAgendadasCard({
 
         {cita.estado !== "atendida" && cita.estado !== "cancelada" && (
           <motion.button
+            type="button"
             whileHover={{
               scale: 1.06,
               boxShadow: "0 0 10px rgba(220,199,172,0.4)",
@@ -131,6 +133,7 @@ export default function CitasAgendadasCard({
         )}
 
         <motion.button
+          type="button"
           whileHover={{
             scale: 1.06,
             boxShadow: "0 0 12px rgba(176,137,104,0.4)",
@@ -147,6 +150,7 @@ export default function CitasAgendadasCard({
 
         {cita.estado !== "cancelada" && cita.estado !== "atendida" && (
           <motion.button
+            type="button"
             whileHover={{
               scale: 1.06,
               boxShadow: "0 0 12px rgba(255,107,107,0.3)",

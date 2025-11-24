@@ -32,6 +32,65 @@ router.get("/", async (req, res) => {
 });
 
 /**
+ * 🔥 GET /citas/usuario/:userId
+ * Devuelve todas las citas asignadas a un usuario específico
+ */
+router.get("/usuario/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        ok: false,
+        error: "El parámetro :userId es obligatorio"
+      });
+    }
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        id,
+        userId,
+        nombres,
+        apellidos,
+        telefono,
+        correo,
+        procedimiento,
+        tipoCita,
+        nota,
+        fecha,
+        hora,
+        metodoPago,
+        tipoPagoConsultorio,
+        tipoPagoOnline,
+        pagado,
+        monto,
+        montoPagado,
+        montoRestante,
+        creadaPor,
+        estado,
+        qrCita,
+        motivoCancelacion,
+        fechaCreacion,
+        fechaActualizacion
+      FROM citas
+      WHERE userId = ?
+      ORDER BY fechaCreacion DESC
+      `,
+      [userId]
+    );
+
+    return res.json({ ok: true, citas: rows });
+  } catch (err) {
+    console.error("Error GET /citas/usuario/:userId:", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Error al obtener citas del usuario"
+    });
+  }
+});
+
+/**
  * POST /citas
  * Crea una cita nueva
  */

@@ -4,14 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { PALETTE } from "./palette";
-import { createUser, type User } from "../utils/localDB";
 import type { RegisterFormData } from "./page";
 
-interface Props {
-  formData: RegisterFormData;
-}
+// API base
+const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
-// helper para calcular edad a partir de la fecha
+// helper calcular edad
 const calcularEdad = (date: Date | null): number => {
   if (!date) return 0;
   const hoy = new Date();
@@ -23,52 +21,69 @@ const calcularEdad = (date: Date | null): number => {
   return edad;
 };
 
+interface Props {
+  formData: RegisterFormData;
+}
+
 export default function Step3Exito({ formData }: Props) {
   const router = useRouter();
 
-  // Guardar el usuario en localDB al montar el componente
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    try {
-      const antecedentesTxt = (formData.antecedentes || []).join(", ");
-      const alergiasTxt = (formData.alergias || []).join(", ");
-      const medicamentosTxt = (formData.medicamentos || []).join(", ");
+    const registrarUsuario = async () => {
+      try {
+        const antecedentesTxt = (formData.antecedentes || []).join(", ");
+        const alergiasTxt = (formData.alergias || []).join(", ");
+        const medicamentosTxt = (formData.medicamentos || []).join(", ");
 
-      const edadNumber =
-        formData.fechaNacimiento != null
-          ? calcularEdad(formData.fechaNacimiento)
-          : Number(formData.edad) || 0;
+        const edadNumber =
+          formData.fechaNacimiento != null
+            ? calcularEdad(formData.fechaNacimiento)
+            : Number(formData.edad) || 0;
 
-      // mapear sexo a tipo User["genero"]
-      const generoMapped: User["genero"] =
-        formData.sexo === "Masculino" || formData.sexo === "Femenino"
-          ? formData.sexo
-          : "Otro";
+        // === Crear usuario en la BD real ===
+        const res = await fetch(`${API}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            nombres: formData.nombres.trim(),
+            apellidos: formData.apellidos.trim(),
+            email: formData.email.trim(),
+            password: formData.password, // ❗ en backend se guarda (sin hash, temporal)
+            telefono: formData.telefono?.trim() || null,
+            edad: edadNumber,
+            genero: formData.sexo ?? "Otro",
 
-      createUser({
-        nombres: formData.nombres.trim(),
-        apellidos: formData.apellidos.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        telefono: formData.telefono?.trim() || "",
-        edad: edadNumber,
-        genero: generoMapped,
-        antecedentes: antecedentesTxt,
-        antecedentesDescripcion:
-          formData.antecedentesDescripcion || "",
-        alergias: alergiasTxt,
-        alergiasDescripcion: formData.alergiasDescripcion || "",
-        medicamentos: medicamentosTxt,
-        medicamentosDescripcion:
-          formData.medicamentosDescripcion || "",
-        // photo se genera con avatar por defecto en localDB
-      });
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn("Error creando usuario:", e);
-    }
-    // solo al montar
+            antecedentes: antecedentesTxt || null,
+            antecedentesDescripcion: formData.antecedentesDescripcion || null,
+
+            alergias: alergiasTxt || null,
+            alergiasDescripcion: formData.alergiasDescripcion || null,
+
+            medicamentos: medicamentosTxt || null,
+            medicamentosDescripcion: formData.medicamentosDescripcion || null,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          console.warn("⚠️ Error guardando usuario:", data.error);
+          return;
+        }
+
+        // Guardar login automático en el navegador
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+      } catch (err) {
+        console.error("Error creando usuario:", err);
+      }
+    };
+
+    registrarUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

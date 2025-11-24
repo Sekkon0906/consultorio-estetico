@@ -157,7 +157,7 @@ export default function Step2DatosMedicos({
     const e: Record<string, string> = {};
     if (!formData.fechaNacimiento) e.fechaNacimiento = "Selecciona tu fecha";
     if (!formData.sexo) e.sexo = "Selecciona tu sexo";
-    if (!formData.genero) e.genero = "Selecciona tu género";
+    // ⚠️ ya NO obligamos campo genero; es opcional para la BD real
     if (!formData.antecedentes?.length)
       e.antecedentes = "Campo obligatorio";
     if (!formData.alergias?.length) e.alergias = "Campo obligatorio";
@@ -294,13 +294,13 @@ export default function Step2DatosMedicos({
         )}
       </div>
 
-      {/* Género / identidad */}
+      {/* Género / identidad (OPCIONAL) */}
       <div className="mb-3 text-start">
         <label
           className="form-label fw-semibold"
           style={{ color: PALETTE.text }}
         >
-          Género / identidad
+          Género / identidad <span className="fw-normal">(opcional)</span>
         </label>
         <Select<MedicalOption, false>
           options={[

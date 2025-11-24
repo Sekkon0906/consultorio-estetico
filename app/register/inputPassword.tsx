@@ -2,6 +2,16 @@
 
 import React from "react";
 
+interface Props {
+  label: string;
+  value: string;
+  setValue: (v: string) => void;
+  show: boolean;
+  setShow: (b: boolean) => void;
+  error?: string; // 👈 ahora solo string o undefined
+  palette: { main: string; text: string; surface: string; border: string };
+}
+
 export default function InputPassword({
   label,
   value,
@@ -10,15 +20,7 @@ export default function InputPassword({
   setShow,
   error,
   palette,
-}: {
-  label: string;
-  value: string;
-  setValue: (v: string) => void;
-  show: boolean;
-  setShow: (b: boolean) => void;
-  error?: string | false;
-  palette: { main: string; text: string; surface: string; border: string };
-}) {
+}: Props) {
   return (
     <div className="mb-3 text-start">
       <label
@@ -27,23 +29,30 @@ export default function InputPassword({
       >
         {label}
       </label>
-      <div className="pwd-input-wrapper" style={{ position: "relative" }}>
+
+      <div style={{ position: "relative" }}>
         <input
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className={`form-control rounded-3 shadow-sm ${error ? "is-invalid" : ""}`}
+          placeholder={
+            label === "Contraseña"
+              ? "Mínimo 8 caracteres"
+              : "Repite tu contraseña"
+          }
+          autoComplete="new-password"
           style={{
             paddingRight: "44px",
             borderColor: palette.border,
             backgroundColor: palette.surface,
           }}
-          placeholder={label === "Contraseña" ? "Mínimo 8 caracteres" : "Repite tu contraseña"}
         />
+
+        {/* 👁 ícono para mostrar/ocultar */}
         <div
           role="button"
           aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
-          className="pwd-eye"
           onClick={() => setShow(!show)}
           style={{
             position: "absolute",
@@ -64,17 +73,12 @@ export default function InputPassword({
                 stroke={palette.main}
                 strokeWidth="1.6"
               />
-              <circle
-                cx="12"
-                cy="12"
-                r="3"
-                stroke={palette.main}
-                strokeWidth="1.6"
-              />
+              <circle cx="12" cy="12" r="3" stroke={palette.main} strokeWidth="1.6" />
             </svg>
           )}
         </div>
       </div>
+
       {error && <div className="invalid-feedback">{error}</div>}
     </div>
   );

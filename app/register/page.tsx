@@ -19,7 +19,7 @@ export interface RegisterFormData {
   confirm: string;
 
   // Información derivada de fecha
-  edad: string; // luego la convertimos a number
+  edad: string; // luego la convertimos a number en Step3Exito
 
   // Paso 2
   fechaNacimiento: Date | null;
@@ -38,7 +38,7 @@ type Direction = 1 | -1;
 function RegisterPageContent() {
   const searchParams = useSearchParams();
 
-  // Datos prellenados desde login con Google
+  // Datos prellenados desde login con Google (si el usuario viene de allí)
   const pre_email = searchParams.get("email") ?? "";
   const pre_nombres = searchParams.get("nombres") ?? "";
   const pre_apellidos = searchParams.get("apellidos") ?? "";
@@ -178,7 +178,7 @@ function RegisterPageContent() {
                     ? "Regístrate para agendar tus citas de forma más rápida."
                     : step === 2
                     ? "Completa tu información médica básica."
-                    : "Cuenta creada correctamente."}
+                    : "Estamos creando tu cuenta en el sistema."}
                 </p>
 
                 {err && (
@@ -245,6 +245,7 @@ function RegisterPageContent() {
                         exit="exit"
                         transition={{ duration: 0.45 }}
                       >
+                        {/* Aquí Step3Exito hace el POST a /auth/register */}
                         <Step3Exito formData={formData} />
                       </motion.div>
                     )}

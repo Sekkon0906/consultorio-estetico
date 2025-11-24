@@ -45,7 +45,7 @@ export default function Step1DatosPersonales({
       e.email = "El correo electrónico no tiene un formato válido.";
     }
 
-    // Teléfono colombiano o formato internacional (+57 3XXXXXXXXX)
+    // Teléfono colombiano o internacional sencillo
     if (!/^(\+?\d{1,3})?\s?3\d{9}$/.test(formData.telefono || "")) {
       e.telefono = "El número de teléfono debe tener 10 dígitos válidos.";
     }
@@ -82,7 +82,7 @@ export default function Step1DatosPersonales({
           label="Nombres"
           value={formData.nombres || ""}
           setValue={(v) => setFormData((prev) => ({ ...prev, nombres: v }))}
-          error={touched && errors.nombres}
+          error={touched ? errors.nombres : undefined}
           palette={PALETTE}
         />
         {touched && errors.nombres && (
@@ -96,7 +96,7 @@ export default function Step1DatosPersonales({
           label="Apellidos"
           value={formData.apellidos || ""}
           setValue={(v) => setFormData((prev) => ({ ...prev, apellidos: v }))}
-          error={touched && errors.apellidos}
+          error={touched ? errors.apellidos : undefined}
           palette={PALETTE}
         />
         {touched && errors.apellidos && (
@@ -111,7 +111,7 @@ export default function Step1DatosPersonales({
           type="email"
           value={formData.email || ""}
           setValue={(v) => setFormData((prev) => ({ ...prev, email: v }))}
-          error={touched && errors.email}
+          error={touched ? errors.email : undefined}
           palette={PALETTE}
         />
         {touched && errors.email && (
@@ -125,7 +125,7 @@ export default function Step1DatosPersonales({
           label="Teléfono"
           value={formData.telefono || ""}
           setValue={(v) => setFormData((prev) => ({ ...prev, telefono: v }))}
-          error={touched && errors.telefono}
+          error={touched ? errors.telefono : undefined}
           palette={PALETTE}
         />
         {touched && errors.telefono && (
@@ -141,7 +141,7 @@ export default function Step1DatosPersonales({
           setValue={(v) => setFormData((prev) => ({ ...prev, password: v }))}
           show={showPass}
           setShow={setShowPass}
-          error={touched && errors.password}
+          error={touched ? errors.password : undefined}
           palette={PALETTE}
         />
         {touched && errors.password && (
@@ -157,7 +157,7 @@ export default function Step1DatosPersonales({
           setValue={(v) => setFormData((prev) => ({ ...prev, confirm: v }))}
           show={showConfirm}
           setShow={setShowConfirm}
-          error={touched && errors.confirm}
+          error={touched ? errors.confirm : undefined}
           palette={PALETTE}
         />
         {touched && errors.confirm && (

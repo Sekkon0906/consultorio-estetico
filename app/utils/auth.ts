@@ -1,13 +1,8 @@
 // utils/auth.ts
 "use client";
 
-import { auth } from "./firebaseClient";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  User as FirebaseUser,
-} from "firebase/auth";
+// YA NO usamos auth de Firebase para email+password.
+// Todo el login/registro con correo va contra la API propia.
 
 // Importamos el tipo de dominio y lo re-exportamos para no romper imports antiguos
 import type { SessionUser as DomainSessionUser } from "../types/domain";
@@ -172,31 +167,7 @@ export function updateCurrentUser(data: Partial<SessionUser>) {
 }
 
 /* ============================================================
-   HELPER: sincronizar Firebase ↔ backend MySQL
-   (usa /auth/google, que sirve para cualquier idToken)
-   ============================================================ */
-
-async function syncWithBackend(firebaseUser: FirebaseUser): Promise<SessionUser> {
-  const idToken = await firebaseUser.getIdToken();
-
-  const resp = await fetch(`${API_BASE}/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-
-  const data = await resp.json();
-
-  if (!resp.ok || !data.ok) {
-    console.error("Respuesta /auth/google:", data);
-    throw new Error(data.error || "No se pudo sincronizar el usuario.");
-  }
-
-  return data.user as SessionUser;
-}
-
-/* ============================================================
-   LOGIN CON EMAIL Y CONTRASEÑA (Firebase + backend)
+   LOGIN CON EMAIL Y CONTRASEÑA  (API propia, NO Firebase)
    ============================================================ */
 
 export async function loginUser(
@@ -205,69 +176,102 @@ export async function loginUser(
   remember = false
 ): Promise<{ ok: boolean; error?: string; user?: SessionUser }> {
   try {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const resp = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-    const sessionUser = await syncWithBackend(cred.user);
+    const data = await resp.json();
+
+    if (!resp.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || "No se pudo iniciar sesión.",
+      };
+    }
+
+    const sessionUser = data.user as SessionUser;
 
     setCurrentUser(sessionUser);
     if (remember) saveRememberedUser(sessionUser);
     showWelcomeToast(sessionUser.nombres);
 
     return { ok: true, user: sessionUser };
-  } catch (err: unknown) {
-    console.error("Error loginUser:", err);
-
-    const errorMessage =
-      err instanceof Error ? err.message : "No se pudo iniciar sesión.";
-
+  } catch (err) {
+    console.error("Error loginUser (frontend):", err);
     return {
       ok: false,
-      error: errorMessage,
+      error: "Error de conexión al iniciar sesión.",
     };
   }
 }
 
 /* ============================================================
-   REGISTRO CON EMAIL Y CONTRASEÑA (Firebase + backend)
+   REGISTRO CON EMAIL Y CONTRASEÑA (API propia, NO Firebase)
    ============================================================ */
 
 export async function registerUser(
   nombres: string,
   apellidos: string,
   email: string,
-  password: string
+  password: string,
+  extra?: {
+    telefono?: string;
+    edad?: number;
+    genero?: string;
+    antecedentes?: string;
+    antecedentesDescripcion?: string;
+    alergias?: string;
+    alergiasDescripcion?: string;
+    medicamentos?: string;
+    medicamentosDescripcion?: string;
+  }
 ): Promise<{ ok: boolean; error?: string; user?: SessionUser }> {
   try {
-    // 1) Crear cuenta en Firebase
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const payload = {
+      nombres,
+      apellidos,
+      email,
+      password,
+      telefono: extra?.telefono ?? null,
+      edad: extra?.edad ?? null,
+      genero: extra?.genero ?? null,
+      antecedentes: extra?.antecedentes ?? null,
+      antecedentesDescripcion: extra?.antecedentesDescripcion ?? null,
+      alergias: extra?.alergias ?? null,
+      alergiasDescripcion: extra?.alergiasDescripcion ?? null,
+      medicamentos: extra?.medicamentos ?? null,
+      medicamentosDescripcion: extra?.medicamentosDescripcion ?? null,
+    };
 
-    // 2) Guardar nombre completo en Firebase (para que llegue como displayName)
-    try {
-      await updateProfile(cred.user, {
-        displayName: `${nombres} ${apellidos}`.trim(),
-      });
-    } catch (e) {
-      console.warn("No se pudo actualizar displayName en Firebase:", e);
+    const resp = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok || !data.ok) {
+      return {
+        ok: false,
+        error: data.error || "No se pudo registrar el usuario.",
+      };
     }
 
-    // 3) Sincronizar con backend (crea fila en 'usuarios' si no existe)
-    const sessionUser = await syncWithBackend(cred.user);
+    const sessionUser = data.user as SessionUser;
 
-    // 4) Guardar en sesión local
     setCurrentUser(sessionUser);
     saveRememberedUser(sessionUser);
     showWelcomeToast(sessionUser.nombres);
 
     return { ok: true, user: sessionUser };
-  } catch (err: unknown) {
-    console.error("Error registerUser:", err);
-
-    const errorMessage =
-      err instanceof Error ? err.message : "No se pudo registrar el usuario.";
-
+  } catch (err) {
+    console.error("Error registerUser (frontend):", err);
     return {
       ok: false,
-      error: errorMessage,
+      error: "Error de conexión al registrar usuario.",
     };
   }
 }

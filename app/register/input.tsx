@@ -7,7 +7,7 @@ interface Props {
   type?: string;
   value: string;
   setValue: (v: string) => void;
-  error?: string | false;
+  error?: string; // <- ahora solo string (o undefined)
   palette: {
     main: string;
     text: string;
@@ -15,6 +15,8 @@ interface Props {
     border: string;
     muted?: string;
   };
+  name?: string;
+  placeholder?: string;
 }
 
 export default function Input({
@@ -24,7 +26,18 @@ export default function Input({
   setValue,
   error,
   palette,
+  name,
+  placeholder,
 }: Props) {
+  // placeholder por defecto según tipo
+  const finalPlaceholder =
+    placeholder ??
+    (type === "email"
+      ? "tucorreo@gmail.com"
+      : type === "tel"
+      ? "3001234567"
+      : "");
+
   return (
     <div className="mb-3 text-start">
       <label
@@ -34,15 +47,19 @@ export default function Input({
         {label}
       </label>
       <input
+        name={name}
         type={type}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className={`form-control rounded-3 shadow-sm ${error ? "is-invalid" : ""}`}
-        placeholder={type === "email" ? "tucorreo@gmail.com" : undefined}
+        className={`form-control rounded-3 shadow-sm ${
+          error ? "is-invalid" : ""
+        }`}
+        placeholder={finalPlaceholder}
         style={{
           borderColor: palette.border,
           backgroundColor: palette.surface,
         }}
+        autoComplete={type === "password" ? "new-password" : "on"}
       />
       {error && <div className="invalid-feedback">{error}</div>}
     </div>

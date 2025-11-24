@@ -62,25 +62,26 @@ export default function AgendarPago({
   const [brilloActivo, setBrilloActivo] = useState(false);
   const [error, setError] = useState(false);
 
-  const opciones: Array<{
-    tipo: MetodoPago;
-    icono: JSX.Element;
-    titulo: string;
-    descripcion: string;
-  }> = [
-    {
-      tipo: "Consultorio",
-      icono: <Wallet size={26} />,
-      titulo: "Pagar en consultorio",
-      descripcion: "Podrás pagar tu cita en efectivo o tarjeta al asistir.",
-    },
-    {
-      tipo: "Online",
-      icono: <Globe size={26} />,
-      titulo: "Pago en línea",
-      descripcion: "Realiza tu pago seguro vía PayU o PSE antes de asistir.",
-    },
-  ];
+const opciones: {
+  tipo: MetodoPago;
+  icono: React.ReactNode;
+  titulo: string;
+  descripcion: string;
+}[] = [
+  {
+    tipo: "Consultorio",
+    icono: <Wallet size={26} />,
+    titulo: "Pagar en consultorio",
+    descripcion: "Podrás pagar tu cita en efectivo o tarjeta al asistir.",
+  },
+  {
+    tipo: "Online",
+    icono: <Globe size={26} />,
+    titulo: "Pago en línea",
+    descripcion: "Realiza tu pago seguro vía PayU o PSE antes de asistir.",
+  },
+];
+
 
   const pagoValido: boolean =
     (metodoPago === "Consultorio" &&

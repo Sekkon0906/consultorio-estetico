@@ -126,31 +126,31 @@ function AgendarPageContent() {
     setStep(2);
   };
 
-  // === Paso 2 → 3: armar objeto de cita sin pagos ===
-  const handleConfirmarDatos = () => {
-    if (!fecha || !usuario) return;
+// Paso 2 → 3: armar objeto de cita sin pagos
+const handleConfirmarDatos = (): void => {
+  if (!fecha || !usuario) return;
 
-    const fechaISO = fecha.toISOString().slice(0, 10);
-
-    const nuevaCita: CitaSinPagos = {
-      userId: usuario.id,
-      nombres: formData.nombre,
-      apellidos: usuario.apellidos,
-      telefono: formData.telefono,
-      correo: formData.correo,
-      procedimiento: formData.procedimiento,
-      nota: formData.nota ?? "",
-      tipoCita: "valoracion",
-      fecha: fechaISO,
-      hora,
-      pagado: false,
-      creadaPor: "usuario",
-      fechaCreacion: new Date().toISOString(),
-    };
-
-    setCitaDraft(nuevaCita);
-    setStep(3);
+  const nuevaCita: CitaSinPagos = {
+    userId: usuario.id,
+    nombres: formData.nombre,
+    apellidos: usuario.apellidos,
+    telefono: formData.telefono,
+    correo: formData.correo,
+    procedimiento: formData.procedimiento,
+    nota: formData.nota,
+    tipoCita: "valoracion",
+    // mejor mandar solo YYYY-MM-DD porque en la BD es DATE
+    fecha: fecha.toISOString().slice(0, 10),
+    hora,
+    pagado: false,
+    creadaPor: "usuario",
+    // 👈 nada de fechaCreacion aquí, la pone el backend
   };
+
+  setCitaDraft(nuevaCita);   // o setCitaConfirmada, según tu estado
+  setStep(3);
+};
+
 
   return (
     <main

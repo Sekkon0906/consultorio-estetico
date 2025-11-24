@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Cita } from "../utils/localDB";
 import QRCode from "react-qr-code";
 import { Clock, CheckCircle2, FileText } from "lucide-react";
+import type { Cita, EstadoCita } from "../types/domain";
+import type { ReactNode } from "react";
 
 interface Props {
   cita: Cita;
@@ -11,32 +12,27 @@ interface Props {
   mostrarQR?: boolean;
 }
 
-export default function TarjetaCita({
-  cita,
-  modo = "confirmacion",
-  mostrarQR = false,
-}: Props) {
-  // ====== FORMATEADORES ======
-  const fmtHoraHumana = (hhmm: string) => {
-    if (!hhmm) return "Hora no válida";
+// ====== FORMATEADORES ======
+const fmtHoraHumana = (hhmm: string): string => {
+  if (!hhmm) return "Hora no válida";
 
-    // limpiar cualquier AM/PM que venga del backend o del input
-    const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
-
-    const [hStr, mStr] = limpio.split(":");
-    let h = Number(hStr);
-    const suf = h >= 12 ? "p.m." : "a.m.";
-    if (h === 0) h = 12;
-    if (h > 12) h -= 12;
-
-    return `${h}:${mStr} ${suf}`;
-  };
-
-const fmtHoraMilitar = (hhmm: string) => {
-  if (!hhmm) return "--:--";
+  // limpiar cualquier AM/PM que venga del backend o del input
   const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
 
-  const [hStr, mStr] = limpio.split(":"); // ✅ ahora const
+  const [hStr, mStr] = limpio.split(":");
+  let h = Number(hStr);
+  const suf = h >= 12 ? "p.m." : "a.m.";
+  if (h === 0) h = 12;
+  if (h > 12) h -= 12;
+
+  return `${h}:${mStr} ${suf}`;
+};
+
+const fmtHoraMilitar = (hhmm: string): string => {
+  if (!hhmm) return "--:--";
+
+  const limpio = hhmm.replace(/(a\.?m\.?|p\.?m\.?)/gi, "").trim();
+  const [hStr, mStr] = limpio.split(":");
   let h = Number(hStr);
 
   if (/p\.?m\.?/i.test(hhmm) && h < 12) h += 12;
@@ -46,38 +42,42 @@ const fmtHoraMilitar = (hhmm: string) => {
   return `${hMil}:${mStr}`;
 };
 
+const fmtDiaHumano = (date: Date): string => {
+  const dias = [
+    "domingo",
+    "lunes",
+    "martes",
+    "miércoles",
+    "jueves",
+    "viernes",
+    "sábado",
+  ];
+  return dias[date.getDay()];
+};
 
-  const fmtDiaHumano = (date: Date) => {
-    const dias = [
-      "domingo",
-      "lunes",
-      "martes",
-      "miércoles",
-      "jueves",
-      "viernes",
-      "sábado",
-    ];
-    return dias[date.getDay()];
-  };
+const fmtFechaHumana = (date: Date): string => {
+  const meses = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+  ];
+  return `${date.getDate()} de ${meses[date.getMonth()]}`;
+};
 
-  const fmtFechaHumana = (date: Date) => {
-    const meses = [
-      "enero",
-      "febrero",
-      "marzo",
-      "abril",
-      "mayo",
-      "junio",
-      "julio",
-      "agosto",
-      "septiembre",
-      "octubre",
-      "noviembre",
-      "diciembre",
-    ];
-    return `${date.getDate()} de ${meses[date.getMonth()]}`;
-  };
-
+export default function TarjetaCita({
+  cita,
+  modo = "confirmacion",
+  mostrarQR = false,
+}: Props) {
   const fechaObj = new Date(cita.fecha);
   const diaTxt = fmtDiaHumano(fechaObj);
   const fechaTxt = fmtFechaHumana(fechaObj);
@@ -86,14 +86,25 @@ const fmtHoraMilitar = (hhmm: string) => {
 
   const numeroCita = String(cita.id).padStart(5, "0");
 
-  const metodoPagoTxt =
-    cita.metodoPago === "Consultorio"
-      ? `Pago en consultorio (${cita.tipoPagoConsultorio || "sin especificar"})`
-      : `Pago en línea (${cita.tipoPagoOnline || "sin especificar"})`;
+  let metodoPagoTxt = "Sin información de método de pago";
+  if (cita.metodoPago === "Consultorio") {
+    metodoPagoTxt = `Pago en consultorio (${
+      cita.tipoPagoConsultorio ?? "sin especificar"
+    })`;
+  } else if (cita.metodoPago === "Online") {
+    metodoPagoTxt = `Pago en línea (${cita.tipoPagoOnline ?? "sin especificar"})`;
+  }
 
   // === DETERMINAR PROGRESO ===
-  const estados = ["pendiente", "confirmada", "atendida"];
-  const progreso = estados.indexOf(cita.estado || "pendiente") + 1;
+  const estados: EstadoCita[] = ["pendiente", "confirmada", "atendida"];
+  const idx = estados.indexOf(cita.estado);
+  const progreso = idx === -1 ? 1 : idx + 1;
+
+  const pasos: { label: string; icon: ReactNode }[] = [
+    { label: "Cita pendiente", icon: <Clock size={18} /> },
+    { label: "Cita confirmada", icon: <CheckCircle2 size={18} /> },
+    { label: "Cita atendida", icon: <FileText size={18} /> },
+  ];
 
   return (
     <motion.div
@@ -109,7 +120,7 @@ const fmtHoraMilitar = (hhmm: string) => {
 
       {/* === BARRA DE PROGRESO === */}
       <div className="relative mb-6">
-        <div className="absolute top-1/2 left-0 w-full h-[3px] bg-[#E5D8C8] -translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-0 w-full h-[3px] bg-[#E5D8C8] -translate-y-1/2" />
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${(progreso - 1) * 50}%` }}
@@ -118,14 +129,10 @@ const fmtHoraMilitar = (hhmm: string) => {
         />
 
         <div className="relative flex justify-between items-center">
-          {[
-            { label: "Cita pendiente", icon: <Clock size={18} /> },
-            { label: "Cita confirmada", icon: <CheckCircle2 size={18} /> },
-            { label: "Cita atendida", icon: <FileText size={18} /> },
-          ].map((step, i) => {
+          {pasos.map((step, i) => {
             const activo = i < progreso;
             return (
-              <div key={i} className="flex flex-col items-center w-1/3">
+              <div key={step.label} className="flex flex-col items-center w-1/3">
                 <motion.div
                   initial={{ scale: 0.8 }}
                   animate={{ scale: activo ? 1 : 0.9 }}
@@ -166,7 +173,9 @@ const fmtHoraMilitar = (hhmm: string) => {
         </p>
         <p>
           <b>Hora:</b> {horaNormal}{" "}
-          <span className="text-[#A78A75] text-sm">(formato 24h: {horaMilitar})</span>
+          <span className="text-[#A78A75] text-sm">
+            (formato 24h: {horaMilitar})
+          </span>
         </p>
         <p>
           <b>Teléfono:</b> {cita.telefono}
@@ -177,6 +186,11 @@ const fmtHoraMilitar = (hhmm: string) => {
         <p>
           <b>Método de pago:</b> {metodoPagoTxt}
         </p>
+        {cita.nota ? (
+          <p>
+            <b>Nota:</b> {cita.nota}
+          </p>
+        ) : null}
       </div>
 
       <hr className="my-4 border-[#E9DED2]" />
@@ -194,7 +208,10 @@ const fmtHoraMilitar = (hhmm: string) => {
       {mostrarQR && !cita.pagado && (
         <div className="mt-6 flex flex-col items-center">
           <div className="w-28 h-28 border border-[#E9DED2] bg-[#FAF9F7] flex items-center justify-center rounded-lg">
-            <QRCode value={`Cita #${cita.id} - ${cita.nombres}`} size={120} />
+            <QRCode
+              value={`Cita #${cita.id} - ${cita.nombres} ${cita.apellidos}`}
+              size={120}
+            />
           </div>
         </div>
       )}

@@ -12,8 +12,7 @@ const app = express();
 // 🔹 Dominios permitidos (local + tus deploys de Vercel)
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://consultorio-estetico-bw657kmy0-santiagos-projects-29d8b051.vercel.app",
-  "https://consultorio-estetico-mfm611m2n-santiagos-projects-29d8b051.vercel.app" // el que se ve en tu captura
+ "https://consultorio-estetico.vercel.app", // el que se ve en tu captura
 ];
 
 // 🔹 Configuración global de CORS

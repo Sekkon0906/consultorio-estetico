@@ -2,11 +2,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
-import { handleGoogleSuccess } from "./GoogleHandler";
-import { getUsers, updateUserData, User } from "../utils/localDB";
-import { getCurrentUser, setCurrentUser, type SessionUser } from "../utils/auth";
+import { getUsers, updateUserData, type User } from "../utils/localDB";
+import {
+  getCurrentUser,
+  setCurrentUser,
+  type SessionUser,
+} from "../utils/auth";
 import { PALETTE } from "./palette2";
 
 type RecoverUser = User | SessionUser | null;
@@ -19,36 +21,89 @@ export default function RecoverForm({
   const router = useRouter();
   const [recoverStep, setRecoverStep] = useState<"verify" | "reset">("verify");
   const [recoverUser, setRecoverUser] = useState<RecoverUser>(null);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [verifyTouched, setVerifyTouched] = useState(false);
 
-  // Validaciones
+  // ========= VALIDACIONES =========
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
+
+    if (recoverStep === "verify") {
+      if (!email.trim()) {
+        e.email = "Ingresa tu correo electrónico";
+      } else if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+        e.email = "Correo no válido";
+      }
+    }
+
     if (recoverStep === "reset") {
       if (!password) e.password = "Ingresa una nueva contraseña";
       if (password !== confirm) e.confirm = "Las contraseñas no coinciden";
     }
+
     return e;
-  }, [password, confirm, recoverStep]);
+  }, [email, password, confirm, recoverStep]);
 
   const isValid = Object.keys(errors).length === 0;
 
-  // Guardar nueva contraseña
-  const handleResetPassword = (e: React.FormEvent) => {
+  // ========= PASO 1: VERIFICAR CORREO =========
+  const handleVerifyEmail = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setVerifyTouched(true);
+    setErr(null);
+
+    if (recoverStep !== "verify") return;
+
+    if (errors.email) {
+      setErr("Revisa el correo ingresado.");
+      return;
+    }
+
+    const normalized = email.trim().toLowerCase();
+
+    // 1) Intentar con usuarios de localDB
+    const users = getUsers();
+    const found = users.find(
+      (u) => u.email.toLowerCase() === normalized
+    );
+
+    if (!found) {
+      setErr("No existe un usuario registrado con ese correo.");
+      return;
+    }
+
+    // Guardamos usuario a recuperar (puede ser User o SessionUser)
+    setRecoverUser(found);
+    setRecoverStep("reset");
+
+    // Si ya tienes sesión iniciada con backend, la sincronizamos:
+    const current = getCurrentUser();
+    if (current && current.email.toLowerCase() === normalized) {
+      setRecoverUser(current);
+    }
+  };
+
+  // ========= PASO 2: GUARDAR NUEVA CONTRASEÑA =========
+  const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTouched(true);
+    setErr(null);
+
     if (!isValid) {
       setErr("Revisa los campos marcados.");
       return;
     }
 
     if (!recoverUser) {
-      setErr("No se detectó un usuario válido para restablecer la contraseña.");
+      setErr(
+        "No se detectó un usuario válido para restablecer la contraseña."
+      );
       return;
     }
 
@@ -62,7 +117,7 @@ export default function RecoverForm({
       return;
     }
 
-    // Actualizamos en tu “DB” local y sincronizamos sesión
+    // Actualizar en la “DB” local
     updateUserData({ password }, found.email);
     const updatedUser: User = { ...found, password };
     setCurrentUser(updatedUser);
@@ -78,35 +133,56 @@ export default function RecoverForm({
   return (
     <div>
       {recoverStep === "verify" ? (
-        <div className="text-center">
+        <form onSubmit={handleVerifyEmail} noValidate>
           <p
             className="text-muted mb-3"
             style={{ color: PALETTE.muted, fontSize: "0.95rem" }}
           >
-            Verifica tu identidad con tu cuenta de Google antes de restablecer
-            tu contraseña.
+            Ingresa el correo asociado a tu cuenta para verificar tu identidad
+            y poder restablecer tu contraseña.
           </p>
 
-          <GoogleLogin
-            onSuccess={async (cred) => {
-              await handleGoogleSuccess(cred, { router, setErr });
-              // Si el login fue OK, el handler ya guardó la sesión en localStorage:
-              const current = getCurrentUser();
-              if (!current) {
-                setErr("No se pudo obtener la sesión después del login.");
-                return;
-              }
-              setRecoverUser(current); // SessionUser o User
-              setRecoverStep("reset");
-            }}
-            onError={() =>
-              setErr("Error al autenticar con Google. Intenta nuevamente.")
-            }
-            shape="pill"
-            text="signin_with"
-          />
+          <div className="mb-3 text-start">
+            <label
+              className="form-label fw-semibold"
+              style={{ color: PALETTE.text }}
+            >
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              className={`form-control rounded-3 shadow-sm ${
+                verifyTouched && errors.email ? "is-invalid" : ""
+              }`}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tucorreo@dominio.com"
+              style={{
+                borderColor: PALETTE.border,
+                backgroundColor: PALETTE.surface,
+              }}
+            />
+            {verifyTouched && errors.email && (
+              <div className="invalid-feedback d-block">
+                {errors.email}
+              </div>
+            )}
+          </div>
 
-          <div className="mt-3">
+          <button
+            type="submit"
+            className="btn w-100 fw-semibold py-2 mb-3"
+            style={{
+              backgroundColor: PALETTE.main,
+              border: "none",
+              color: "white",
+              borderRadius: "50px",
+            }}
+          >
+            Verificar correo
+          </button>
+
+          <div className="mt-3 text-center">
             <button
               type="button"
               className="btn btn-outline-secondary rounded-pill"
@@ -119,7 +195,7 @@ export default function RecoverForm({
               Volver al inicio
             </button>
           </div>
-        </div>
+        </form>
       ) : (
         <form onSubmit={handleResetPassword} noValidate>
           <div className="mb-3 text-start">
@@ -197,7 +273,9 @@ export default function RecoverForm({
                 }}
               >
                 <i
-                  className={`fas ${showConfirm ? "fa-eye-slash" : "fa-eye"}`}
+                  className={`fas ${
+                    showConfirm ? "fa-eye-slash" : "fa-eye"
+                  }`}
                 ></i>
               </button>
             </div>

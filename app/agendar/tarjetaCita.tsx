@@ -6,6 +6,9 @@ import { Clock, CheckCircle2, FileText } from "lucide-react";
 import type { Cita, EstadoCita } from "../types/domain";
 import type { ReactNode } from "react";
 
+// 🔁 re-exportamos los tipos para que otros componentes puedan usarlos
+export type { Cita, EstadoCita };
+
 interface Props {
   cita: Cita;
   modo?: "confirmacion" | "lista" | "admin";

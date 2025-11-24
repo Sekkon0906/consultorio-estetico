@@ -9,19 +9,34 @@ const bloqueosHorasRoutes = require("./routes/bloqueosHoras");
 
 const app = express();
 
-// Dominios permitidos para CORS
+// 🔹 Dominios permitidos (local + tus deploys de Vercel)
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://consultorio-estetico-bw657kmy0-santiagos-projects-29d8b051.vercel.app"
+  "https://consultorio-estetico-bw657kmy0-santiagos-projects-29d8b051.vercel.app",
+  "https://consultorio-estetico-mfm611m2n-santiagos-projects-29d8b051.vercel.app" // el que se ve en tu captura
 ];
 
-// Configuración de CORS
+// 🔹 Configuración global de CORS
 app.use(
   cors({
-    origin: allowedOrigins,   // acepta cualquiera de esos orígenes
-    credentials: true,        // necesario si usas cookies / sesiones
+    origin: function (origin, callback) {
+      // Permitir herramientas sin origin (Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// 🔹 Preflight específico para /auth/google (POST)
+app.options("/auth/google", cors());
 
 app.use(express.json());
 

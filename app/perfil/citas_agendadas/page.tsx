@@ -2,30 +2,15 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import TarjetaCita from "../../agendar/tarjetaCita";
+import TarjetaCita, { Cita } from "../../agendar/tarjetaCita"; // 🟢 Se importa el tipo correcto
 import Link from "next/link";
 import FondoAnim from "@/components/FondoAnim";
 
-// ===== Tipos =====
+// ===== Tipos para filtros =====
 type FiltroTipo = "todas" | "valoracion" | "implementacion";
 type FiltroAutor = "todas" | "usuario" | "doctora";
 
-interface Cita {
-  id: number;
-  nombres: string;
-  apellidos: string;
-  correo: string;
-  telefono: string;
-  procedimiento: string;
-  fecha: string;
-  hora: string;
-  estado: string;
-  metodoPago: string;
-  tipoCita: string;
-  creadaPor: string;
-  fechaCreacion: string;
-}
-
+// ===== Tipo User =====
 interface User {
   id: number;
   nombres: string;
@@ -210,7 +195,7 @@ export default function CitasAgendadasPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
               >
-                <TarjetaCita cita={cita} modo="lista" />
+                <TarjetaCita cita={cita} modo="lista" /> {/* 🟢 Ahora acepta el tipo correcto */}
               </motion.div>
             ))}
           </motion.div>

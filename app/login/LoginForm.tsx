@@ -105,12 +105,14 @@ export default function LoginForm({ setErr }: Props) {
       } else {
         router.push("/");
       }
-    } catch (err: any) {
-      console.error("Error en onSubmit:", err);
-      setErr(err?.message || "Ocurrió un error al iniciar sesión.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: unknown) {
+  const message =
+    err instanceof Error ? err.message : "Ocurrió un error al iniciar sesión.";
+  console.error("Error en onSubmit:", err);
+  setErr(message);
+} finally {
+  setLoading(false);
+}
   };
 
   return (

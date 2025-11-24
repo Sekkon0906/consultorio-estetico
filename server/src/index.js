@@ -6,7 +6,7 @@ const testimoniosRoutes = require("./routes/testimonios");
 const citasRoutes = require("./routes/citas");
 const bloqueosHorasRoutes = require("./routes/bloqueosHoras");
 const app = express();
-app.use(cors({ origin: ["http://localhost:3000", "https://TU-APP.vercel.app"], credentials: true }));
+app.use(cors({ origin: ["http://localhost:3000", "https://consultorio-estetico.vercel.app/"], credentials: true }));
 app.use(express.json());
 
 app.use("/auth", authRoutes);

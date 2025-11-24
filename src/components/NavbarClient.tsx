@@ -6,13 +6,13 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+
 import {
   getCurrentUser,
   restoreRememberedSession,
   clearCurrentUser,
-  UserData, // si quieres usarlo más adelante
+  type SessionUser,
 } from "../../app/utils/auth";
-import type { User } from "../../app/utils/localDB";
 
 interface IndicatorState {
   left: number;
@@ -21,7 +21,7 @@ interface IndicatorState {
 
 export default function Navbar() {
   const pathname = usePathname() || "/";
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<SessionUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export default function Navbar() {
   useEffect(() => {
     const remembered = restoreRememberedSession();
     const user = remembered || getCurrentUser();
-    setCurrentUser(user);
+    setCurrentUser(user ?? null);
 
     if (user?.email) {
       const stored = localStorage.getItem(`photo_${user.email}`);
@@ -45,11 +45,13 @@ export default function Navbar() {
     }
 
     const handleAuthChange = () => {
-      const updated = getCurrentUser() || restoreRememberedSession();
+      const updated = getCurrentUser() || restoreRememberedSession() || null;
       setCurrentUser(updated);
       if (updated?.email) {
         const stored = localStorage.getItem(`photo_${updated.email}`);
         setUserPhoto(stored || updated.photo || null);
+      } else {
+        setUserPhoto(null);
       }
     };
 
@@ -62,23 +64,20 @@ export default function Navbar() {
   }, []);
 
   /* === MENÚ PRINCIPAL === */
-  const menuItems = useMemo(
-    () => {
-      const base: { label: string; href: string }[] = [
-        { label: "Inicio", href: "/" },
-        { label: "Dra. Vanessa Medina", href: "/doctora" },
-        { label: "Consultorio", href: "/consultorio" },
-        { label: "Procedimientos", href: "/procedimientos" },
-        { label: "Testimonios", href: "/testimonios" },
-        { label: "Agendar cita", href: "/agendar" },
-      ];
-      if (currentUser?.rol === "admin") {
-        base.push({ label: "Administrar", href: "/administrar" });
-      }
-      return base;
-    },
-    [currentUser?.rol]
-  );
+  const menuItems = useMemo(() => {
+    const base: { label: string; href: string }[] = [
+      { label: "Inicio", href: "/" },
+      { label: "Dra. Vanessa Medina", href: "/doctora" },
+      { label: "Consultorio", href: "/consultorio" },
+      { label: "Procedimientos", href: "/procedimientos" },
+      { label: "Testimonios", href: "/testimonios" },
+      { label: "Agendar cita", href: "/agendar" },
+    ];
+    if (currentUser?.rol === "admin") {
+      base.push({ label: "Administrar", href: "/administrar" });
+    }
+    return base;
+  }, [currentUser?.rol]);
 
   /* === INDICADOR ACTIVO === */
   const updateIndicatorTo = (el: HTMLLIElement | null) => {
@@ -104,7 +103,7 @@ export default function Navbar() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
     };
-  }, [pathname, menuItems]); // ← incluye menuItems para quitar el warning
+  }, [pathname, menuItems]);
 
   /* === LOGOUT === */
   const handleLogout = () => {

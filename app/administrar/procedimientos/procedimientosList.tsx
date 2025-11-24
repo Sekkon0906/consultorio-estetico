@@ -1,23 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  getProcedimientos,
-  addProcedimiento,
-  updateProcedimiento,
-  deleteProcedimiento,
+import { motion, AnimatePresence } from "framer-motion";
+import ModalGaleriaItem from "./modalGaleriaItem";
+
+// ✅ Tipos de dominio desde domain.ts
+import type {
   Procedimiento,
   CategoriaProcedimiento,
   MediaItem,
-} from "../../utils/localDB";
-import { motion, AnimatePresence } from "framer-motion";
-import ModalGaleriaItem from "./modalGaleriaItem";
+} from "../../types/domain";
+
+// ✅ Llamadas al backend
+import {
+  getProcedimientosApi,
+  createProcedimientoApi,
+  updateProcedimientoApi,
+  deleteProcedimientoApi,
+} from "../../services/procedimientosApi";
 
 export default function ProcedimientosList() {
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
   const [modo, setModo] = useState<"lista" | "crear" | "editar">("lista");
   const [actual, setActual] = useState<Procedimiento | null>(null);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     nombre: "",
@@ -30,81 +37,125 @@ export default function ProcedimientosList() {
     galeria: [] as MediaItem[],
   });
 
+  // ==========================
+  // Cargar procedimientos desde la API
+  // ==========================
+  const cargarProcedimientos = async () => {
+    try {
+      setLoading(true);
+      const data = await getProcedimientosApi();
+      setProcedimientos(data);
+    } catch (err) {
+      console.error("Error al cargar procedimientos:", err);
+      alert("No se pudieron cargar los procedimientos desde el servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setProcedimientos(getProcedimientos());
+    cargarProcedimientos();
   }, []);
 
-  // === Guardar ===
-  const handleGuardar = () => {
+  // ==========================
+  // Guardar (crear / editar)
+  // ==========================
+  const handleGuardar = async () => {
     if (!form.nombre.trim() || !form.desc.trim()) {
       alert("Por favor completa el nombre y la descripción.");
       return;
     }
 
-    const data: Omit<Procedimiento, "id"> = {
+    // payload que espera el backend (sin id ni galería)
+    const payload = {
       nombre: form.nombre,
       desc: form.desc,
-      precio: Number(form.precio) || 0,
+      precio: form.precio || "0", // precio es VARCHAR en BD
       imagen: form.imagen,
       categoria: form.categoria,
-      duracionMin: Number(form.duracionMin) || undefined,
+      duracionMin: form.duracionMin ? Number(form.duracionMin) : null,
       destacado: form.destacado,
-      galeria: form.galeria,
     };
 
-    if (modo === "crear") addProcedimiento(data);
-    else if (modo === "editar" && actual) updateProcedimiento(actual.id, data);
+    try {
+      if (modo === "crear") {
+        await createProcedimientoApi(payload as any);
+      } else if (modo === "editar" && actual) {
+        await updateProcedimientoApi(actual.id, payload as any);
+      }
 
-    setForm({
-      nombre: "",
-      desc: "",
-      precio: "",
-      imagen: "",
-      categoria: "Facial",
-      duracionMin: "",
-      destacado: false,
-      galeria: [],
-    });
-    setModo("lista");
-    setProcedimientos(getProcedimientos());
+      // limpiar formulario
+      setForm({
+        nombre: "",
+        desc: "",
+        precio: "",
+        imagen: "",
+        categoria: "Facial",
+        duracionMin: "",
+        destacado: false,
+        galeria: [],
+      });
+      setModo("lista");
+      setActual(null);
+
+      // recargar lista desde la BD
+      await cargarProcedimientos();
+    } catch (err) {
+      console.error("Error al guardar procedimiento:", err);
+      alert("Ocurrió un error al guardar el procedimiento.");
+    }
   };
 
-  // === Editar ===
+  // ==========================
+  // Editar
+  // ==========================
   const handleEditar = (p: Procedimiento) => {
     setActual(p);
     setForm({
       nombre: p.nombre,
       desc: p.desc,
-      precio: p.precio.toString(),
+      precio: p.precio?.toString() || "",
       imagen: p.imagen,
       categoria: p.categoria,
       duracionMin: p.duracionMin?.toString() || "",
-      destacado: p.destacado || false,
+      destacado: !!p.destacado,
       galeria: p.galeria || [],
     });
     setModo("editar");
   };
 
-  // === Eliminar procedimiento ===
-  const handleEliminar = (id: number) => {
-    if (confirm("¿Deseas eliminar este procedimiento?")) {
-      deleteProcedimiento(id);
-      setProcedimientos(getProcedimientos());
+  // ==========================
+  // Eliminar
+  // ==========================
+  const handleEliminar = async (id: number) => {
+    if (!confirm("¿Deseas eliminar este procedimiento?")) return;
+
+    try {
+      await deleteProcedimientoApi(id);
+      await cargarProcedimientos();
+    } catch (err) {
+      console.error("Error al eliminar procedimiento:", err);
+      alert("No se pudo eliminar el procedimiento.");
     }
   };
 
-  // === Manejo de imágenes ===
+  // ==========================
+  // Manejo de imágenes (principal)
+  // ==========================
   const handleImagenPrincipal = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => setForm({ ...form, imagen: e.target?.result as string });
+    reader.onload = (e) =>
+      setForm({ ...form, imagen: e.target?.result as string });
     reader.readAsDataURL(file);
   };
 
+  // ==========================
+  // Galería (solo front)
+  // ==========================
   const handleEliminarMedia = (id: string) => {
     setForm({ ...form, galeria: form.galeria.filter((m) => m.id !== id) });
   };
 
-  // === Guardar medio desde modal ===
   const handleSaveMedia = (item: MediaItem) => {
     setForm({ ...form, galeria: [...form.galeria, item] });
     setMostrarModal(false);
@@ -116,6 +167,12 @@ export default function ProcedimientosList() {
         Procedimientos
       </h2>
 
+      {loading && (
+        <p className="text-sm text-[#6E4F37] mb-3">
+          Cargando procedimientos...
+        </p>
+      )}
+
       <AnimatePresence>
         {modo !== "lista" && (
           <motion.div
@@ -126,7 +183,9 @@ export default function ProcedimientosList() {
             className="p-5 rounded-lg bg-[#FBF7F2] shadow-md mb-6"
           >
             <h3 className="text-lg font-medium mb-4 text-[#8B6A4B]">
-              {modo === "crear" ? "Agregar Procedimiento" : "Editar Procedimiento"}
+              {modo === "crear"
+                ? "Agregar Procedimiento"
+                : "Editar Procedimiento"}
             </h3>
 
             <input
@@ -145,17 +204,20 @@ export default function ProcedimientosList() {
             />
 
             <input
-              type="number"
+              type="text"
               value={form.precio}
               onChange={(e) => setForm({ ...form, precio: e.target.value })}
-              placeholder="Precio"
+              placeholder='Precio (ej: "180000" o "350.000 – 450.000")'
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
 
             <select
               value={form.categoria}
               onChange={(e) =>
-                setForm({ ...form, categoria: e.target.value as CategoriaProcedimiento })
+                setForm({
+                  ...form,
+                  categoria: e.target.value as CategoriaProcedimiento,
+                })
               }
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3 bg-white"
             >
@@ -200,7 +262,9 @@ export default function ProcedimientosList() {
               </label>
               <button
                 type="button"
-                onClick={() => setForm({ ...form, destacado: !form.destacado })}
+                onClick={() =>
+                  setForm({ ...form, destacado: !form.destacado })
+                }
                 className={`px-3 py-1 rounded-md font-medium ${
                   form.destacado
                     ? "bg-[#8B6A4B] text-white"
@@ -265,7 +329,10 @@ export default function ProcedimientosList() {
                 Guardar
               </button>
               <button
-                onClick={() => setModo("lista")}
+                onClick={() => {
+                  setModo("lista");
+                  setActual(null);
+                }}
                 className="border border-[#C7A27A] text-[#6E4F37] px-4 py-2 rounded hover:bg-[#F3E9E0]"
               >
                 Cancelar
@@ -279,7 +346,19 @@ export default function ProcedimientosList() {
       {modo === "lista" && (
         <div>
           <button
-            onClick={() => setModo("crear")}
+            onClick={() => {
+              setForm({
+                nombre: "",
+                desc: "",
+                precio: "",
+                imagen: "",
+                categoria: "Facial",
+                duracionMin: "",
+                destacado: false,
+                galeria: [],
+              });
+              setModo("crear");
+            }}
             className="mb-4 bg-[#8B6A4B] text-white px-4 py-2 rounded hover:bg-[#6E4F37]"
           >
             + Agregar Procedimiento
@@ -299,7 +378,8 @@ export default function ProcedimientosList() {
                   </h3>
                   <p className="text-[#6E5A49] mb-2">{p.desc}</p>
                   <p className="text-sm text-[#8B6A4B] font-medium mb-2">
-                    ${p.precio}
+                    {/* precio ya viene como string desde la BD */}
+                    {p.precio}
                   </p>
                   {p.imagen && (
                     <img

@@ -1,16 +1,24 @@
+// app/agendar/agendarCalendar.tsx  (o ruta equivalente)
 "use client";
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  getHorarioPorFecha,
-  getCitasByDay,
-  getBloqueosPorFecha,
-  User,
-} from "../utils/localDB";
 import { PALETTE } from "./page";
 
-const nombresMes = [
+import type {
+  HoraDisponible,
+  HorarioPorFecha,
+  Cita,
+  BloqueoHora,
+  SessionUser,
+} from "../types/domain";
+
+import {
+  getCitasByDayApi,
+  getBloqueosPorFechaApi,
+} from "../services/citasApi";
+
+const nombresMes: string[] = [
   "enero",
   "febrero",
   "marzo",
@@ -30,7 +38,46 @@ interface AgendarCalendarProps {
   hora: string;
   onFechaSelect: (v: Date | null) => void;
   onHoraSelect: (v: string) => void;
-  usuario: User | null;
+  usuario: SessionUser | null;
+}
+
+// =====================================================
+//  Horario base en front (igual idea que en localDB)
+//  - Aquí pongo un ejemplo de 8:00–12:00 y 14:00–18:00
+//    Lunes a Viernes. Si en tu localDB tienes otra lógica,
+//    puedes copiarla aquí respetando la firma.
+// =====================================================
+function buildHorarioPorFecha(fechaISO: string): HorarioPorFecha {
+  const fecha = new Date(fechaISO);
+  const diaSemana = fecha.getDay(); // 0=domingo, 6=sábado
+
+  // ejemplo: Lunes–Viernes, cada 30 min de 8:00–12:00 y 14:00–18:00
+  const slots: string[] = [];
+
+  const pushRango = (inicioHora: number, finHora: number): void => {
+    for (let h = inicioHora; h < finHora; h++) {
+      slots.push(`${h.toString().padStart(2, "0")}:00`);
+      slots.push(`${h.toString().padStart(2, "0")}:30`);
+    }
+  };
+
+  if (diaSemana >= 1 && diaSemana <= 5) {
+    pushRango(8, 12);
+    pushRango(14, 18);
+  } else if (diaSemana === 6) {
+    // sábado 8:00–12:00
+    pushRango(8, 12);
+  }
+
+  const horas: HoraDisponible[] = slots.map((h) => ({
+    hora: `${h} AM`, // si quieres mostrar "08:00 AM", puedes ajustar
+    disponible: true,
+  }));
+
+  return {
+    fecha: fechaISO,
+    horas,
+  };
 }
 
 export default function AgendarCalendar({
@@ -41,55 +88,67 @@ export default function AgendarCalendar({
   usuario,
 }: AgendarCalendarProps) {
   const hoy = new Date();
-  const [anio, setAnio] = useState(hoy.getFullYear());
-  const [mes, setMes] = useState(hoy.getMonth());
+  const [anio, setAnio] = useState<number>(hoy.getFullYear());
+  const [mes, setMes] = useState<number>(hoy.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
 
   // ======= Generar días del mes =======
-  const generarDias = () => {
+  const generarDias = (): (number | null)[] => {
     const primerDia = new Date(anio, mes, 1).getDay() || 7; // 0(domingo) -> 7
     const diasEnMes = new Date(anio, mes + 1, 0).getDate();
     const dias: (number | null)[] = [];
 
-    // huecos antes del día 1
-    for (let i = 1; i < primerDia; i++) dias.push(null);
-    // días reales
-    for (let d = 1; d <= diasEnMes; d++) dias.push(d);
+    for (let i = 1; i < primerDia; i += 1) dias.push(null);
+    for (let d = 1; d <= diasEnMes; d += 1) dias.push(d);
 
     return dias;
   };
 
-  // ======= Cargar horas disponibles =======
-  const cargarHoras = () => {
+  // ======= Cargar horas disponibles desde BD real =======
+  const cargarHoras = async (): Promise<void> => {
     if (!selectedDate) return;
 
     const fechaSel = new Date(selectedDate);
-    const fechaISO = fechaSel.toISOString().slice(0, 10);
+    const fechaISO = selectedDate; // ya viene en formato YYYY-MM-DD
 
-    const base = getHorarioPorFecha(fechaISO);
-    const bloqueos = getBloqueosPorFecha(fechaISO);
-    const citas = getCitasByDay(fechaISO);
+    // horario base calculado en el front (igual que antes)
+    const base: HorarioPorFecha = buildHorarioPorFecha(fechaISO);
 
-    // horas libres sin bloqueos y sin citas (excepto canceladas)
-    const libres = base
-      .filter(
-        (h) =>
-          h.disponible &&
-          !bloqueos.some((b) => b.hora === h.hora) &&
-          !citas.some((c) => c.hora === h.hora && c.estado !== "cancelada")
-      )
-      .map((h) => h.hora);
+    // datos reales desde backend
+    let bloqueos: BloqueoHora[] = [];
+    let citas: Cita[] = [];
+
+    try {
+      bloqueos = await getBloqueosPorFechaApi(fechaISO);
+      citas = await getCitasByDayApi(fechaISO);
+    } catch (err) {
+      console.error("Error cargando horas desde API:", err);
+    }
+
+    const libres: string[] = base.horas
+      .filter((hSlot: HoraDisponible) => {
+        const bloqueado = bloqueos.some(
+          (b) => b.hora === hSlot.hora
+        );
+        const ocupada = citas.some(
+          (c) => c.hora === hSlot.hora && c.estado !== "cancelada"
+        );
+        return hSlot.disponible && !bloqueado && !ocupada;
+      })
+      .map((hSlot) => hSlot.hora);
 
     const ahora = new Date();
     const esHoy = fechaSel.toDateString() === ahora.toDateString();
 
-    const filtradas = libres.filter((h) => {
+    const filtradas: string[] = libres.filter((hSlot) => {
       if (!esHoy) return true;
-      const [hh, mm] = h
-        .replace(/[^0-9:]/g, "")
-        .split(":")
-        .map((n) => Number(n));
+
+      const soloHora: string = hSlot.replace(/[^0-9:]/g, "");
+      const [hhStr, mmStr] = soloHora.split(":");
+      const hh = Number(hhStr);
+      const mm = Number(mmStr);
+
       const fechaHora = new Date();
       fechaHora.setHours(hh, mm, 0, 0);
       return fechaHora >= ahora;
@@ -98,21 +157,25 @@ export default function AgendarCalendar({
     setHorasDisponibles(filtradas);
   };
 
+  // Cargar horas cuando cambia la fecha seleccionada
   useEffect(() => {
-    cargarHoras();
+    void cargarHoras();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
-  // ======= Sincronización automática (cuando cambian citas/horario) =======
+  // Sincronizar cuando se emita el evento global de cambio de horario
   useEffect(() => {
-    const handler = () => cargarHoras();
+    const handler = (): void => {
+      void cargarHoras();
+    };
+
     window.addEventListener("horarioCambiado", handler);
     return () => window.removeEventListener("horarioCambiado", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   // ======= Seleccionar día =======
-  const handleDateClick = (d: number | null) => {
+  const handleDateClick = (d: number | null): void => {
     if (!d) return;
     const nuevaFecha = new Date(anio, mes, d);
     const fechaISO = nuevaFecha.toISOString().slice(0, 10);
@@ -124,7 +187,6 @@ export default function AgendarCalendar({
   // ======= Render =======
   return (
     <div className="flex flex-col items-center w-full">
-      {/* === FILA PRINCIPAL === */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -139,6 +201,7 @@ export default function AgendarCalendar({
           {/* CABECERA */}
           <div className="flex justify-between items-center mb-4 w-full">
             <button
+              type="button"
               onClick={() => {
                 if (mes === 0) {
                   setMes(11);
@@ -157,6 +220,7 @@ export default function AgendarCalendar({
             </span>
 
             <button
+              type="button"
               onClick={() => {
                 if (mes === 11) {
                   setMes(0);
@@ -195,11 +259,12 @@ export default function AgendarCalendar({
               const fechaBtn = new Date(anio, mes, d ?? 1);
               const esPasado =
                 fechaBtn <
-                new Date(new Date().setHours(0, 0, 0, 0)); // hoy 00:00
+                new Date(new Date().setHours(0, 0, 0, 0));
 
               return (
                 <motion.button
                   key={i}
+                  type="button"
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleDateClick(d)}
                   disabled={!d || esPasado}
@@ -257,6 +322,7 @@ export default function AgendarCalendar({
                 {horasDisponibles.map((hSlot) => (
                   <motion.button
                     key={hSlot}
+                    type="button"
                     layout
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}

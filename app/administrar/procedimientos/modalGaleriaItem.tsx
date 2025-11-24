@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MediaItem } from "../../utils/localDB";
+// ✅ Ahora usamos el tipo de dominio
+import type { MediaItem } from "../../types/domain";
 
 interface Props {
   show: boolean;
@@ -12,7 +13,13 @@ interface Props {
   item?: MediaItem;
 }
 
-export default function ModalGaleriaItem({ show, onClose, onSave, item, modo = "crear" }: Props) {
+export default function ModalGaleriaItem({
+  show,
+  onClose,
+  onSave,
+  item,
+  modo = "crear",
+}: Props) {
   const [tipo, setTipo] = useState<"imagen" | "video">(item?.tipo || "imagen");
   const [titulo, setTitulo] = useState(item?.titulo || "");
   const [descripcion, setDescripcion] = useState(item?.descripcion || "");
@@ -30,7 +37,8 @@ export default function ModalGaleriaItem({ show, onClose, onSave, item, modo = "
 
   const handleGuardar = () => {
     if (!titulo.trim()) return alert("Debe ingresar un título.");
-    if (tipo === "imagen" && !url) return alert("Debe subir una imagen o URL válida.");
+    if (tipo === "imagen" && !url)
+      return alert("Debe subir una imagen o URL válida.");
 
     const nuevo: MediaItem = {
       id: crypto.randomUUID(),

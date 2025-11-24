@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { ChangeEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
+// ✅ Tipos de dominio
+import type { Testimonio } from "../../types/domain";
+
+// ✅ Servicios que hablan con el backend
 import {
-  getTestimonios,
-  addTestimonio,
-  updateTestimonio,
-  deleteTestimonio,
-  Testimonio,
-} from "../../utils/localDB";
-import {
-  activarTestimonio,
-  desactivarTestimonio,
-  validarVideoURL,
-} from "./helpers";
+  getTestimoniosApi,
+  createTestimonioApi,
+  updateTestimonioApi,
+  deleteTestimonioApi,
+} from "../../services/testimoniosApi";
+
+// ✅ Helper solo para validar URL de video
+import { validarVideoURL } from "./helpers";
 
 export default function TestimoniosList() {
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
@@ -25,15 +28,34 @@ export default function TestimoniosList() {
     video: "",
     thumb: "",
   });
-  const [confirmEliminar, setConfirmEliminar] = useState<null | number>(null);
+  const [confirmEliminar, setConfirmEliminar] = useState<number | null>(null);
   const [fotoCargada, setFotoCargada] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // ============================================
+  // Cargar testimonios desde la API
+  // ============================================
+  const cargarTestimonios = async () => {
+    try {
+      setLoading(true);
+      const data = await getTestimoniosApi();
+      setTestimonios(data);
+    } catch (err) {
+      console.error("Error cargando testimonios:", err);
+      alert("Ocurrió un error al cargar los testimonios.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setTestimonios(getTestimonios());
+    void cargarTestimonios();
   }, []);
 
-  // === Cargar imagen de portada ===
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ============================================
+  // Cargar imagen de portada
+  // ============================================
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -44,36 +66,56 @@ export default function TestimoniosList() {
     reader.readAsDataURL(file);
   };
 
-  // === Guardar ===
-  const handleGuardar = () => {
+  // ============================================
+  // Guardar (crear / editar) en la BD
+  // ============================================
+  const handleGuardar = async () => {
     if (!form.nombre.trim() || !form.texto.trim()) {
       alert("Debes completar nombre y texto del testimonio");
       return;
     }
 
-    if (modo === "crear") {
-      addTestimonio({
-        nombre: form.nombre,
-        texto: form.texto,
-        video: form.video,
-        thumb: form.thumb,
-        activo: true,
-      });
-    } else if (modo === "editar" && actual) {
-      updateTestimonio(actual.id, {
-        nombre: form.nombre,
-        texto: form.texto,
-        video: form.video,
-        thumb: form.thumb,
-      });
-    }
+    try {
+      setLoading(true);
 
-    setForm({ nombre: "", texto: "", video: "", thumb: "" });
-    setFotoCargada(false);
-    setModo("lista");
-    setTestimonios(getTestimonios());
+      if (modo === "crear") {
+        // ➕ Crear en backend
+        const payload: Omit<Testimonio, "id" | "creadoEn"> = {
+          nombre: form.nombre,
+          texto: form.texto,
+          video: form.video,
+          thumb: form.thumb,
+          activo: true,
+          destacado: false,
+        };
+        await createTestimonioApi(payload);
+      } else if (modo === "editar" && actual) {
+        // 🔄 Actualizar en backend
+        await updateTestimonioApi(actual.id, {
+          nombre: form.nombre,
+          texto: form.texto,
+          video: form.video,
+          thumb: form.thumb,
+        });
+      }
+
+      // Limpiar formulario y recargar lista
+      setForm({ nombre: "", texto: "", video: "", thumb: "" });
+      setFotoCargada(false);
+      setModo("lista");
+      setActual(null);
+      await cargarTestimonios();
+    } catch (err) {
+      console.error("Error guardando testimonio:", err);
+      alert("Ocurrió un error al guardar el testimonio.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ============================================
+  // Editar
+  // ============================================
   const handleEditar = (t: Testimonio) => {
     setActual(t);
     setForm({
@@ -82,15 +124,47 @@ export default function TestimoniosList() {
       video: t.video,
       thumb: t.thumb || "",
     });
+    setFotoCargada(!!t.thumb);
     setModo("editar");
   };
 
-  const confirmarEliminar = (id: number) => setConfirmEliminar(id);
+  // ============================================
+  // Eliminar
+  // ============================================
+  const confirmarEliminarFn = (id: number) => setConfirmEliminar(id);
 
-  const handleEliminar = (id: number) => {
-    deleteTestimonio(id);
-    setTestimonios(getTestimonios());
-    setConfirmEliminar(null);
+  const handleEliminar = async (id: number) => {
+    try {
+      setLoading(true);
+      await deleteTestimonioApi(id);
+      setConfirmEliminar(null);
+      await cargarTestimonios();
+    } catch (err) {
+      console.error("Error eliminando testimonio:", err);
+      alert("Ocurrió un error al eliminar el testimonio.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ============================================
+  // Activar / desactivar (toggle activo)
+  // ============================================
+  const handleToggleActivo = async (testimonio: Testimonio) => {
+    try {
+      const nuevoEstado = !testimonio.activo;
+      await updateTestimonioApi(testimonio.id, { activo: nuevoEstado });
+
+      // Actualizamos en memoria sin volver a pedir todo (más fluido)
+      setTestimonios((prev) =>
+        prev.map((t) =>
+          t.id === testimonio.id ? { ...t, activo: nuevoEstado } : t
+        )
+      );
+    } catch (err) {
+      console.error("Error cambiando estado de testimonio:", err);
+      alert("No se pudo cambiar el estado del testimonio.");
+    }
   };
 
   return (
@@ -172,7 +246,7 @@ export default function TestimoniosList() {
                 <iframe
                   src={form.video}
                   className="rounded-lg w-full"
-                  height="250"
+                  height={250}
                   allowFullScreen
                 ></iframe>
               </div>
@@ -180,13 +254,19 @@ export default function TestimoniosList() {
 
             <div className="flex gap-3 mt-4">
               <button
-                onClick={handleGuardar}
-                className="bg-[#7a563a] text-white px-5 py-2 rounded hover:bg-[#5d3f29] transition"
+                onClick={() => void handleGuardar()}
+                disabled={loading}
+                className="bg-[#7a563a] text-white px-5 py-2 rounded hover:bg-[#5d3f29] transition disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Guardar
+                {loading ? "Guardando..." : "Guardar"}
               </button>
               <button
-                onClick={() => setModo("lista")}
+                onClick={() => {
+                  setModo("lista");
+                  setActual(null);
+                  setForm({ nombre: "", texto: "", video: "", thumb: "" });
+                  setFotoCargada(false);
+                }}
                 className="border border-[#7a563a] text-[#7a563a] px-5 py-2 rounded hover:bg-[#ebd9c6] transition"
               >
                 Cancelar
@@ -200,13 +280,20 @@ export default function TestimoniosList() {
       {modo === "lista" && (
         <div className="space-y-6">
           <button
-            onClick={() => setModo("crear")}
+            onClick={() => {
+              setModo("crear");
+              setActual(null);
+              setForm({ nombre: "", texto: "", video: "", thumb: "" });
+              setFotoCargada(false);
+            }}
             className="mb-6 bg-[#7a563a] text-white px-5 py-2 rounded hover:bg-[#5d3f29] transition"
           >
             + Agregar Testimonio
           </button>
 
-          {testimonios.length === 0 ? (
+          {loading && testimonios.length === 0 ? (
+            <p className="text-[--textSoft]">Cargando testimonios...</p>
+          ) : testimonios.length === 0 ? (
             <p className="text-[--textSoft]">No hay testimonios registrados.</p>
           ) : (
             testimonios.map((t) => (
@@ -232,7 +319,7 @@ export default function TestimoniosList() {
                     <iframe
                       src={t.video}
                       width="100%"
-                      height="250"
+                      height={250}
                       className="rounded-md mb-4"
                       allowFullScreen
                     ></iframe>
@@ -240,12 +327,9 @@ export default function TestimoniosList() {
                 )}
 
                 <div className="flex items-center justify-between">
-                  <div
-                    onClick={() => {
-                      if (t.activo) desactivarTestimonio(t.id);
-                      else activarTestimonio(t.id);
-                      setTestimonios(getTestimonios());
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleActivo(t)}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <span className="text-sm text-[--textSoft]">
@@ -266,7 +350,7 @@ export default function TestimoniosList() {
                         transition={{ type: "spring", stiffness: 300 }}
                       />
                     </motion.div>
-                  </div>
+                  </button>
 
                   <div className="flex gap-2">
                     <button
@@ -276,7 +360,7 @@ export default function TestimoniosList() {
                       Editar
                     </button>
                     <button
-                      onClick={() => confirmarEliminar(t.id)}
+                      onClick={() => confirmarEliminarFn(t.id)}
                       className="px-3 py-1 rounded bg-[#e57373] text-white hover:bg-[#c62828] transition"
                     >
                       Eliminar
@@ -291,7 +375,7 @@ export default function TestimoniosList() {
 
       {/* === Modal de confirmación === */}
       <AnimatePresence>
-        {confirmEliminar && (
+        {confirmEliminar !== null && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -312,7 +396,7 @@ export default function TestimoniosList() {
               </p>
               <div className="flex justify-center gap-3">
                 <button
-                  onClick={() => handleEliminar(confirmEliminar)}
+                  onClick={() => void handleEliminar(confirmEliminar)}
                   className="bg-[#c62828] text-white px-5 py-2 rounded hover:bg-[#a4161a] transition"
                 >
                   Eliminar

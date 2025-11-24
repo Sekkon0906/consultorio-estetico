@@ -5,12 +5,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
-import {
-  formatCurrency,
-  confirmarCita,
-  marcarCitaAtendida,
-} from "../utils/localDB";
-import type { Cita, User } from "../utils/localDB";
+
+import type { Cita, SessionUser } from "../types/domain";
+import { updateCitaApi } from "../services/citasApi";
+
 import {
   CheckCircle2,
   CalendarDays,
@@ -23,8 +21,18 @@ import {
 
 interface AgendarConfirmacionProps {
   cita: Cita;
-  usuario?: User | null;
+  usuario?: SessionUser | null;
 }
+
+// ==============================
+// Formateador de moneda (COP)
+// ==============================
+const formatCurrency = (valor: number): string =>
+  valor.toLocaleString("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  });
 
 export default function AgendarConfirmacion({
   cita,
@@ -36,11 +44,11 @@ export default function AgendarConfirmacion({
   );
 
   useEffect(() => {
-    generarQR();
+    void generarQR();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cita.id, cita.nombres, cita.apellidos, cita.procedimiento, cita.fecha, cita.hora]);
+  }, [cita]);
 
-  async function generarQR() {
+  async function generarQR(): Promise<void> {
     try {
       const data = `Cita #${cita.id} - ${cita.nombres} ${cita.apellidos}\n${cita.procedimiento}\n${cita.fecha} ${cita.hora}`;
       const url = await QRCode.toDataURL(data);
@@ -51,7 +59,7 @@ export default function AgendarConfirmacion({
   }
 
   // === Generar PDF con QR ===
-  const descargarPDF = () => {
+  const descargarPDF = (): void => {
     const doc = new jsPDF();
 
     doc.setFont("helvetica", "bold");
@@ -73,16 +81,21 @@ export default function AgendarConfirmacion({
   };
 
   // === Barra de progreso ===
-  const pasos: Cita["estado"][] = ["pendiente", "confirmada", "atendida"];
+  const pasos: Array<Cita["estado"]> = ["pendiente", "confirmada", "atendida"];
   const indice = pasos.indexOf(estado);
 
-  const avanzarEstado = () => {
-    if (estado === "pendiente") {
-      confirmarCita(cita.id);
-      setEstado("confirmada");
-    } else if (estado === "confirmada") {
-      marcarCitaAtendida(cita.id);
-      setEstado("atendida");
+  const avanzarEstado = async (): Promise<void> => {
+    try {
+      if (estado === "pendiente") {
+        await updateCitaApi(cita.id, { estado: "confirmada" });
+        setEstado("confirmada");
+      } else if (estado === "confirmada") {
+        await updateCitaApi(cita.id, { estado: "atendida" });
+        setEstado("atendida");
+      }
+    } catch (err) {
+      console.error("Error actualizando estado de la cita:", err);
+      alert("Ocurrió un error al actualizar el estado de la cita.");
     }
   };
 
@@ -111,7 +124,7 @@ export default function AgendarConfirmacion({
                   ? "bg-[#B08968] border-[#A67855]"
                   : "bg-[#E9DED2] border-[#D5C3AF]"
               }`}
-            ></div>
+            />
             <span
               className={`mt-2 text-xs uppercase ${
                 i <= indice ? "text-[#5A3B1E]" : "text-gray-400"
@@ -124,7 +137,7 @@ export default function AgendarConfirmacion({
                 className={`absolute top-3 left-1/2 w-full h-[2px] -translate-x-1/2 ${
                   i < indice ? "bg-[#B08968]" : "bg-[#E6D8C8]"
                 }`}
-              ></div>
+              />
             )}
           </div>
         ))}
@@ -195,6 +208,7 @@ export default function AgendarConfirmacion({
       {/* === Botones === */}
       <div className="mt-10 flex flex-col md:flex-row justify-center gap-4">
         <button
+          type="button"
           onClick={descargarPDF}
           className="flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-white shadow-md"
           style={{
@@ -207,7 +221,8 @@ export default function AgendarConfirmacion({
 
         {estado !== "atendida" && (
           <button
-            onClick={avanzarEstado}
+            type="button"
+            onClick={() => void avanzarEstado()}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold text-[#4E3B2B] border border-[#D1BFA4] bg-[#FBF7F2]"
           >
             <CheckCircle2 size={18} />
@@ -218,6 +233,7 @@ export default function AgendarConfirmacion({
         )}
 
         <button
+          type="button"
           onClick={() => router.push("/")}
           className="flex items-center justify-center gap-2 px-6 py-3 rounded-full font-semibold border border-[#E0CDB5] bg-[#FFFDF9] text-[#4E3B2B]"
         >

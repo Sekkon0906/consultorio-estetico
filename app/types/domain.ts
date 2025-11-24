@@ -58,7 +58,7 @@ export interface Cita {
 
   // fecha y hora
   fecha: string; // YYYY-MM-DD (DATE en BD)
-  hora: string;  // ej. "08:30 AM"
+  hora: string; // ej. "08:30 AM"
 
   // Pago
   metodoPago?: MetodoPago | null;
@@ -102,7 +102,8 @@ export interface Procedimiento {
   id: number;
   nombre: string;
   desc: string;
-  precio: number; // INT en BD
+  // VARCHAR en BD, puede ser "180000", "350.000 – 450.000" o "Según valoración médica"
+  precio: string;
   imagen: string;
   categoria: CategoriaProcedimiento;
   duracionMin?: number | null;
@@ -147,7 +148,7 @@ export interface Charla {
 export interface BloqueoHora {
   id: number;
   fechaISO: string; // YYYY-MM-DD
-  hora: string;     // "08:30 AM"
+  hora: string; // "08:30 AM"
   motivo: string;
 }
 

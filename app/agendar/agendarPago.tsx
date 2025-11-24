@@ -4,31 +4,50 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wallet, Globe, ArrowLeft, AlertTriangle } from "lucide-react";
 import { PALETTE } from "./page";
-import { crearCita, Cita } from "../utils/localDB";
 
+// ✅ Tipos de dominio reales
+import type {
+  Cita,
+  MetodoPago,
+  TipoPagoConsultorio,
+  TipoPagoOnline,
+} from "../types/domain";
+
+// ✅ Servicio que habla con el backend
+import { createCitaApi } from "../services/citasApi";
+
+// -----------------------------
 // Tipos auxiliares
-type MetodoPago = "Consultorio" | "Online" | null;
-type TipoPagoConsultorio = "Efectivo" | "Tarjeta" | undefined;
-type TipoPagoOnline = "PayU" | "PSE" | undefined;
+// -----------------------------
 
-// 👉 Tipo EXACTO que usa crearCita como primer parámetro
-type CitaPayload = Parameters<typeof crearCita>[0];
+// Payload que usa el backend para crear una cita
+// (ajusta los campos omitidos si en tu createCitaApi usas otro tipo)
+export type CrearCitaPayload = Omit<
+  Cita,
+  | "id"
+  | "fechaCreacion"
+  | "estado"
+  | "qrCita"
+  | "motivoCancelacion"
+  | "montoPagado"
+  | "montoRestante"
+>;
 
-// Pero en este paso todavía NO tenemos los datos de pago:
-type CitaSinPagos = Omit<
-  CitaPayload,
+// En este paso todavía NO tenemos los datos de pago:
+export type CitaSinPagos = Omit<
+  CrearCitaPayload,
   "metodoPago" | "tipoPagoConsultorio" | "tipoPagoOnline"
 >;
 
 interface AgendarPagoProps {
-  metodoPago: MetodoPago;
-  setMetodoPago: (metodo: MetodoPago) => void;
+  metodoPago: MetodoPago | null;
+  setMetodoPago: (metodo: MetodoPago | null) => void;
 
-  tipoPagoConsultorio: TipoPagoConsultorio;
-  setTipoPagoConsultorio: (tipo: TipoPagoConsultorio) => void;
+  tipoPagoConsultorio: TipoPagoConsultorio | undefined;
+  setTipoPagoConsultorio: (tipo: TipoPagoConsultorio | undefined) => void;
 
-  tipoPagoOnline: TipoPagoOnline;
-  setTipoPagoOnline: (tipo: TipoPagoOnline) => void;
+  tipoPagoOnline: TipoPagoOnline | undefined;
+  setTipoPagoOnline: (tipo: TipoPagoOnline | undefined) => void;
 
   // datos ya capturados en pasos anteriores (sin info de pago)
   citaData: CitaSinPagos;
@@ -68,7 +87,7 @@ export default function AgendarPago({
     },
   ];
 
-  const pagoValido =
+  const pagoValido: boolean =
     (metodoPago === "Consultorio" &&
       (tipoPagoConsultorio === "Efectivo" ||
         tipoPagoConsultorio === "Tarjeta")) ||
@@ -76,7 +95,7 @@ export default function AgendarPago({
       (tipoPagoOnline === "PayU" || tipoPagoOnline === "PSE"));
 
   // === CONFIRMAR ===
-  const handleConfirmar = async () => {
+  const handleConfirmar = async (): Promise<void> => {
     if (!pagoValido) {
       setError(true);
       setTimeout(() => setError(false), 2500);
@@ -87,14 +106,17 @@ export default function AgendarPago({
 
     setTimeout(async () => {
       try {
-        const nuevaCita = await crearCita({
+        const payload: CrearCitaPayload = {
           ...citaData,
           // 💳 aquí agregamos la info de pago
           metodoPago: metodoPago ?? "Consultorio",
-          tipoPagoConsultorio,
-          tipoPagoOnline,
-          // ❌ NO mandamos `estado`, lo pone crearCita en localDB.ts
-        });
+          tipoPagoConsultorio:
+            metodoPago === "Consultorio" ? tipoPagoConsultorio ?? "Efectivo" : null,
+          tipoPagoOnline:
+            metodoPago === "Online" ? tipoPagoOnline ?? "PayU" : null,
+        };
+
+        const nuevaCita = await createCitaApi(payload);
 
         // 🔁 Notificar a AgendarPage
         onConfirmar(nuevaCita);
@@ -105,8 +127,9 @@ export default function AgendarPago({
             detail: { tipo: "nuevaCita", cita: nuevaCita },
           })
         );
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Error creando cita:", err);
+        // eslint-disable-next-line no-alert
         alert("Error al confirmar la cita. Intenta nuevamente.");
       } finally {
         setBrilloActivo(false);
@@ -190,12 +213,12 @@ export default function AgendarPago({
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-4 flex gap-4 w-full"
               >
-                {["Efectivo", "Tarjeta"].map((m) => (
+                {(["Efectivo", "Tarjeta"] as TipoPagoConsultorio[]).map((m) => (
                   <button
                     key={m}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setTipoPagoConsultorio(m as TipoPagoConsultorio);
+                      setTipoPagoConsultorio(m);
                       setTipoPagoOnline(undefined);
                     }}
                     className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all hover:shadow-md ${
@@ -217,12 +240,12 @@ export default function AgendarPago({
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-4 flex gap-4 w-full"
               >
-                {["PayU", "PSE"].map((m) => (
+                {(["PayU", "PSE"] as TipoPagoOnline[]).map((m) => (
                   <button
                     key={m}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setTipoPagoOnline(m as TipoPagoOnline);
+                      setTipoPagoOnline(m);
                       setTipoPagoConsultorio(undefined);
                     }}
                     className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all hover:shadow-md ${

@@ -1,30 +1,28 @@
-import { Testimonio, testimonios, updateTestimonio } from "../../utils/localDB";
+// app/administrar/testimonios/helpers.ts
 
-// ============================================================
-// 🔹 Activar testimonio
-// ============================================================
-export function activarTestimonio(id: number) {
-  const testimonio = testimonios.find((t: Testimonio) => t.id === id);
-  if (testimonio) {
-    testimonio.activo = true;
-    updateTestimonio(id, { activo: true });
-  }
+// Ya no usamos localDB aquí. En su lugar, llamamos a la API real.
+import {
+  activarTestimonioApi,
+  desactivarTestimonioApi,
+} from "../../services/testimoniosApi";
+
+/**
+ * 🔹 Activa un testimonio en la BD real
+ */
+export async function activarTestimonio(id: number): Promise<void> {
+  await activarTestimonioApi(id);
 }
 
-// ============================================================
-// 🔹 Desactivar testimonio
-// ============================================================
-export function desactivarTestimonio(id: number) {
-  const testimonio = testimonios.find((t: Testimonio) => t.id === id);
-  if (testimonio) {
-    testimonio.activo = false;
-    updateTestimonio(id, { activo: false });
-  }
+/**
+ * 🔹 Desactiva un testimonio en la BD real
+ */
+export async function desactivarTestimonio(id: number): Promise<void> {
+  await desactivarTestimonioApi(id);
 }
 
-// ============================================================
-// 🔹 Validar URL de video (YouTube o no-cookie)
-// ============================================================
+/**
+ * 🔹 Validar URL de video (YouTube o no-cookie)
+ */
 export function validarVideoURL(url: string): boolean {
   const regex =
     /^(https:\/\/(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\/(watch\?v=|embed\/)?[\w-]+)/;

@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Procedimiento, addProcedimiento, updateProcedimiento } from "../../utils/localDB";
+// ✅ Tipos de dominio (ya no usamos localDB)
+import type { Procedimiento, CategoriaProcedimiento } from "../../types/domain";
+// ✅ Servicios que hablan con el backend
+import {
+  createProcedimientoApi,
+  updateProcedimientoApi,
+} from "../../services/procedimientosApi";
 
 interface Props {
   procedimiento?: Procedimiento;
@@ -11,24 +17,56 @@ interface Props {
 export default function ProcedimientosForm({ procedimiento, onGuardar }: Props) {
   const [nombre, setNombre] = useState(procedimiento?.nombre || "");
   const [desc, setDesc] = useState(procedimiento?.desc || "");
-  const [precio, setPrecio] = useState(procedimiento?.precio?.toString() || "");
-  const [categoria, setCategoria] = useState(procedimiento?.categoria || "Facial");
+  const [precio, setPrecio] = useState(
+    procedimiento?.precio != null ? procedimiento.precio.toString() : ""
+  );
+  const [categoria, setCategoria] = useState<CategoriaProcedimiento>(
+    procedimiento?.categoria || "Facial"
+  );
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nombre.trim()) return alert("El nombre del procedimiento es obligatorio");
 
-    if (procedimiento) {
-      updateProcedimiento(procedimiento.id, { nombre, desc, precio, categoria });
-      alert("Procedimiento actualizado correctamente");
-    } else {
-      addProcedimiento({ nombre, desc, precio, imagen: "", categoria });
-      alert("Procedimiento creado correctamente");
-    }
+    const precioString = precio.trim(); // 👈 SIEMPRE STRING
 
-    if (onGuardar) onGuardar();
-    setNombre("");
-    setDesc("");
-    setPrecio("");
+const payload = {
+  nombre,
+  desc,
+  precio: precioString,               // 👈 SE ENVÍA COMO STRING
+  imagen: procedimiento?.imagen || "",
+  categoria,
+  duracionMin: procedimiento?.duracionMin ?? null,
+  destacado: procedimiento?.destacado ?? false,
+};
+
+
+    try {
+      setSaving(true);
+
+      if (procedimiento) {
+        // 🔄 Editar en BD real
+        await updateProcedimientoApi(procedimiento.id, payload);
+        alert("Procedimiento actualizado correctamente ✅");
+      } else {
+        // ➕ Crear en BD real
+        await createProcedimientoApi(payload);
+        alert("Procedimiento creado correctamente ✅");
+      }
+
+      if (onGuardar) onGuardar();
+
+      // limpiar formulario
+      setNombre("");
+      setDesc("");
+      setPrecio("");
+      setCategoria("Facial");
+    } catch (err) {
+      console.error("Error guardando procedimiento:", err);
+      alert("Ocurrió un error al guardar el procedimiento.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -63,7 +101,9 @@ export default function ProcedimientosForm({ procedimiento, onGuardar }: Props) 
 
         <select
           value={categoria}
-          onChange={(e) => setCategoria(e.target.value as Procedimiento["categoria"])}
+          onChange={(e) =>
+            setCategoria(e.target.value as CategoriaProcedimiento)
+          }
           className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-[--main]"
         >
           <option value="Facial">Facial</option>
@@ -73,9 +113,10 @@ export default function ProcedimientosForm({ procedimiento, onGuardar }: Props) 
 
         <button
           onClick={handleSave}
-          className="mt-3 bg-[--main] hover:bg-[--mainHover] text-white font-medium py-2 px-4 rounded-md transition-all"
+          disabled={saving}
+          className="mt-3 bg-[--main] hover:bg-[--mainHover] text-white font-medium py-2 px-4 rounded-md transition-all disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          Guardar
+          {saving ? "Guardando..." : "Guardar"}
         </button>
       </div>
     </div>

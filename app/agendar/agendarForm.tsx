@@ -2,7 +2,10 @@
 
 import { motion } from "framer-motion";
 import { PALETTE } from "./page";
-import type { Procedimiento, User } from "../utils/localDB";
+
+// ✅ Tipos desde el dominio real (ya no usamos utils/localDB)
+import type { Procedimiento, SessionUser } from "../types/domain";
+
 import { ArrowLeft, CalendarDays, Clock, RotateCcw } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -17,7 +20,7 @@ export interface AgendarFormData {
 }
 
 interface AgendarFormProps {
-  usuario: User | null;
+  usuario: SessionUser | null;
   esPrimeraCita: boolean;
   procedimientos?: Procedimiento[];
   formData: AgendarFormData;
@@ -35,7 +38,7 @@ export default function AgendarForm({
   handleConfirmar,
   goBack,
 }: AgendarFormProps) {
-  const listaProcedimientos = Array.isArray(procedimientos)
+  const listaProcedimientos: Procedimiento[] = Array.isArray(procedimientos)
     ? procedimientos
     : [];
 
@@ -58,19 +61,19 @@ export default function AgendarForm({
   const handleChange = <K extends keyof AgendarFormData>(
     key: K,
     value: AgendarFormData[K]
-  ) => {
+  ): void => {
     setFormData((prev) => ({
       ...prev,
       [key]: value,
     }));
   };
 
-  const handleContinue = () => {
+  const handleContinue = (): void => {
     handleConfirmar();
   };
 
   // === FORMATOS DE FECHA Y HORA ===
-  const fmtDiaHumano = (date: Date) => {
+  const fmtDiaHumano = (date: Date): string => {
     const dias = [
       "domingo",
       "lunes",
@@ -83,7 +86,7 @@ export default function AgendarForm({
     return dias[date.getDay()];
   };
 
-  const fmtFechaHumana = (date: Date) => {
+  const fmtFechaHumana = (date: Date): string => {
     const meses = [
       "enero",
       "febrero",
@@ -98,10 +101,12 @@ export default function AgendarForm({
       "noviembre",
       "diciembre",
     ];
-    return `${date.getDate()} de ${meses[date.getMonth()]} de ${date.getFullYear()}`;
+    return `${date.getDate()} de ${
+      meses[date.getMonth()]
+    } de ${date.getFullYear()}`;
   };
 
-  const fmtHoraHumana = (hhmm: string) => {
+  const fmtHoraHumana = (hhmm: string): string => {
     const [hStr, mStr] = hhmm.split(":");
     let h = Number(hStr);
     const suf = h >= 12 ? "p.m." : "a.m.";
@@ -290,7 +295,7 @@ export default function AgendarForm({
           />
         </div>
 
-        {/* Tipo de cita */}
+        {/* Tipo de cita (solo informativo ahora) */}
         <div className="md:col-span-2">
           <label
             className="block mb-1 text-sm font-semibold"

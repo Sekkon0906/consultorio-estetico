@@ -4,24 +4,35 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import FondoAnim from "@/components/FondoAnim";
 import ComentariosClientes from "@/components/ComentariosClientes";
-import { getTestimonios, Testimonio } from "../utils/localDB";
+
+// ✅ Tipos de dominio (BD real)
+import type { Testimonio } from "../types/domain";
+// ✅ Servicio que habla con el backend
+import { getTestimoniosApi } from "../services/testimoniosApi";
 
 export default function TestimoniosPage() {
   const [testimonios, setTestimonios] = useState<Testimonio[]>([]);
   const [videoActivo, setVideoActivo] = useState<number | null>(null);
 
-  // === Cargar testimonios desde localDB ===
+  // === Cargar testimonios desde la API ===
   useEffect(() => {
-    setTestimonios(getTestimonios());
+    let isMounted = true;
 
-    // Escuchar cambios desde el panel admin o storage
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "testimonios") {
-        setTestimonios(getTestimonios());
+    const cargarTestimonios = async () => {
+      try {
+        const data = await getTestimoniosApi();
+        if (!isMounted) return;
+        setTestimonios(data);
+      } catch (err) {
+        console.error("Error al cargar testimonios desde la API:", err);
       }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+
+    cargarTestimonios();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -83,7 +94,8 @@ export default function TestimoniosPage() {
               .filter((t) => t.activo)
               .sort(
                 (a, b) =>
-                  new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime()
+                  new Date(b.creadoEn).getTime() -
+                  new Date(a.creadoEn).getTime()
               )
               .map((t, index) => (
                 <div
@@ -104,7 +116,8 @@ export default function TestimoniosPage() {
                       (e.currentTarget.style.transform = "translateY(-6px)")
                     }
                     onMouseOut={(e) =>
-                      (e.currentTarget.style.transform = "translateY(0)")
+                      (e.currentTarget.style.transform = "translateY(0)"
+                      )
                     }
                   >
                     <div

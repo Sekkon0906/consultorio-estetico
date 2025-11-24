@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { addTestimonio, updateTestimonio, Testimonio } from "../../utils/localDB";
+import React, { useState } from "react";
+// ✅ Tipo de dominio
+import type { Testimonio } from "../../types/domain";
+// ✅ Servicios que hablan con el backend
+import {
+  createTestimonioApi,
+  updateTestimonioApi,
+} from "../../services/testimoniosApi";
 
 interface Props {
   testimonio?: Testimonio;
@@ -9,37 +15,52 @@ interface Props {
 }
 
 export default function TestimoniosForm({ testimonio, onGuardar }: Props) {
-  const [nombre, setNombre] = useState(testimonio?.nombre || "");
-  const [texto, setTexto] = useState(testimonio?.texto || "");
-  const [video, setVideo] = useState(testimonio?.video || "");
+  const [nombre, setNombre] = useState<string>(testimonio?.nombre ?? "");
+  const [texto, setTexto] = useState<string>(testimonio?.texto ?? "");
+  const [video, setVideo] = useState<string>(testimonio?.video ?? "");
+  const [saving, setSaving] = useState<boolean>(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!nombre.trim() || !texto.trim()) {
       alert("Por favor, completa el nombre y el texto del testimonio.");
       return;
     }
 
-    if (testimonio) {
-      // Editar existente
-      updateTestimonio(testimonio.id, { nombre, texto, video });
-      alert("Testimonio actualizado correctamente");
-    } else {
-      // Crear nuevo
-      addTestimonio({
-        nombre,
-        texto,
-        video,
-        activo: true,
-        thumb: "",
-        destacado: false,
-      });
-      alert("Testimonio creado correctamente");
-    }
+    // Payload común para crear / editar
+    const payload: Omit<Testimonio, "id" | "creadoEn"> = {
+      nombre,
+      texto,
+      video,
+      thumb: testimonio?.thumb ?? "",
+      activo: testimonio?.activo ?? true,
+      destacado: testimonio?.destacado ?? false,
+    };
 
-    setNombre("");
-    setTexto("");
-    setVideo("");
-    onGuardar?.();
+    try {
+      setSaving(true);
+
+      if (testimonio) {
+        // 🔄 Editar existente en la BD
+        await updateTestimonioApi(testimonio.id, payload);
+        alert("Testimonio actualizado correctamente ✅");
+      } else {
+        // ➕ Crear nuevo en la BD
+        await createTestimonioApi(payload);
+        alert("Testimonio creado correctamente ✅");
+      }
+
+      // Limpiar formulario
+      setNombre("");
+      setTexto("");
+      setVideo("");
+
+      if (onGuardar) onGuardar();
+    } catch (error) {
+      console.error("Error guardando testimonio:", error);
+      alert("Ocurrió un error al guardar el testimonio.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -72,10 +93,11 @@ export default function TestimoniosForm({ testimonio, onGuardar }: Props) {
       />
 
       <button
-        onClick={handleSave}
-        className="w-full py-2 rounded-md bg-[--main] text-white font-semibold hover:bg-[--mainHover] transition-all"
+        onClick={() => void handleSave()}
+        disabled={saving}
+        className="w-full py-2 rounded-md bg-[--main] text-white font-semibold hover:bg-[--mainHover] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        Guardar
+        {saving ? "Guardando..." : "Guardar"}
       </button>
     </div>
   );

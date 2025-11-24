@@ -3,15 +3,17 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  getProcedimientos,
-  type User,
-  type Procedimiento,
-  type Cita,
-} from "../utils/localDB";
+
+// ✅ Tipos de dominio reales
+import type { User, Procedimiento, Cita } from "../types/domain";
+
+// ✅ Servicios que hablan con el backend
+import { getProcedimientosApi } from "../services/procedimientosApi";
+
+// ✅ Componentes del flujo de agenda
 import AgendarCalendar from "./agendarCalendar";
-import AgendarForm from "./agendarForm";
-import AgendarPago from "./agendarPago";
+import AgendarForm, { AgendarFormData } from "./agendarForm";
+import AgendarPago, { CitaSinPagos } from "./agendarPago";
 import TarjetaCita from "./tarjetaCita";
 
 export const PALETTE = {
@@ -27,52 +29,23 @@ export const PALETTE = {
 };
 
 // ======================
-// TIPOS DEL FORMULARIO
-// ======================
-interface AgendarFormData {
-  fecha?: string;
-  hora?: string;
-  nombre: string;
-  telefono: string;
-  correo: string;
-  procedimiento: string;
-  nota?: string;
-}
-
-// Cita antes de ser guardada (sin campos de pago / id / estado)
-type CitaData = Omit<
-  Cita,
-  | "id"
-  | "metodoPago"
-  | "tipoPagoConsultorio"
-  | "tipoPagoOnline"
-  | "estado"
-  | "monto"
-  | "montoPagado"
-  | "montoRestante"
-  | "qrCita"
-  | "motivoCancelacion"
->;
-
-// ======================
 // CONTENIDO DE LA PÁGINA
 // ======================
 function AgendarPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const procParam = searchParams.get("proc") || "";
+  const procParam = searchParams.get("proc") ?? "";
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [fecha, setFecha] = useState<Date | null>(null);
-  const [hora, setHora] = useState("");
-  const [usuario, setUsuario] = useState<User | null>(null);
+  const [hora, setHora] = useState<string>("");
 
+  const [usuario, setUsuario] = useState<User | null>(null);
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
 
-  // puede ser: borrador de cita (CitaData), cita guardada (Cita) o null
-  const [citaConfirmada, setCitaConfirmada] = useState<CitaData | Cita | null>(
-    null
-  );
+  // Borrador de cita (sin datos de pago) y cita final creada en BD
+  const [citaDraft, setCitaDraft] = useState<CitaSinPagos | null>(null);
+  const [citaCreada, setCitaCreada] = useState<Cita | null>(null);
 
   const [metodoPago, setMetodoPago] = useState<"Consultorio" | "Online" | null>(
     null
@@ -90,52 +63,65 @@ function AgendarPageContent() {
     correo: "",
     procedimiento: procParam || "",
     nota: "",
+    fecha: undefined,
+    hora: undefined,
   });
 
   // === Cargar usuario actual desde localStorage ===
   useEffect(() => {
-    const stored = typeof window !== "undefined"
-      ? localStorage.getItem("currentUser")
-      : null;
+    if (typeof window === "undefined") return;
 
-    if (stored) {
-      try {
-        const parsed: User = JSON.parse(stored);
-        setUsuario(parsed);
-        setFormData((d) => ({
-          ...d,
-          nombre: parsed.nombres || "",
-          telefono: parsed.telefono || "",
-          correo: parsed.email || "",
-        }));
-      } catch {
-        console.warn("Error leyendo usuario local.");
-      }
+    const stored = localStorage.getItem("currentUser");
+    if (!stored) return;
+
+    try {
+      const parsed: User = JSON.parse(stored);
+      setUsuario(parsed);
+      setFormData((prev) => ({
+        ...prev,
+        nombre: parsed.nombres ?? "",
+        telefono: parsed.telefono ?? "",
+        correo: parsed.email ?? "",
+      }));
+    } catch (err) {
+      console.warn("Error leyendo usuario local:", err);
     }
   }, []);
 
-  // === Cargar lista de procedimientos ===
+  // === Cargar lista de procedimientos desde el backend ===
   useEffect(() => {
-    const list = getProcedimientos();
-    setProcedimientos(list);
+    const cargarProcedimientos = async () => {
+      try {
+        const lista = await getProcedimientosApi();
+        setProcedimientos(lista);
+      } catch (err) {
+        console.error("Error cargando procedimientos:", err);
+      }
+    };
+
+    void cargarProcedimientos();
   }, []);
 
   // === Paso 1 → 2 ===
   const handleAvanzar = () => {
     if (!fecha || !hora) {
+      // eslint-disable-next-line no-alert
       alert("Selecciona un día y una hora antes de continuar.");
       return;
     }
     if (!usuario) {
+      // eslint-disable-next-line no-alert
       alert("Debes iniciar sesión para agendar una cita.");
       router.push("/login");
       return;
     }
 
+    const fechaISO = fecha.toISOString().slice(0, 10); // YYYY-MM-DD
+
     setFormData((prev) => ({
       ...prev,
-      fecha: fecha.toISOString(),
-      hora: hora,
+      fecha: fechaISO,
+      hora,
     }));
     setStep(2);
   };
@@ -144,23 +130,25 @@ function AgendarPageContent() {
   const handleConfirmarDatos = () => {
     if (!fecha || !usuario) return;
 
-    const nuevaCita: CitaData = {
+    const fechaISO = fecha.toISOString().slice(0, 10);
+
+    const nuevaCita: CitaSinPagos = {
       userId: usuario.id,
       nombres: formData.nombre,
       apellidos: usuario.apellidos,
       telefono: formData.telefono,
       correo: formData.correo,
       procedimiento: formData.procedimiento,
-      nota: formData.nota,
+      nota: formData.nota ?? "",
       tipoCita: "valoracion",
-      fecha: fecha.toISOString(),
+      fecha: fechaISO,
       hora,
       pagado: false,
       creadaPor: "usuario",
       fechaCreacion: new Date().toISOString(),
     };
 
-    setCitaConfirmada(nuevaCita);
+    setCitaDraft(nuevaCita);
     setStep(3);
   };
 
@@ -217,7 +205,7 @@ function AgendarPageContent() {
             />
           )}
 
-          {step === 3 && citaConfirmada && (
+          {step === 3 && citaDraft && (
             <AgendarPago
               metodoPago={metodoPago}
               setMetodoPago={setMetodoPago}
@@ -225,16 +213,16 @@ function AgendarPageContent() {
               setTipoPagoConsultorio={setTipoPagoConsultorio}
               tipoPagoOnline={tipoPagoOnline}
               setTipoPagoOnline={setTipoPagoOnline}
-              citaData={citaConfirmada}
+              citaData={citaDraft}
               onConfirmar={(nuevaCita: Cita) => {
-                setCitaConfirmada(nuevaCita);
+                setCitaCreada(nuevaCita);
                 setStep(4);
               }}
               goBack={() => setStep(2)}
             />
           )}
 
-          {step === 4 && citaConfirmada && (
+          {step === 4 && citaCreada && (
             <motion.div
               key="confirmacion"
               initial={{ opacity: 0, y: 16 }}
@@ -244,7 +232,7 @@ function AgendarPageContent() {
               className="text-center flex flex-col items-center"
             >
               <TarjetaCita
-                cita={citaConfirmada as Cita}
+                cita={citaCreada}
                 modo="confirmacion"
                 mostrarQR={true}
               />

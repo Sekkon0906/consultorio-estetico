@@ -1,0 +1,24 @@
+[33m556784c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to HEAD~1
+[33m5a003e9[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull origin main: Fast-forward
+[33mfc944ab[m HEAD@{2}: commit: ahora horario esta conectado con cita agendada, al concluir la cita, se agrega el pagado a los ingresos, y se podra descargar el pdf de factura, se arreglaron los pagos, animaciones, se culmino la comunicacion entre paneles administrativos y se implemento el reagendar
+[33m753ff65[m HEAD@{3}: commit: se termino el panel administrar testimonios, agregando lasportadas y eliminar, mejora en agendar cita en la parte de confirmacion de cita, se inicio la comunicacion entre agendarCita, administrarHorario y adminitrarCita
+[33mfc2db81[m HEAD@{4}: commit: se mejoro todo el agendar cita, falta el confirmar cita
+[33m94f73b7[m HEAD@{5}: commit: se mejoro el regfister, ahora al iniciar con google y es una cuenta no registrada, facilita los datos a la hora de crear una nueva cuenta. se mejoro el step2 con bloque de explicacion, mejora de avisos para eliminar en procedimiento, nuevo panel de charlas nuevas.
+[33m3e6db5b[m HEAD@{6}: commit: se agrego animacion para boton perfil, se mejoro la navbar y ahora es completamente responsive, mejora en siluetas de procedimientos, aun falta mucho por terminarlas
+[33m3fd3aff[m HEAD@{7}: commit: Se realizo la beta del panel admin, citas agendadas, procedimientos, testimonios e ingresos.
+[33m205392b[m HEAD@{8}: pull origin main: Fast-forward
+[33m0a7a4ed[m HEAD@{9}: commit: correccion de ultimo momento en fonts de register
+[33mfaff5d6[m HEAD@{10}: commit: se realizo toda la pagina de agendamiento conectado a la base de datos local, y se reformo la base de datos local, a su vez por mejores practicas se desglozaron algunas page que estaban muy largas
+[33m6a0bb5a[m HEAD@{11}: commit (amend): Se agregó botón de inicio de sesión con Google, se dejó el iniciar sesión totalmente funcional, junto a sus derivados como integrar el recuperar contraseña y un rediseño al registrar. Se agregó un botón de perfil donde el usuario podrá editar todos sus datos registrados, ingresar una foto y próximamente visualizar todas las citas agendadas. Todo esto usando una fakeDB que más adelante se reemplazará por la BD real, además de cambios de integraciones y mejoras visuales.
+[33mbe830bc[m HEAD@{12}: commit: Se agrego boton inicio sesion con google, se dejo el iniciar sesion totalmente funcional, junto a sus derivados como integrar el recuperar contrasena y un rediseno al registrar, ahora todo se comunica en base a una
+[33m15cf4a7[m HEAD@{13}: commit: Se optimizo y se agregaron animaciones para la pagina de inicio, se agrego un sector de informacion, y casi se culmini la pagina de inicio solo falta un video introductorio que lo dara la doctora, se cambiaron fotos y se acomodaron en carpetas por mejores practicas. se agregaron apis como lo son de ubicacion, comentarios y rate con verificacion de google. se agrego un formulario de contacto directo que genera un mensaje predeterminado a wp. se cambio informacion importante por toda la pagina, como direcciones reales, correos reales. se agregaron animaciones al navbar
+[33m29eee20[m HEAD@{14}: commit: agregue animaciones en el background de testomonios con librerias de react que se encuentran en FondoAnim.tsx y agregue casi toda la informacion en page doctora para dejar esa seccion a un 80%
+[33m1a0bb9b[m HEAD@{15}: commit (amend): mejora completa de la pagina doctora, agregando carrucel, seccion de inspiraciones, formacion continua, mision y vision. A su vez algunos cambios de fuentes, colores de paleta e imagenes renombradas y agregadas
+[33m7109a03[m HEAD@{16}: commit (amend): Arreglo de conflictos
+[33mc3040b3[m HEAD@{17}: reset: moving to HEAD~1
+[33m594684c[m HEAD@{18}: commit: realice una mejora total de la pagina doctora, agregando carrucel, nuevas secciones y animaciones
+[33mc3040b3[m HEAD@{19}: checkout: moving from medina to main
+[33mba981ce[m[33m ([m[1;31morigin/medina[m[33m, [m[1;32mmedina[m[33m)[m HEAD@{20}: reset: moving to HEAD
+[33mba981ce[m[33m ([m[1;31morigin/medina[m[33m, [m[1;32mmedina[m[33m)[m HEAD@{21}: checkout: moving from main to medina
+[33mc3040b3[m HEAD@{22}: commit: mejora completa de la pagina doctora, agregando carrucel, seccion de inspiraciones, formacion continua, mision y vision. A su vez algunos cambios de fuentes, colores de paleta e imagenes renombradas y agregadas
+[33m8ff8321[m HEAD@{23}: clone: from https://github.com/SantiagoLozanoGi/consultorio-estetico.git

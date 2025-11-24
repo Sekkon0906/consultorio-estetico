@@ -51,19 +51,21 @@ export default function HeroDoctora() {
             <b> Julieth Medina</b>.
           </p>
 
-          <div className="doc-hero-cta">
-            <Link href="/agendar" className="btn btn-accent">
-              <i className="fas fa-calendar-check me-2" /> Agendar Cita
-            </Link>
-            <a
-              href="https://www.instagram.com/dravanessamedinao28/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-accent"
-            >
-              <i className="fab fa-instagram me-2" /> Conocer más sobre la doctora
-            </a>
-          </div>
+<div className="doc-hero-cta">
+  <Link href="/agendar" className="btn-doctora">
+    <i className="fas fa-calendar-check me-2" /> Agendar Cita
+  </Link>
+
+  <a
+    href="https://www.instagram.com/dravanessamedinao28/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="btn-doctora btn-doctora-secondary"
+  >
+    <i className="fab fa-instagram me-2" /> Conocer más sobre la doctora
+  </a>
+</div>
+
         </div>
       </div>
 

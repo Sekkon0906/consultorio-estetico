@@ -19,10 +19,10 @@ export default function ProcedimientosForm({ procedimiento, onGuardar }: Props) 
 
     if (procedimiento) {
       updateProcedimiento(procedimiento.id, { nombre, desc, precio, categoria });
-      alert("Procedimiento actualizado correctamente ✅");
+      alert("Procedimiento actualizado correctamente");
     } else {
       addProcedimiento({ nombre, desc, precio, imagen: "", categoria });
-      alert("Procedimiento creado correctamente ✅");
+      alert("Procedimiento creado correctamente");
     }
 
     if (onGuardar) onGuardar();

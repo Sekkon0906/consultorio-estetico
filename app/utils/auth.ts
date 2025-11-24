@@ -214,11 +214,15 @@ export async function loginUser(
     showWelcomeToast(sessionUser.nombres);
 
     return { ok: true, user: sessionUser };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error loginUser:", err);
+
+    const errorMessage =
+      err instanceof Error ? err.message : "No se pudo iniciar sesión.";
+
     return {
       ok: false,
-      error: err?.message || "No se pudo iniciar sesión.",
+      error: errorMessage,
     };
   }
 }
@@ -255,24 +259,15 @@ export async function registerUser(
     showWelcomeToast(sessionUser.nombres);
 
     return { ok: true, user: sessionUser };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error registerUser:", err);
+
+    const errorMessage =
+      err instanceof Error ? err.message : "No se pudo registrar el usuario.";
+
     return {
       ok: false,
-      error: err?.message || "No se pudo registrar el usuario.",
+      error: errorMessage,
     };
   }
 }
-
-/* ============================================================
-   LOGIN CON GOOGLE (OPCIONAL DESDE AQUÍ)
-   ============================================================ */
-/**
- * Para Google ya estás usando handleGoogleLogin.ts, que:
- *  - hace signInWithGooglePopup
- *  - llama a /auth/google
- *  - y después usa setCurrentUser + saveRememberedUser.
- *
- * Si algún día quieres centralizarlo aquí, podríamos añadir
- * una función loginWithGoogleFirebase() que use syncWithBackend.
- */

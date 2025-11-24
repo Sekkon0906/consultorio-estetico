@@ -17,6 +17,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
+if (typeof window !== "undefined") {
+  // DEBUG: quitar luego
+  console.log("[firebaseConfig] apiKey:", firebaseConfig.apiKey);
+  if (!firebaseConfig.apiKey) {
+    console.error(
+      "[Firebase] apiKey VACÍA en el cliente. Revisa NEXT_PUBLIC_FIREBASE_API_KEY en .env.local"
+    );
+  }
+}
+
 // Evitar inicializar más de una vez en Next
 const app: FirebaseApp =
   getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
@@ -24,10 +34,9 @@ const app: FirebaseApp =
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Helpers que podemos reutilizar
 export async function signInWithGooglePopup() {
   const result = await signInWithPopup(auth, googleProvider);
-  return result.user; // Firebase User
+  return result.user;
 }
 
 export async function logoutFirebase() {

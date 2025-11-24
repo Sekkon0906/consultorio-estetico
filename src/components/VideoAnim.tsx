@@ -28,22 +28,18 @@ export default function VideoAnim() {
   const Counter = ({
     value,
     label,
-    emoji,
     suffix = "+",
     position = "left",
     duration = 1500, // duración de animación
   }: {
     value: number;
     label: string;
-    emoji: string;
     suffix?: string;
     position?: "left" | "right";
     duration?: number;
   }) => {
     const [count, setCount] = useState(0);
 
-    // Silenciamos la regla solo para este efecto
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (!startCount) return;
       let start: number | null = null;
@@ -61,19 +57,21 @@ export default function VideoAnim() {
     return (
       <div
         className="shared-float d-flex flex-column align-items-center justify-content-center text-center gap-1"
-        style={{ minHeight: "100px" }}
+        style={{ minHeight: "110px", width: "100%" }}
       >
         <div
-          className={`d-flex align-items-center justify-content-center gap-3 ${
+          className={`d-flex align-items-baseline justify-content-center ${
             position === "right" ? "flex-row-reverse" : ""
           }`}
+          style={{
+            gap: "0.5rem",
+            padding: "0.9rem 1.4rem",
+            borderRadius: "999px",
+            background: "linear-gradient(135deg, #FFF7F0, #F3E2D4)",
+            boxShadow: "0 6px 16px rgba(176,137,104,0.18)",
+            border: "1px solid rgba(176,137,104,0.35)",
+          }}
         >
-          <span
-            className="emoji-shared"
-            style={{ fontSize: "2rem", lineHeight: 1 }}
-          >
-            {emoji}
-          </span>
           <div
             className="fw-bold"
             style={{
@@ -85,7 +83,15 @@ export default function VideoAnim() {
             {suffix}
           </div>
         </div>
-        <small style={{ color: "#6C584C", fontWeight: 500 }}>{label}</small>
+        <small
+          style={{
+            color: "#6C584C",
+            fontWeight: 500,
+            marginTop: "0.5rem",
+          }}
+        >
+          {label}
+        </small>
       </div>
     );
   };
@@ -127,7 +133,7 @@ export default function VideoAnim() {
       <div className="container-fluid px-5">
         <div className="row align-items-stretch justify-content-between g-5">
           {/* IZQUIERDA */}
-          <div className="col-lg-3 glass-col d-flex flex-column justify-content-center align-items-center text-center shared-float">
+          <div className="col-lg-3 glass-col glass-col-left d-flex flex-column justify-content-center align-items-center text-center shared-float">
             <h3
               className="fw-bold mb-4 shimmer"
               style={{
@@ -138,31 +144,33 @@ export default function VideoAnim() {
               Cosas a tener en cuenta
             </h3>
             <ul
-              className="list-unstyled d-flex flex-column justify-content-center align-items-center gap-4 w-100"
-              style={{ fontSize: "1.15rem", color: "#6C584C" }}
+              className="list-unstyled d-flex flex-column justify-content-center align-items-center gap-3 w-100"
+              style={{ fontSize: "1.05rem", color: "#4E3B2B" }}
             >
               {[
-                { emoji: "💧", text: "Uso de tecnología Hydrafacial" },
-                { emoji: "💎", text: "Productos de última generación" },
-                { emoji: "🌸", text: "Procedimientos indoloros" },
-                { emoji: "👩🏻‍⚕️", text: "Atención cálida y personalizada" },
-              ].map((item, i) => (
+                "Uso de tecnología Hydrafacial",
+                "Productos de última generación",
+                "Procedimientos indoloros",
+                "Atención cálida y personalizada",
+              ].map((text, i) => (
                 <li
                   key={i}
-                  className="d-flex align-items-center justify-content-center gap-3 shared-float"
+                  className="d-flex align-items-center justify-content-start shared-float"
                   style={{
                     minHeight: "60px",
                     width: "100%",
-                    textAlign: "center",
+                    textAlign: "left",
+                    padding: "0.9rem 1.3rem",
+                    borderRadius: "999px",
+                    background:
+                      "linear-gradient(90deg, #FFF8F2 0%, #F1E0D2 100%)",
+                    boxShadow: "0 4px 10px rgba(176,137,104,0.08)",
+                    border: "1px solid rgba(176,137,104,0.28)",
+                    color: "#4E3B2B",
+                    fontWeight: 500,
                   }}
                 >
-                  <span
-                    className="emoji-shared"
-                    style={{ fontSize: "2.3rem", lineHeight: 1 }}
-                  >
-                    {item.emoji}
-                  </span>
-                  <span>{item.text}</span>
+                  {text}
                 </li>
               ))}
             </ul>
@@ -224,7 +232,7 @@ export default function VideoAnim() {
 
           {/* DERECHA */}
           <div
-            className="col-lg-3 glass-col d-flex flex-column justify-content-center align-items-center text-center shared-float"
+            className="col-lg-3 glass-col glass-col-right d-flex flex-column justify-content-center align-items-center text-center shared-float"
             ref={countersRef}
           >
             <h3
@@ -240,28 +248,24 @@ export default function VideoAnim() {
               <Counter
                 value={680}
                 label="Pacientes satisfechos"
-                emoji="✌🏻"
                 suffix="+"
                 position="right"
               />
               <Counter
                 value={15}
                 label="Tratamientos especializados"
-                emoji="💉"
                 suffix="+"
                 position="right"
               />
               <Counter
                 value={4}
                 label="Años de experiencia"
-                emoji="⏳"
                 suffix="+"
                 position="right"
               />
               <Counter
-                value={4.8}
+                value={5}
                 label="Calificación promedio"
-                emoji="⭐"
                 suffix="/5"
                 position="right"
               />
@@ -290,26 +294,29 @@ export default function VideoAnim() {
           animation: sharedFloat 4.5s ease-in-out infinite;
         }
 
-        @keyframes sharedGlow {
-          0%,
-          100% {
-            text-shadow: 0 0 0 rgba(255, 210, 160, 0);
-          }
-          50% {
-            text-shadow: 0 0 14px rgba(255, 210, 160, 0.8);
-          }
-        }
-        .emoji-shared {
-          animation: sharedGlow 3.5s ease-in-out infinite;
-        }
-
         .glass-col {
-          background: rgba(255, 255, 255, 0.55);
-          backdrop-filter: blur(8px);
           border-radius: 18px;
           padding: 2.5rem;
           box-shadow: 0 6px 18px rgba(176, 137, 104, 0.18);
           min-height: 100%;
+        }
+
+        .glass-col-left {
+          background: linear-gradient(
+            145deg,
+            rgba(255, 253, 252, 0.96),
+            rgba(247, 236, 223, 0.98)
+          );
+          border: 1px solid rgba(176, 137, 104, 0.3);
+        }
+
+        .glass-col-right {
+          background: linear-gradient(
+            145deg,
+            rgba(255, 253, 252, 0.96),
+            rgba(244, 231, 218, 0.98)
+          );
+          border: 1px solid rgba(176, 137, 104, 0.35);
         }
 
         .halo-bg {

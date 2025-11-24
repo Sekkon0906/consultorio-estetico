@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Galeria3D from "@/components/Galeria3D";
 import dynamic from "next/dynamic";
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 
-const VideoAnim = dynamic(() => import("@/components/VideoAnim"), { ssr: false });
+const VideoAnim = dynamic(() => import("@/components/VideoAnim"), {
+  ssr: false,
+});
 
 export default function HomePage() {
   const imagenes = [
@@ -20,98 +21,94 @@ export default function HomePage() {
   ];
 
   const [imagenActual, setImagenActual] = useState(0);
-  const [mostrarTextoCompleto, setMostrarTextoCompleto] = useState(false);
 
   useEffect(() => {
-    const intervalo = setInterval(() => {
-      setImagenActual((prev) => (prev + 1) % imagenes.length);
-    }, 5000);
+    const intervalo = setInterval(
+      () => setImagenActual((prev) => (prev + 1) % imagenes.length),
+      5000
+    );
     return () => clearInterval(intervalo);
   }, [imagenes.length]);
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-  });
-
-  const ubicacionConsultorio = { lat: 4.438889, lng: -75.199722 };
   const memoizedVideo = useMemo(() => <VideoAnim />, []);
 
   return (
     <>
       {/* ===== HERO ===== */}
-<section className="hero">
-  {/* Lado izquierdo: carrusel de imágenes */}
-  <div className="hero-left">
-    {imagenes.map((img, index) => (
-      <Image
-        key={index}
-        src={img}
-        alt={`Imagen ${index + 1}`}
-        fill
-        priority={index === 0}
-        className={`hero-slide ${index === imagenActual ? "is-active" : ""}`}
-      />
-    ))}
-  </div>
+      <section className="hero hero-home">
+        {/* Lado izquierdo: carrusel de imágenes */}
+        <div className="hero-left">
+          {imagenes.map((img, index) => (
+            <Image
+              key={index}
+              src={img}
+              alt={`Imagen ${index + 1}`}
+              fill
+              priority={index === 0}
+              className={`hero-slide ${
+                index === imagenActual ? "is-active" : ""
+              }`}
+            />
+          ))}
+        </div>
 
-  {/* Lado derecho: texto + CTA */}
-  <div className="hero-right">
-    <div className="hero-content container">
-      <h1 className="hero-title">
-        ¡La innovadora y exclusiva tecnología de Hydrafacial está en el
-        consultorio de la Dra. Vanessa Medina!
-      </h1>
+        {/* Lado derecho: texto + CTA */}
+        <div className="hero-right">
+          <div className="hero-content container">
+            <h1 className="hero-title">
+              ¡La innovadora y exclusiva tecnología de Hydrafacial está en el
+              consultorio de la Dra. Vanessa Medina!
+            </h1>
 
-      {/* Texto escritorio */}
-      <p className="hero-desc-long">
-        <strong>¿Qué es HydraFacial?</strong> Es una tecnología estética de
-        última generación que combina limpieza profunda, exfoliación, extracción
-        de impurezas e hidratación avanzada en un solo procedimiento. Su sistema
-        patentado utiliza un aplicador con succión controlada y sueros
-        enriquecidos que renuevan la piel desde la primera sesión, sin
-        necesidad de tiempo de recuperación.
-        <br /><br />
-        <strong>¿Para qué sirve?</strong> Revitaliza la piel, trata poros
-        dilatados, líneas de expresión, manchas y deshidratación, devolviendo
-        su luminosidad natural.
-        <br /><br />
-        <strong>Un tratamiento exclusivo en el Tolima.</strong> El consultorio
-        de la Dra. Vanessa Medina es el único en la región con tecnología
-        original HydraFacial®, certificada internacionalmente.
-      </p>
+            {/* Texto escritorio */}
+            <p className="hero-desc-long">
+              <strong>¿Qué es HydraFacial?</strong> Es una tecnología estética
+              de última generación que combina limpieza profunda, exfoliación,
+              extracción de impurezas e hidratación avanzada en un solo
+              procedimiento. Su sistema patentado utiliza un aplicador con
+              succión controlada y sueros enriquecidos que renuevan la piel
+              desde la primera sesión, sin necesidad de tiempo de recuperación.
+              <br />
+              <br />
+              <strong>¿Para qué sirve?</strong> Revitaliza la piel, trata poros
+              dilatados, líneas de expresión, manchas y deshidratación,
+              devolviendo su luminosidad natural.
+              <br />
+              <br />
+              <strong>Un tratamiento exclusivo en el Tolima.</strong> El
+              consultorio de la Dra. Vanessa Medina es el único en la región con
+              tecnología original HydraFacial®, certificada internacionalmente.
+            </p>
 
-      {/* Texto móvil */}
-      <p className="hero-desc-short">
-        <strong>HydraFacial:</strong> tecnología que limpia, exfolia e hidrata
-        profundamente la piel con resultados visibles desde la primera sesión.
-      </p>
+            {/* Texto móvil */}
+            <p className="hero-desc-short">
+              <strong>HydraFacial:</strong> tecnología que limpia, exfolia e
+              hidrata profundamente la piel con resultados visibles desde la
+              primera sesión.
+            </p>
 
-      <div className="hero-cta">
-        <Link href="/agendar" className="btn btn-accent">
-          <i className="fas fa-calendar-check me-2"></i> Agendar Cita
-        </Link>
-        <a
-          href="https://www.instagram.com/hydrafacialcolombia/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-accent"
-        >
-          <i className="fab fa-instagram me-2"></i> Conocer más de HydraFacial
-        </a>
-      </div>
+            <div className="hero-cta">
+              <Link
+                href="/agendar"
+                className="hero-btn hero-btn-primary d-inline-flex align-items-center"
+              >
+                <i className="fas fa-calendar-check me-2"></i>
+                Agendar Cita
+              </Link>
 
-      {/* Botón leer más solo móvil */}
-      <button
-        className="hero-readmore d-lg-none"
-        onClick={() =>
-          document.querySelector(".hero-desc-short")?.classList.toggle("open")
-        }
-      >
-        Leer más
-      </button>
-    </div>
-  </div>
-</section>
+              <a
+                href="https://www.instagram.com/hydrafacialcolombia/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hero-btn hero-btn-secondary d-inline-flex align-items-center"
+              >
+                <i className="fab fa-instagram me-2"></i>
+                Conocer más de HydraFacial
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* VIDEO CENTRAL */}
       {memoizedVideo}
@@ -172,26 +169,13 @@ export default function HomePage() {
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           }}
         >
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: "100%", height: "100%" }}
-              center={ubicacionConsultorio}
-              zoom={17}
-            >
-              <Marker position={ubicacionConsultorio} label="🏥" />
-              <InfoWindow position={ubicacionConsultorio}>
-                <div style={{ color: "#4E3B2B" }}>
-                  <strong>Consultorio Dra. Vanessa Medina</strong>
-                  <br />
-                  Carrera 5ta #11-24, Torre Empresarial, Consultorio 502
-                  <br />
-                  Ibagué – Tolima
-                </div>
-              </InfoWindow>
-            </GoogleMap>
-          ) : (
-            <p>Cargando mapa...</p>
-          )}
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d994.454304702495!2d-75.24131428635316!3d4.445089870529062!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e38c4845c124d1d%3A0x4c5542efc906b982!2sEdificio%20Torre%20Empresarial!5e0!3m2!1ses-419!2sco!4v1763922944777!5m2!1ses-419!2sco"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="w-full h-full border-0"
+            allowFullScreen
+          />
         </div>
 
         <a

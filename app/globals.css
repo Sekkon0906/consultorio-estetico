@@ -22,163 +22,212 @@
     --border: #5a4637;
   }
 }
-
 /* ==========================
-   ESTILOS BASE
-========================== */
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Poppins", Arial, Helvetica, sans-serif;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-a,
-button {
-  transition: all 0.25s ease-in-out;
-}
-
-/* ==========================
-   HERO (layout + responsive)
+   HERO HOME (HOME PAGE)
 ========================== */
 
 .hero {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: clamp(560px, 90vh, 880px);
   background: #faf9f7;
   position: relative;
   overflow: hidden;
 }
 
-/* ——— Lado izquierdo (carrusel) ——— */
+/* Layout general del héroe de inicio */
+.hero-home {
+  display: flex;
+  flex-direction: column; /* móvil: imagen arriba, texto abajo */
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f7eee6 0%, #fff7f0 60%, #ffffff 100%);
+}
+
+/* ===== LADO IZQUIERDO (CARRUSEL) ===== */
+
 .hero-left {
   position: relative;
-  isolation: isolate; /* crea stacking context */
+  width: 100%;
+  aspect-ratio: 16 / 9; /* da altura para el <Image fill /> en móvil */
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .hero-slide {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transform: scale(1.06);
+  transform: scale(1.04);
   object-fit: cover;
   object-position: center;
-  transition: opacity 1.6s ease, transform 5s ease;
+  transition:
+    opacity 1s ease-in-out,
+    transform 6s ease-in-out;
   will-change: opacity, transform;
 }
+
 .hero-slide.is-active {
   opacity: 1;
   transform: scale(1);
 }
-.hero-left:hover .hero-slide.is-active {
-  filter: brightness(1.06);
-}
 
-/* ——— Lado derecho (texto) ——— */
+/* ===== LADO DERECHO (TEXTO + BOTONES) ===== */
+
 .hero-right {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #faf9f7 0%, #e9ded2 100%);
-  color: #4e3b2b;
-  padding: 4rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .hero-content {
-  width: min(940px, 100%);
+  max-width: 540px;
+  padding: 2.5rem 1.6rem 3rem;
 }
 
 .hero-title {
   font-family: "Playfair Display", serif;
   font-weight: 700;
-  line-height: 1.2;
-  font-size: clamp(1.8rem, 1.1rem + 2.8vw, 2.6rem);
-  margin: 0 0 1.25rem 0;
+  font-size: 1.7rem;
+  line-height: 1.35;
   color: #4e3b2b;
+  margin-bottom: 1.3rem;
+  text-align: center;
 }
 
-.hero-desc-long,
-.hero-desc-short {
-  color: #6c584c;
-  line-height: 1.7;
-  text-align: justify;
-  margin: 0 0 1.25rem 0;
-}
-
+/* Texto largo solo en escritorio */
 .hero-desc-long {
-  font-size: 1.05rem;
-}
-
-.hero-desc-short {
-  display: none;            /* solo móvil */
-  font-size: 1rem;
-  max-height: 4.5lh;
-  overflow: hidden;
-}
-.hero-desc-short.open {
-  max-height: none;
-}
-
-/* CTA */
-.hero-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 1rem;
-}
-
-/* Botón "leer más" (solo móvil) */
-.hero-readmore {
-  margin-top: .75rem;
-  border: none;
-  background: none;
-  color: #a1724f;
-  text-decoration: underline;
-  font-weight: 600;
-  cursor: pointer;
   display: none;
 }
-.hero-readmore:hover { color: #b08968; }
+
+/* Texto corto solo en móvil */
+.hero-desc-short {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #6c584c;
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+
+/* CTA: contenedor de botones */
+.hero-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+/* Botones del hero */
+.hero-btn {
+  border-radius: 999px;
+  padding: 0.85rem 1.9rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+/* Botón principal (Agendar Cita) */
+.hero-btn-primary {
+  background: linear-gradient(135deg, #b08968, #e0b892);
+  color: #fff;
+}
+
+.hero-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(176, 137, 104, 0.35);
+  background: linear-gradient(135deg, #a0724e, #d4a577);
+}
+
+/* Botón secundario (Instagram) */
+.hero-btn-secondary {
+  background-color: #fff7f0;
+  color: #4e3b2b;
+  border: 1px solid #e3cbb1;
+}
+
+.hero-btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(176, 137, 104, 0.25);
+  background-color: #ffeedd;
+}
 
 /* ==========================
-   HERO breakpoints
+   BREAKPOINTS
 ========================== */
 
-@media (max-width: 1200px) {
-  .hero-right { padding: 3rem 2rem; }
-}
+/* Tablet / desktop */
+@media (min-width: 992px) {
+  .hero-home {
+    flex-direction: row;           /* imagen izquierda, texto derecha */
+    min-height: calc(100vh - 80px);
+    align-items: stretch;
+  }
 
-@media (max-width: 992px) {
-  .hero { grid-template-columns: 1fr; }
-  .hero-left { display: none; }             /* ocultar carrusel en móvil */
+  .hero-left {
+    flex: 1 1 50%;
+    aspect-ratio: auto;
+    min-height: 520px;
+  }
+
   .hero-right {
-    padding: 2rem !important;
-    text-align: center;
+    flex: 1 1 50%;
     align-items: center;
   }
-  .hero-content { max-width: 520px; }
-  .hero-desc-long { display: none; }
-  .hero-desc-short { display: block; margin-inline: auto; }
-  .hero-readmore { display: inline-block; }
+
+  .hero-content {
+    max-width: 620px;
+    padding: 3.5rem 3rem;
+  }
+
+  .hero-title {
+    font-size: 2.3rem;
+    text-align: left;
+  }
+
+  .hero-desc-long {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.75;
+    color: #6c584c;
+    margin-bottom: 1.5rem;
+    text-align: justify;
+  }
+
+  .hero-desc-short {
+    display: none;
+  }
+
+  .hero-cta {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+  }
 }
 
-@media (max-width: 768px) {
-  .hero-right { padding: 1.5rem !important; }
-  .hero-title { font-size: clamp(1.55rem, 3.8vw, 1.9rem); }
-  .hero-desc-short { font-size: .95rem; }
-}
-
+/* Ajustes finos en móviles pequeños */
 @media (max-width: 576px) {
-  .hero-right { padding: 1rem !important; }
-  .hero-title { font-size: clamp(1.4rem, 4.6vw, 1.7rem); }
-  .hero-desc-short { font-size: .92rem; }
+  .hero-content {
+    padding: 2rem 1.25rem 2.5rem;
+  }
+
+  .hero-title {
+    font-size: 1.55rem;
+  }
+
+  .hero-desc-short {
+    font-size: 0.92rem;
+  }
 }
+
 
 /* ==========================
    Accesibilidad Motion
@@ -699,21 +748,27 @@ footer a:hover i {
 }
 
 .user-action-btn {
+  width: 100%;
+  max-width: 260px;
+  padding: 12px 18px;
   background: #fffaf5;
   color: #6b4e3d;
   border: 1px solid #d6bfa4;
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 0.88rem;
+  border-radius: 12px;
+  font-size: 0.95rem;
   font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
   transition: all 0.25s ease;
-  width: 70%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .user-action-btn:hover {
   background: #e9e0d1;
   color: #3e2f22;
+  transform: scale(1.03);
 }
+
 
 /* === CONTENEDOR DE MENÚ === */
 .mobile-sidebar-menu {
@@ -845,6 +900,45 @@ footer a:hover i {
 }
 .doc-hero-right:hover .doc-hero-slide.is-active {
   filter: brightness(1.06);
+}
+/* === BOTONES HERO DOCTORA ANIMADOS === */
+
+.btn-doctora {
+  background: linear-gradient(135deg, #b08968, #d9b89a);
+  color: #fff;
+  border: none;
+  padding: 0.9rem 1.8rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: 
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.4s ease;
+  box-shadow: 0 8px 18px rgba(176, 137, 104, 0.28);
+}
+
+.btn-doctora:hover {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 12px 26px rgba(176, 137, 104, 0.38);
+  background: linear-gradient(135deg, #a0724e, #c79d76);
+}
+
+/* Variación suave para botón secundario */
+.btn-doctora-secondary {
+  background: #fff7ef;
+  color: #6b4e3d;
+  border: 1px solid #e3ccb6;
+  box-shadow: 0 6px 16px rgba(176, 137, 104, 0.18);
+}
+
+.btn-doctora-secondary:hover {
+  background: #ffe8d6;
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 10px 22px rgba(176, 137, 104, 0.28);
 }
 
 /* ==========================

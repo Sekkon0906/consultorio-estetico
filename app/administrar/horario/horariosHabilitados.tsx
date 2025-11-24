@@ -6,44 +6,69 @@ import { PALETTE } from "../../agendar/page";
 import {
   getHorarioGlobal,
   setHorarioGlobal,
-  getHorarioPorFecha,
-  setHorarioPorFecha,
   HoraDisponible,
-  aplicarHorarioGlobalATodosLosDias,
-  getCitasByDay,
-  getCitaById,
-  Cita,
 } from "../../utils/localDB";
 import CitasAgendadasModalSimple from "../citas/citasAgendadasModalSimple";
+import { Cita } from "../citas/helpers";
+
+// ===== Helpers =====
+const normalizarHora = (h: string): string =>
+  h.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, "");
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+// Tipo local para bloqueos
+interface BloqueoHora {
+  id?: number;
+  fechaISO: string;
+  hora: string;
+  motivo: string;
+}
 
 export default function HorariosHabilitados() {
   const hoy = new Date();
   const [mes, setMes] = useState(hoy.getMonth());
   const [anio, setAnio] = useState(hoy.getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const [horarioGlobal, setHorarioGlobalState] = useState<HoraDisponible[]>(
+    getHorarioGlobal()
+  );
   const [horasDelDia, setHorasDelDia] = useState<HoraDisponible[]>([]);
-  const [horarioGlobal, setHorarioGlobalState] = useState<HoraDisponible[]>(getHorarioGlobal());
+
   const [toast, setToast] = useState<string | null>(null);
   const [modalGlobal, setModalGlobal] = useState(false);
   const [modalCita, setModalCita] = useState<Cita | null>(null);
 
-  // === NUEVO: lista de citas ocupadas con detalles ===
+  // Citas y bloqueos de la fecha seleccionada
+  const [citasDelDia, setCitasDelDia] = useState<Cita[]>([]);
   const [citasOcupadas, setCitasOcupadas] = useState<
     { horaNorm: string; paciente: string; procedimiento: string; id: number }[]
   >([]);
+  const [bloqueosDia, setBloqueosDia] = useState<BloqueoHora[]>([]);
 
-  // === TOAST ===
+  // ===== TOAST =====
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   };
 
-  // === FECHAS ===
+  // ===== FECHAS =====
   const diasEnMes = new Date(anio, mes + 1, 0).getDate();
   const primerDiaSemana = new Date(anio, mes, 1).getDay();
   const nombresMes = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
   ];
 
   const generarDias = () => {
@@ -54,66 +79,154 @@ export default function HorariosHabilitados() {
     return dias;
   };
 
-  // === CARGAR HORAS Y CITAS ===
+  // ===== CARGAR CITAS + BLOQUEOS DE UN DÍA =====
   useEffect(() => {
-    if (selectedDate) {
-      const horario = getHorarioPorFecha(selectedDate);
-      const base = horario.length ? horario : horarioGlobal;
-      setHorasDelDia(base);
+    if (!selectedDate) return;
 
-      // 🔍 Traer citas del día
-      const citas = getCitasByDay(selectedDate);
+    const cargarDatosDelDia = async () => {
+      try {
+        // 1) Citas reales desde BD
+        const resCitas = await fetch(
+          `${API_BASE}/citas?fecha=${selectedDate}`,
+          { cache: "no-store" }
+        );
+        if (!resCitas.ok) throw new Error("Error al obtener citas");
 
-      // Normaliza formato de hora
-      const normalizarHora = (h: string) =>
-        h.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, "");
+        const dataCitas: { ok: boolean; citas: Cita[] } = await resCitas.json();
+        const citas = Array.isArray(dataCitas.citas) ? dataCitas.citas : [];
+        setCitasDelDia(citas);
 
-      // Mapea citas ocupadas
-      const horasOcupadas = citas.map((c) => ({
-        horaNorm: normalizarHora(c.hora),
-        paciente: c.nombres,
-        procedimiento: c.procedimiento,
-        id: c.id,
-      }));
+        const horasOcupadas = citas.map((c) => ({
+          horaNorm: normalizarHora(c.hora),
+          paciente: c.nombres,
+          procedimiento: c.procedimiento,
+          id: c.id,
+        }));
+        setCitasOcupadas(horasOcupadas);
 
-      setCitasOcupadas(horasOcupadas);
-    }
+        // 2) Bloqueos desde BD
+        const resBloq = await fetch(
+          `${API_BASE}/bloqueos-horas?fechaISO=${selectedDate}`,
+          { cache: "no-store" }
+        );
+        if (!resBloq.ok) throw new Error("Error al obtener bloqueos");
+
+        const dataBloq: { ok: boolean; bloqueos: BloqueoHora[] } =
+          await resBloq.json();
+        const bloqueos = Array.isArray(dataBloq.bloqueos)
+          ? dataBloq.bloqueos
+          : [];
+        setBloqueosDia(bloqueos);
+
+        const horasBloqueadas = bloqueos.map((b) => normalizarHora(b.hora));
+
+        // 3) Construir horasDelDia combinando horarioGlobal + bloqueos
+        const nuevasHoras = horarioGlobal.map((h) => ({
+          ...h,
+          // disponible según horarioGlobal Y no esté bloqueada
+          disponible:
+            h.disponible &&
+            !horasBloqueadas.includes(normalizarHora(h.hora)),
+        }));
+        setHorasDelDia(nuevasHoras);
+      } catch (err) {
+        console.error("Error cargando datos del día:", err);
+        setCitasDelDia([]);
+        setCitasOcupadas([]);
+        setBloqueosDia([]);
+
+        // fallback: solo horarioGlobal
+        setHorasDelDia(horarioGlobal);
+      }
+    };
+
+    void cargarDatosDelDia();
   }, [selectedDate, horarioGlobal]);
 
-  // === CLICK EN DÍA ===
+  // ===== CLICK EN DÍA =====
   const handleDateClick = (dia: number | null) => {
     if (!dia) return;
     const fecha = new Date(anio, mes, dia).toISOString().slice(0, 10);
     setSelectedDate(fecha);
   };
 
-  // === ACTUALIZAR HORA INDIVIDUAL ===
-  const toggleHora = (hora: string) => {
-    const normalizarHora = (h: string) =>
-      h.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, "");
+  // ===== TOGGLE HORA EN UN DÍA (bloqueo en BD) =====
+  const toggleHora = async (hora: string) => {
+    if (!selectedDate) return;
 
-    const esOcupada = citasOcupadas.some((c) => c.horaNorm === normalizarHora(hora));
+    // 1) Si tiene cita → no se puede
+    const esOcupada = citasOcupadas.some(
+      (c) => c.horaNorm === normalizarHora(hora)
+    );
     if (esOcupada) {
-      showToast(`La hora ${hora} tiene una cita agendada. No puede modificarse.`);
+      showToast(
+        `La hora ${hora} tiene una cita agendada. No puede modificarse.`
+      );
       return;
     }
 
-    const nuevas = horasDelDia.map((h) =>
-      h.hora === hora ? { ...h, disponible: !h.disponible } : h
+    // 2) Ver si ya está bloqueada
+    const bloqueoExistente = bloqueosDia.find(
+      (b) => normalizarHora(b.hora) === normalizarHora(hora)
     );
 
-    setHorasDelDia(nuevas);
+    try {
+      if (bloqueoExistente) {
+        // ➜ Desbloquear: DELETE bloqueo
+        const url = `${API_BASE}/bloqueos-horas/${selectedDate}/${encodeURIComponent(
+          hora
+        )}`;
+        const res = await fetch(url, { method: "DELETE" });
+        if (!res.ok) throw new Error("Error al eliminar bloqueo");
 
-    if (selectedDate) {
-      setHorarioPorFecha(selectedDate, nuevas);
-      window.dispatchEvent(
-        new CustomEvent("horarioCambiado", { detail: { tipo: "dia", fecha: selectedDate, hora } })
-      );
-      showToast(`Hora ${hora} actualizada en ${selectedDate}`);
+        // Actualizamos estado local
+        setBloqueosDia((prev) =>
+          prev.filter(
+            (b) => normalizarHora(b.hora) !== normalizarHora(hora)
+          )
+        );
+        setHorasDelDia((prev) =>
+          prev.map((h) =>
+            h.hora === hora ? { ...h, disponible: true } : h
+          )
+        );
+        showToast(`Hora ${hora} desbloqueada para ${selectedDate}`);
+      } else {
+        // ➜ Bloquear: POST bloqueo
+        const res = await fetch(`${API_BASE}/bloqueos-horas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fechaISO: selectedDate,
+            hora,
+            motivo: "Bloqueada manualmente",
+          }),
+        });
+        if (!res.ok) throw new Error("Error al crear bloqueo");
+
+        const data: { ok: boolean; bloqueo: BloqueoHora | null } =
+          await res.json();
+        const nuevoBloqueo: BloqueoHora = data.bloqueo || {
+          fechaISO: selectedDate,
+          hora,
+          motivo: "Bloqueada manualmente",
+        };
+
+        setBloqueosDia((prev) => [...prev, nuevoBloqueo]);
+        setHorasDelDia((prev) =>
+          prev.map((h) =>
+            h.hora === hora ? { ...h, disponible: false } : h
+          )
+        );
+        showToast(`Hora ${hora} bloqueada para ${selectedDate}`);
+      }
+    } catch (err) {
+      console.error("Error al togglear bloqueo de hora:", err);
+      showToast("Ocurrió un error al actualizar la hora.");
     }
   };
 
-  // === MODIFICAR HORARIO GLOBAL ===
+  // ===== MODIFICAR HORARIO GLOBAL (solo localDB) =====
   const toggleHoraGlobal = (hora: string) => {
     const actualizado = horarioGlobal.map((h) =>
       h.hora === hora ? { ...h, disponible: !h.disponible } : h
@@ -121,21 +234,93 @@ export default function HorariosHabilitados() {
 
     setHorarioGlobalState(actualizado);
     setHorarioGlobal(actualizado);
-    aplicarHorarioGlobalATodosLosDias();
 
-    window.dispatchEvent(new CustomEvent("horarioCambiado", { detail: { tipo: "global", hora } }));
     showToast(`Hora ${hora} actualizada globalmente`);
+
+    // Si hay un día seleccionado, recomponemos sus horas usando bloqueosDia
+    if (selectedDate) {
+      const horasBloqueadas = bloqueosDia.map((b) =>
+        normalizarHora(b.hora)
+      );
+      const nuevas = actualizado.map((h) => ({
+        ...h,
+        disponible:
+          h.disponible &&
+          !horasBloqueadas.includes(normalizarHora(h.hora)),
+      }));
+      setHorasDelDia(nuevas);
+    }
   };
 
-  // === RENDER ===
+  // ===== RECARGAR CITAS + BLOQUEOS TRAS ACTUALIZAR CITA =====
+  const recargarDatosDelDia = async () => {
+    if (!selectedDate) return;
+
+    try {
+      const [resCitas, resBloq] = await Promise.all([
+        fetch(`${API_BASE}/citas?fecha=${selectedDate}`, {
+          cache: "no-store",
+        }),
+        fetch(`${API_BASE}/bloqueos-horas?fechaISO=${selectedDate}`, {
+          cache: "no-store",
+        }),
+      ]);
+
+      if (!resCitas.ok || !resBloq.ok) {
+        throw new Error("Error al recargar datos");
+      }
+
+      const dataCitas: { ok: boolean; citas: Cita[] } =
+        await resCitas.json();
+      const citas = Array.isArray(dataCitas.citas)
+        ? dataCitas.citas
+        : [];
+      setCitasDelDia(citas);
+
+      const horasOcupadas = citas.map((c) => ({
+        horaNorm: normalizarHora(c.hora),
+        paciente: c.nombres,
+        procedimiento: c.procedimiento,
+        id: c.id,
+      }));
+      setCitasOcupadas(horasOcupadas);
+
+      const dataBloq: { ok: boolean; bloqueos: BloqueoHora[] } =
+        await resBloq.json();
+      const bloqueos = Array.isArray(dataBloq.bloqueos)
+        ? dataBloq.bloqueos
+        : [];
+      setBloqueosDia(bloqueos);
+
+      const horasBloqueadas = bloqueos.map((b) =>
+        normalizarHora(b.hora)
+      );
+
+      // Recombinar con horarioGlobal
+      const nuevasHoras = horarioGlobal.map((h) => ({
+        ...h,
+        disponible:
+          h.disponible &&
+          !horasBloqueadas.includes(normalizarHora(h.hora)),
+      }));
+      setHorasDelDia(nuevasHoras);
+    } catch (err) {
+      console.error("Error al recargar datos del día:", err);
+    }
+  };
+
+  // ===== RENDER =====
   return (
     <div className="p-6 space-y-6 relative">
-      <h2 className="text-2xl font-semibold text-center" style={{ color: PALETTE.main }}>
+      <h2
+        className="text-2xl font-semibold text-center"
+        style={{ color: PALETTE.main }}
+      >
         Configurar Horarios
       </h2>
 
       <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
-        {/* === CALENDARIO === */}
+        {/* CALENDARIO */}
         <div
           className="bg-[#FBF7F2] p-6 rounded-xl shadow-md w-full md:w-[45%] flex flex-col items-center"
           style={{ border: `1px solid ${PALETTE.border}` }}
@@ -171,10 +356,12 @@ export default function HorariosHabilitados() {
             ))}
           </div>
 
-          {/* DÍAS DEL MES */}
+          {/* DÍAS MES */}
           <div className="grid grid-cols-7 gap-1 w-full mb-4">
             {generarDias().map((d, i) => {
-              const fechaISO = d ? new Date(anio, mes, d).toISOString().slice(0, 10) : "";
+              const fechaISO = d
+                ? new Date(anio, mes, d).toISOString().slice(0, 10)
+                : "";
               const isSelected = selectedDate === fechaISO;
               return (
                 <motion.button
@@ -205,7 +392,7 @@ export default function HorariosHabilitados() {
           </button>
         </div>
 
-        {/* === HORAS DEL DÍA === */}
+        {/* HORAS DEL DÍA */}
         <div className="flex-1 bg-[#FBF7F2] p-6 rounded-xl shadow-md border border-[#E5D8C8] min-h-[380px]">
           {!selectedDate ? (
             <p className="text-[#6E5A49] text-center mt-16 italic">
@@ -219,12 +406,14 @@ export default function HorariosHabilitados() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {horasDelDia.map((h) => {
-                  const normalizarHora = (t: string) =>
-                    t.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, "");
                   const citaOcupada = citasOcupadas.find(
                     (c) => c.horaNorm === normalizarHora(h.hora)
                   );
                   const esOcupada = Boolean(citaOcupada);
+
+                  const estaBloqueada = bloqueosDia.some(
+                    (b) => normalizarHora(b.hora) === normalizarHora(h.hora)
+                  );
 
                   return (
                     <motion.div key={h.hora} className="relative group">
@@ -235,13 +424,13 @@ export default function HorariosHabilitados() {
                         className={`relative w-full p-3 rounded-lg text-sm font-medium border transition-all overflow-hidden ${
                           esOcupada
                             ? "bg-[#F5D9A9] text-[#7A5534] border-[#E5D8C8] cursor-not-allowed"
-                            : h.disponible
-                            ? "bg-white text-[#32261C] border-[#E5D8C8]"
-                            : "bg-[#F5E7DC] text-[#9C7A54] border-[#E5D8C8]"
+                            : !h.disponible || estaBloqueada
+                            ? "bg-[#F5E7DC] text-[#9C7A54] border-[#E5D8C8]"
+                            : "bg-white text-[#32261C] border-[#E5D8C8]"
                         }`}
                       >
                         <span>{h.hora}</span>
-                        {!h.disponible && !esOcupada && (
+                        {(!h.disponible || estaBloqueada) && !esOcupada && (
                           <motion.div
                             initial={{ scaleX: 0 }}
                             animate={{ scaleX: 1 }}
@@ -251,7 +440,7 @@ export default function HorariosHabilitados() {
                         )}
                       </motion.button>
 
-                      {/* === TOOLTIP === */}
+                      {/* Tooltip para citas ocupadas */}
                       {esOcupada && (
                         <motion.div
                           initial={{ opacity: 0, y: 6 }}
@@ -266,8 +455,13 @@ export default function HorariosHabilitados() {
                             Procedimiento: {citaOcupada?.procedimiento}
                           </p>
                           <button
+                            type="button"
                             onClick={() => {
-                              const citaCompleta = getCitaById(citaOcupada?.id || 0);
+                              if (!citaOcupada) return;
+                              const citaCompleta =
+                                citasDelDia.find(
+                                  (c) => c.id === citaOcupada.id
+                                ) || null;
                               if (citaCompleta) setModalCita(citaCompleta);
                             }}
                             className="px-3 py-1 rounded-md bg-[#B08968] text-white hover:bg-[#9C7A54] text-xs transition"
@@ -290,11 +484,11 @@ export default function HorariosHabilitados() {
                   <span className="w-4 h-4 bg-[#F5E7DC] border border-[#E5D8C8] rounded relative">
                     <span className="absolute top-1/2 left-0 w-full h-[2px] bg-[#9C7A54]" />
                   </span>
-                  Desactivada
+                  Desactivada / Bloqueada
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 bg-[#F5D9A9] border border-[#E5D8C8] rounded" />
-                  Reservada (ocupada)
+                  Reservada (cita)
                 </div>
               </div>
             </>
@@ -302,7 +496,7 @@ export default function HorariosHabilitados() {
         </div>
       </div>
 
-      {/* === MODAL GLOBAL === */}
+      {/* MODAL HORARIO GLOBAL */}
       <AnimatePresence>
         {modalGlobal && (
           <motion.div
@@ -349,6 +543,7 @@ export default function HorariosHabilitados() {
 
               <div className="flex justify-center">
                 <button
+                  type="button"
                   onClick={() => setModalGlobal(false)}
                   className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                 >
@@ -360,31 +555,21 @@ export default function HorariosHabilitados() {
         )}
       </AnimatePresence>
 
-      {/* === MODAL DE CITA === */}
+      {/* MODAL CITA */}
       <AnimatePresence>
         {modalCita && (
           <CitasAgendadasModalSimple
-  cita={modalCita}
-  onClose={() => setModalCita(null)}
-  onUpdated={() => {
-    setModalCita(null);
-    // refresca lista
-            if (selectedDate) {
-                const citas = getCitasByDay(selectedDate);
-                const horasOcupadas = citas.map((c) => ({
-                  horaNorm: c.hora.trim().toLowerCase().replace(/\s+/g, "").replace(/^0/, ""),
-                  paciente: c.nombres,
-                  procedimiento: c.procedimiento,
-                  id: c.id,
-                }));
-                setCitasOcupadas(horasOcupadas);
-              }
+            cita={modalCita}
+            onClose={() => setModalCita(null)}
+            onUpdated={async () => {
+              setModalCita(null);
+              await recargarDatosDelDia();
             }}
           />
         )}
       </AnimatePresence>
 
-      {/* === TOAST === */}
+      {/* TOAST */}
       <AnimatePresence>
         {toast && (
           <motion.div

@@ -9,6 +9,7 @@ const bloqueosHorasRoutes = require("./routes/bloqueosHoras");
 const ingresosRoutes = require("./routes/ingresos");
 const reportesRoutes = require("./routes/reportes");
 const charlasRoutes = require("./routes/charlas");
+const bloqueosHorasRoutes = require("./routes/bloqueosHoras");
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use("/bloqueos-horas", bloqueosHorasRoutes);
 app.use("/ingresos", ingresosRoutes);
 app.use("/reportes", reportesRoutes);
 app.use("/charlas", charlasRoutes);
+app.use("/bloqueos-horas", bloqueosHorasRoutes);
 // Puerto
 const PORT = process.env.PORT || 4000;
 

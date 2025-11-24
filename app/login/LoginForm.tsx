@@ -3,14 +3,19 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { loginUser, setCurrentUser } from "../utils/auth";
-import { updateUserData } from "../utils/localDB";
-import { handleGoogleLogin } from "./GoogleHandler"; // 👈 nuevo handler basado en Firebase
+import { loginUser } from "../utils/auth";
+import { handleGoogleLogin } from "./GoogleHandler";
 import { PALETTE } from "./palette2";
 
 interface Props {
   setErr: (msg: string | null) => void;
 }
+
+const ADMIN_EMAILS = [
+  "medinapipe123@gmail.com",
+  "admin@clinicavm.com",
+  "soporte@clinicavm.com",
+];
 
 export default function LoginForm({ setErr }: Props) {
   const router = useRouter();
@@ -19,6 +24,7 @@ export default function LoginForm({ setErr }: Props) {
   const [touched, setTouched] = useState(false);
   const [show, setShow] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // === Centrar la ventana emergente (por si alguna lib usa window.open) ===
   useEffect(() => {
@@ -38,7 +44,9 @@ export default function LoginForm({ setErr }: Props) {
         const top = window.screenY + (window.outerHeight - height) / 2.5;
 
         const extraSpecs = `left=${left},top=${top},width=${width},height=${height}`;
-        const finalFeatures = features ? `${features},${extraSpecs}` : extraSpecs;
+        const finalFeatures = features
+          ? `${features},${extraSpecs}`
+          : extraSpecs;
 
         return originalOpen(url, target, finalFeatures);
       } catch {
@@ -62,46 +70,47 @@ export default function LoginForm({ setErr }: Props) {
 
   const isValid = Object.keys(errors).length === 0;
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
+    setErr(null);
+
     if (!isValid) {
       setErr("Revisa los campos marcados.");
       return;
     }
 
-    const res = loginUser(email, password);
-    if (!res.ok) {
-      setErr(res.error || "No se pudo iniciar sesión.");
-      return;
+    setLoading(true);
+    try {
+      // loginUser ahora es ASÍNCRONO y ya habla con Firebase + backend
+      const result = await loginUser(
+        email.trim().toLowerCase(),
+        password,
+        remember
+      );
+
+      if (!result.ok || !result.user) {
+        setErr(result.error || "No se pudo iniciar sesión.");
+        return;
+      }
+
+      const user = result.user;
+
+      // Lógica para panel administrador
+      const isAdminEmail = ADMIN_EMAILS.includes(user.email.toLowerCase());
+      const isAdminRole = user.rol === "admin";
+
+      if (isAdminEmail || isAdminRole) {
+        router.push("/administrar");
+      } else {
+        router.push("/");
+      }
+    } catch (err: any) {
+      console.error("Error en onSubmit:", err);
+      setErr(err?.message || "Ocurrió un error al iniciar sesión.");
+    } finally {
+      setLoading(false);
     }
-
-    const user = res.user;
-    if (!user) {
-      setErr("Usuario no encontrado.");
-      return;
-    }
-
-    if (remember) {
-      const session = {
-        ...user,
-        expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 30, // 30 días
-      };
-      localStorage.setItem("rememberUser", JSON.stringify(session));
-    }
-
-    updateUserData(
-      {
-        photo: user.photo || null,
-        nombres: user.nombres,
-        apellidos: user.apellidos,
-        rol: user.rol,
-      },
-      user.email
-    );
-
-    setCurrentUser(user);
-    router.push("/");
   };
 
   return (
@@ -117,7 +126,10 @@ export default function LoginForm({ setErr }: Props) {
     >
       {/* === Email === */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Correo electrónico
         </label>
         <input
@@ -143,7 +155,10 @@ export default function LoginForm({ setErr }: Props) {
 
       {/* === Contraseña === */}
       <div className="mb-3 text-start">
-        <label className="form-label fw-semibold" style={{ color: PALETTE.text }}>
+        <label
+          className="form-label fw-semibold"
+          style={{ color: PALETTE.text }}
+        >
           Contraseña
         </label>
         <div className="input-group">
@@ -176,6 +191,9 @@ export default function LoginForm({ setErr }: Props) {
             <i className={`fas ${show ? "fa-eye-slash" : "fa-eye"}`}></i>
           </button>
         </div>
+        {touched && errors.password && (
+          <div className="invalid-feedback d-block">{errors.password}</div>
+        )}
       </div>
 
       {/* === Recordar sesión === */}
@@ -199,6 +217,7 @@ export default function LoginForm({ setErr }: Props) {
       {/* === Botón de inicio === */}
       <motion.button
         type="submit"
+        disabled={loading}
         className="btn w-100 fw-semibold py-2 mb-3"
         style={{
           backgroundColor: PALETTE.main,
@@ -206,15 +225,19 @@ export default function LoginForm({ setErr }: Props) {
           color: "white",
           borderRadius: "50px",
         }}
-        whileHover={{
-          scale: 1.03,
-          y: -2,
-          boxShadow: "0px 5px 12px rgba(0, 0, 0, 0.15)",
-        }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={
+          !loading
+            ? {
+                scale: 1.03,
+                y: -2,
+                boxShadow: "0px 5px 12px rgba(0, 0, 0, 0.15)",
+              }
+            : {}
+        }
+        whileTap={!loading ? { scale: 0.97 } : {}}
         transition={{ type: "spring", stiffness: 250, damping: 18 }}
       >
-        Entrar
+        {loading ? "Iniciando sesión..." : "Entrar"}
       </motion.button>
 
       {/* === Login con Google (Firebase) === */}

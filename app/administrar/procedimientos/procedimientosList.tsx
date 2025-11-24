@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ModalGaleriaItem from "./modalGaleriaItem";
 
-// ✅ Tipos de dominio desde domain.ts
+// ✅ Tipos de dominio
 import type {
   Procedimiento,
   CategoriaProcedimiento,
@@ -19,6 +19,17 @@ import {
   deleteProcedimientoApi,
 } from "../../services/procedimientosApi";
 
+// Tipo de lo que realmente enviamos a la API
+type ProcedimientoApiInput = {
+  nombre: string;
+  desc: string;
+  precio: string; // en la BD es VARCHAR
+  imagen: string;
+  categoria: CategoriaProcedimiento;
+  duracionMin: number | null;
+  destacado: boolean;
+};
+
 export default function ProcedimientosList() {
   const [procedimientos, setProcedimientos] = useState<Procedimiento[]>([]);
   const [modo, setModo] = useState<"lista" | "crear" | "editar">("lista");
@@ -26,21 +37,30 @@ export default function ProcedimientosList() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    nombre: string;
+    desc: string;
+    precio: string;
+    imagen: string;
+    categoria: CategoriaProcedimiento;
+    duracionMin: string; // lo manejamos como string en el form
+    destacado: boolean;
+    galeria: MediaItem[];
+  }>({
     nombre: "",
     desc: "",
     precio: "",
     imagen: "",
-    categoria: "Facial" as CategoriaProcedimiento,
+    categoria: "Facial",
     duracionMin: "",
     destacado: false,
-    galeria: [] as MediaItem[],
+    galeria: [],
   });
 
   // ==========================
   // Cargar procedimientos desde la API
   // ==========================
-  const cargarProcedimientos = async () => {
+  const cargarProcedimientos = async (): Promise<void> => {
     try {
       setLoading(true);
       const data = await getProcedimientosApi();
@@ -54,23 +74,22 @@ export default function ProcedimientosList() {
   };
 
   useEffect(() => {
-    cargarProcedimientos();
+    void cargarProcedimientos();
   }, []);
 
   // ==========================
   // Guardar (crear / editar)
   // ==========================
-  const handleGuardar = async () => {
+  const handleGuardar = async (): Promise<void> => {
     if (!form.nombre.trim() || !form.desc.trim()) {
       alert("Por favor completa el nombre y la descripción.");
       return;
     }
 
-    // payload que espera el backend (sin id ni galería)
-    const payload = {
+    const payload: ProcedimientoApiInput = {
       nombre: form.nombre,
       desc: form.desc,
-      precio: form.precio || "0", // precio es VARCHAR en BD
+      precio: form.precio || "0",
       imagen: form.imagen,
       categoria: form.categoria,
       duracionMin: form.duracionMin ? Number(form.duracionMin) : null,
@@ -79,9 +98,9 @@ export default function ProcedimientosList() {
 
     try {
       if (modo === "crear") {
-        await createProcedimientoApi(payload as any);
+        await createProcedimientoApi(payload);
       } else if (modo === "editar" && actual) {
-        await updateProcedimientoApi(actual.id, payload as any);
+        await updateProcedimientoApi(actual.id, payload);
       }
 
       // limpiar formulario
@@ -109,17 +128,17 @@ export default function ProcedimientosList() {
   // ==========================
   // Editar
   // ==========================
-  const handleEditar = (p: Procedimiento) => {
+  const handleEditar = (p: Procedimiento): void => {
     setActual(p);
     setForm({
       nombre: p.nombre,
       desc: p.desc,
-      precio: p.precio?.toString() || "",
+      precio: p.precio?.toString() ?? "",
       imagen: p.imagen,
       categoria: p.categoria,
-      duracionMin: p.duracionMin?.toString() || "",
-      destacado: !!p.destacado,
-      galeria: p.galeria || [],
+      duracionMin: p.duracionMin?.toString() ?? "",
+      destacado: Boolean(p.destacado),
+      galeria: p.galeria ?? [],
     });
     setModo("editar");
   };
@@ -127,8 +146,11 @@ export default function ProcedimientosList() {
   // ==========================
   // Eliminar
   // ==========================
-  const handleEliminar = async (id: number) => {
-    if (!confirm("¿Deseas eliminar este procedimiento?")) return;
+  const handleEliminar = async (id: number): Promise<void> => {
+    const confirmar = window.confirm(
+      "¿Deseas eliminar este procedimiento?"
+    );
+    if (!confirmar) return;
 
     try {
       await deleteProcedimientoApi(id);
@@ -142,22 +164,32 @@ export default function ProcedimientosList() {
   // ==========================
   // Manejo de imágenes (principal)
   // ==========================
-  const handleImagenPrincipal = (file: File) => {
+  const handleImagenPrincipal = (file: File): void => {
     const reader = new FileReader();
-    reader.onload = (e) =>
-      setForm({ ...form, imagen: e.target?.result as string });
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const result = e.target?.result;
+      if (typeof result === "string") {
+        setForm((prev) => ({ ...prev, imagen: result }));
+      }
+    };
     reader.readAsDataURL(file);
   };
 
   // ==========================
   // Galería (solo front)
   // ==========================
-  const handleEliminarMedia = (id: string) => {
-    setForm({ ...form, galeria: form.galeria.filter((m) => m.id !== id) });
+  const handleEliminarMedia = (id: string): void => {
+    setForm((prev) => ({
+      ...prev,
+      galeria: prev.galeria.filter((m) => m.id !== id),
+    }));
   };
 
-  const handleSaveMedia = (item: MediaItem) => {
-    setForm({ ...form, galeria: [...form.galeria, item] });
+  const handleSaveMedia = (item: MediaItem): void => {
+    setForm((prev) => ({
+      ...prev,
+      galeria: [...prev.galeria, item],
+    }));
     setMostrarModal(false);
   };
 
@@ -191,14 +223,18 @@ export default function ProcedimientosList() {
             <input
               type="text"
               value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, nombre: e.target.value }))
+              }
               placeholder="Nombre del procedimiento"
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
 
             <textarea
               value={form.desc}
-              onChange={(e) => setForm({ ...form, desc: e.target.value })}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, desc: e.target.value }))
+              }
               placeholder="Descripción"
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
@@ -206,7 +242,9 @@ export default function ProcedimientosList() {
             <input
               type="text"
               value={form.precio}
-              onChange={(e) => setForm({ ...form, precio: e.target.value })}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, precio: e.target.value }))
+              }
               placeholder='Precio (ej: "180000" o "350.000 – 450.000")'
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3"
             />
@@ -214,10 +252,10 @@ export default function ProcedimientosList() {
             <select
               value={form.categoria}
               onChange={(e) =>
-                setForm({
-                  ...form,
+                setForm((prev) => ({
+                  ...prev,
                   categoria: e.target.value as CategoriaProcedimiento,
-                })
+                }))
               }
               className="w-full p-2 border border-[#E5D8C8] rounded mb-3 bg-white"
             >
@@ -249,21 +287,22 @@ export default function ProcedimientosList() {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) =>
-                  e.target.files && handleImagenPrincipal(e.target.files[0])
-                }
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImagenPrincipal(file);
+                }}
               />
             </div>
 
             {/* Procedimiento en demanda */}
-            <div className="mb-3 d-flex align-items-center gap-3">
-              <label className="fw-semibold" style={{ color: "#4E3B2B" }}>
+            <div className="mb-3 flex items-center gap-3">
+              <label className="font-semibold" style={{ color: "#4E3B2B" }}>
                 Procedimiento en demanda:
               </label>
               <button
                 type="button"
                 onClick={() =>
-                  setForm({ ...form, destacado: !form.destacado })
+                  setForm((prev) => ({ ...prev, destacado: !prev.destacado }))
                 }
                 className={`px-3 py-1 rounded-md font-medium ${
                   form.destacado
@@ -301,6 +340,7 @@ export default function ProcedimientosList() {
                       />
                     )}
                     <button
+                      type="button"
                       onClick={() => handleEliminarMedia(m.id)}
                       className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded-bl"
                     >
@@ -323,12 +363,16 @@ export default function ProcedimientosList() {
 
             <div className="flex gap-3 mt-4">
               <button
-                onClick={handleGuardar}
+                type="button"
+                onClick={() => {
+                  void handleGuardar();
+                }}
                 className="bg-[#C7A27A] text-white px-4 py-2 rounded hover:bg-[#B08968]"
               >
                 Guardar
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setModo("lista");
                   setActual(null);
@@ -346,6 +390,7 @@ export default function ProcedimientosList() {
       {modo === "lista" && (
         <div>
           <button
+            type="button"
             onClick={() => {
               setForm({
                 nombre: "",
@@ -378,7 +423,6 @@ export default function ProcedimientosList() {
                   </h3>
                   <p className="text-[#6E5A49] mb-2">{p.desc}</p>
                   <p className="text-sm text-[#8B6A4B] font-medium mb-2">
-                    {/* precio ya viene como string desde la BD */}
                     {p.precio}
                   </p>
                   {p.imagen && (
@@ -390,13 +434,17 @@ export default function ProcedimientosList() {
                   )}
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => handleEditar(p)}
                       className="px-3 py-1 rounded bg-[#E5D8C8] text-[#6E4F37] hover:bg-[#C7A27A]"
                     >
                       Editar
                     </button>
                     <button
-                      onClick={() => handleEliminar(p.id)}
+                      type="button"
+                      onClick={() => {
+                        void handleEliminar(p.id);
+                      }}
                       className="px-3 py-1 rounded bg-red-200 text-red-700 hover:bg-red-300"
                     >
                       Eliminar

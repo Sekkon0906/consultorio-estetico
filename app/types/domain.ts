@@ -13,7 +13,7 @@ export type RolUsuario =
   | "paciente"
   | "recepcionista"; // puedes extender roles en el futuro
 
-// Usuario que viaja entre backend y frontend (payload de /auth/google)
+// Usuario "ligero" que suele viajar en la sesión (auth/google, etc.)
 export interface SessionUser {
   id: number;
   nombres: string;
@@ -23,6 +23,22 @@ export interface SessionUser {
   rol: RolUsuario;
   photo?: string | null;
   creadoEn?: string | null; // DATETIME en BD (opcional en respuestas)
+}
+
+// Usuario completo, mapeando la tabla `usuarios` de la BD
+// (puedes ir ajustando campos según lo que devuelva tu backend)
+export interface User extends SessionUser {
+  // Historia clínica simplificada
+  antecedentes?: string | null;
+  antecedentesDescripcion?: string | null;
+  alergias?: string | null;
+  alergiasDescripcion?: string | null;
+  medicamentos?: string | null;
+  medicamentosDescripcion?: string | null;
+
+  // En la BD `creadoEn` es NOT NULL, pero lo dejamos opcional
+  // porque algunas respuestas pueden omitirlo
+  creadoEn?: string | null;
 }
 
 // ============================================================

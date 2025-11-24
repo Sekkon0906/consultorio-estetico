@@ -27,12 +27,14 @@ router.get("/", async (req, res) => {
     return res.json({ ok: true, citas: rows });
   } catch (err) {
     console.error("Error GET /citas:", err);
-    return res.status(500).json({ ok: false, error: "Error al obtener citas" });
+    return res
+      .status(500)
+      .json({ ok: false, error: "Error al obtener citas" });
   }
 });
 
 /**
- * 🔥 GET /citas/usuario/:userId
+ * GET /citas/usuario/:userId
  * Devuelve todas las citas asignadas a un usuario específico
  */
 router.get("/usuario/:userId", async (req, res) => {
@@ -42,7 +44,15 @@ router.get("/usuario/:userId", async (req, res) => {
     if (!userId) {
       return res.status(400).json({
         ok: false,
-        error: "El parámetro :userId es obligatorio"
+        error: "El parámetro :userId es obligatorio",
+      });
+    }
+
+    const idNum = Number(userId);
+    if (Number.isNaN(idNum)) {
+      return res.status(400).json({
+        ok: false,
+        error: "El parámetro :userId debe ser numérico",
       });
     }
 
@@ -71,13 +81,12 @@ router.get("/usuario/:userId", async (req, res) => {
         estado,
         qrCita,
         motivoCancelacion,
-        fechaCreacion,
-        fechaActualizacion
+        fechaCreacion
       FROM citas
       WHERE userId = ?
       ORDER BY fechaCreacion DESC
       `,
-      [userId]
+      [idNum]
     );
 
     return res.json({ ok: true, citas: rows });
@@ -85,7 +94,7 @@ router.get("/usuario/:userId", async (req, res) => {
     console.error("Error GET /citas/usuario/:userId:", err);
     return res.status(500).json({
       ok: false,
-      error: "Error al obtener citas del usuario"
+      error: "Error al obtener citas del usuario",
     });
   }
 });
@@ -119,6 +128,24 @@ router.post("/", async (req, res) => {
       qrCita,
       motivoCancelacion,
     } = req.body;
+
+    // Validación básica de campos obligatorios
+    if (
+      !userId ||
+      !nombres ||
+      !apellidos ||
+      !telefono ||
+      !correo ||
+      !procedimiento ||
+      !tipoCita ||
+      !fecha ||
+      !hora
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Faltan campos obligatorios para crear la cita",
+      });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO citas
@@ -201,7 +228,9 @@ router.put("/:id", async (req, res) => {
     return res.json({ ok: true, cita: rows[0] });
   } catch (err) {
     console.error("Error PUT /citas/:id:", err);
-    return res.status(500).json({ ok: false, error: "Error al actualizar cita" });
+    return res
+      .status(500)
+      .json({ ok: false, error: "Error al actualizar cita" });
   }
 });
 
@@ -216,7 +245,9 @@ router.delete("/:id", async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     console.error("Error DELETE /citas/:id:", err);
-    return res.status(500).json({ ok: false, error: "Error al eliminar cita" });
+    return res
+      .status(500)
+      .json({ ok: false, error: "Error al eliminar cita" });
   }
 });
 

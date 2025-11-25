@@ -1,36 +1,233 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+📘 README.md — CONSULTORIO ESTÉTICO
+Plataforma web para gestión de procedimientos, citas, clientes y contenido
+🏥 Consultorio Estético – Plataforma Web Completa
 
-## Getting Started
+Este proyecto es un sistema web moderno diseñado para la administración integral de un consultorio estético: agenda de citas, gestión de procedimientos, testimonios, clientes y contenido visual.
 
-First, run the development server:
+Incluye:
 
-```bash
+💆 Catálogo completo de procedimientos con imágenes y descripciones
+
+📅 Sistema de agendamiento con calendario, confirmación y pagos simulados
+
+🛠️ Panel administrativo para gestionar todo el contenido
+
+🖼️ Galerías multimedia para procedimientos, testimonios y charlas
+
+🧭 Sitio público informativo del consultorio
+
+⚙️ Arquitectura modular basada en Next.js App Router
+
+El objetivo del proyecto es proveer una interfaz profesional, escalable y administrable, lista para producción.
+
+🏗️ Arquitectura General
+
+El sistema está construido sobre una arquitectura dividida en:
+
+🎨 Frontend – Next.js + TypeScript
+
+UI moderna, responsive y basada en TailwindCSS
+
+Rutas del App Router
+
+Tarjetas, formularios, galerías, modales
+
+Páginas públicas y páginas protegidas (admin)
+
+Manejo de imágenes en public/ y media externa
+
+Flujo de agendamiento completo (form → calendario → pago → confirmación)
+
+🛠️ Panel Administrativo
+
+Incluye secciones:
+
+Procedimientos
+
+Testimonios
+
+Clientes
+
+Charlas
+
+Citas agendadas
+
+Con funcionalidades:
+
+CRUD completo
+
+Formularios dinámicos
+
+Manejo de galerías
+
+Edición en tiempo real
+
+Listados con paginación y tarjetas visuales
+
+📸 Sistema Multimedia
+
+Subida de imágenes
+
+Galerías por procedimiento
+
+Videos y fotografías para testimonios
+
+Previsualización y administración visual
+
+📂 Estructura del Proyecto
+consultorio-estetico-main/
+│
+├── app/
+│   ├── administrar/
+│   │   ├── procedimientos/
+│   │   │   ├── procedimientosList.tsx
+│   │   │   ├── procedimientosForm.tsx
+│   │   │   └── helpers.ts
+│   │   ├── citas/
+│   │   ├── testimonios/
+│   │   ├── charlas/
+│   │   ├── clientes/
+│   │   ├── AdministrarPageInner.tsx
+│   │   ├── adminLayoutInner.tsx
+│   │   └── ...
+│   │
+│   ├── agendar/
+│   │   ├── agendarForm.tsx
+│   │   ├── agendarCalendar.tsx
+│   │   ├── agendarPago.tsx
+│   │   ├── agendarConfirmacion.tsx
+│   │   └── page.tsx
+│   │
+│   ├── consultorio/
+│   ├── components/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── ...
+│
+├── public/
+│   └── imágenes, íconos y recursos estáticos
+│
+├── .env.example
+├── .gitignore
+├── package.json
+└── README.md
+
+⚙️ Instalación
+1️⃣ Clonar el repositorio
+git clone https://github.com/tu-repo/consultorio-estetico.git
+cd consultorio-estetico
+
+2️⃣ Instalar dependencias
+npm install
+
+3️⃣ Configurar variables de entorno
+
+Crea un archivo .env.local basado en .env.example.
+
+Ejemplo:
+
+NEXT_PUBLIC_API_URL=https://tu-backend.com/api
+ADMIN_SECRET=clave_admin
+
+▶️ Ejecución del Proyecto
+Ejecución en desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Disponible en:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+👉 http://localhost:3000
 
-## Learn More
+Compilar para producción
+npm run build
+npm start
 
-To learn more about Next.js, take a look at the following resources:
+💆 Flujo del Usuario (Frontend Público)
+🔹 1. Explora procedimientos
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Con tarjetas, descripciones e imágenes.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+🔹 2. Selecciona un procedimiento y agenda
 
-## Deploy on Vercel
+Formulario + calendario dinámico.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+🔹 3. Confirmación y pago simulado
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pantalla visual de resumen.
+
+🔹 4. Registro final
+
+Vista de éxito + resumen de cita.
+
+🛠️ Panel Administrativo
+
+Incluye herramientas para:
+
+✔️ Procedimientos
+
+Crear
+
+Editar
+
+Eliminar
+
+Añadir galería
+
+Definir precio y duración
+
+✔️ Testimonios
+
+Videos
+
+Fotos
+
+Descripciones
+
+✔️ Citas
+
+Listado
+
+Editor
+
+Confirmación manual
+
+✔️ Clientes
+
+Base de datos interna
+
+✔️ Charlas / contenido
+
+Gestión de material educativo
+
+🛠️ Solución de Problemas Comunes
+❌ Las imágenes no cargan
+
+➡️ Verifica rutas en /public
+➡️ No uses rutas absolutas del sistema operativo
+
+❌ Falla el agendamiento
+
+➡️ Revisar formato de fechas
+➡️ Validar estado del calendario
+
+❌ Next.js no genera build
+
+➡️ Variable de entorno faltante
+➡️ Archivos .env.local mal configurados
+
+👨‍💻 Tecnologías utilizadas
+Tecnología	Rol
+Next.js	Framework principal
+React + TS	Interfaz
+TailwindCSS	Estilos
+Node + API externa	Backend esperado
+Media Components	Galerías y previews
+App Router	Navegación moderna
+📜 Licencia
+
+MIT — Libre para uso académico o comercial.
+
+🧿 Créditos
+
+Proyecto diseñado y organizado por:
+Mi amo, Señor Stark
